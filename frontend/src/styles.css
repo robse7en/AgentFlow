@@ -1,0 +1,508 @@
+* { box-sizing: border-box; }
+
+html, body, #app { height: 100%; margin: 0; }
+
+body {
+  font-family: var(--font);
+  font-size: 14px;
+  color: var(--text);
+  background:
+    radial-gradient(900px 500px at 15% -10%, var(--page-glow-accent), transparent 60%),
+    radial-gradient(700px 500px at 105% 110%, var(--page-glow-warn), transparent 60%),
+    var(--bg);
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+h1, h2, h3, h4 { margin: 0 0 0.5rem; font-weight: 600; }
+h1 { font-size: 1.4rem; }
+h2 { font-size: 1.15rem; }
+h3 { font-size: 1rem; }
+h4 { font-size: 0.9rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+
+code, pre, .mono { font-family: var(--mono); font-size: 12.5px; }
+pre {
+  background: var(--info-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.8rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+}
+
+/* layout ---------------------------------------------------------------------- */
+.app-shell { display: flex; height: 100%; }
+.page { flex: 1; min-width: 0; overflow: auto; padding: 1.5rem; }
+/* The task dashboard scrolls its own list, so the page itself must not (see HomeView). */
+.page:has(> .dashboard) { display: flex; flex-direction: column; overflow: hidden; }
+@media (max-height: 640px) { .page:has(> .dashboard) { display: block; overflow: auto; } }
+.page-narrow { max-width: 860px; margin: 0 auto; }
+
+/* panels ---------------------------------------------------------------------- */
+.panel {
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 1.15rem 1.3rem; margin-bottom: 1rem; box-shadow: 0 8px 24px var(--shadow-2);
+}
+.panel-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+.muted { color: var(--muted); }
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.small { font-size: 12.5px; }
+.row { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 0.3rem 1rem; align-items: baseline; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; word-break: break-all; }
+
+/* forms ----------------------------------------------------------------------- */
+label.field { display: block; margin-bottom: 0.9rem; }
+label.field > span { display: block; font-weight: 500; margin-bottom: 0.3rem; }
+label.field .hint { font-weight: 400; color: var(--muted); }
+input[type="text"], input[type="search"], input[type="password"], input[type="url"], input[type="number"], select, textarea {
+  width: 100%; padding: 0.5rem 0.6rem; font: inherit;
+  border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--input-bg); color: var(--text);
+  transition: border-color 0.25s, box-shadow 0.25s var(--spring);
+}
+input[type="search"] { border-radius: var(--radius-pill); padding-inline: 1rem; }
+textarea { min-height: 90px; resize: vertical; }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+.input-row { display: flex; gap: 0.5rem; }
+.input-row input { flex: 1; }
+
+button, .btn {
+  font: inherit; padding: 0.5rem 1rem; border-radius: var(--radius-pill); cursor: pointer;
+  border: 1px solid var(--border); background: var(--panel); color: var(--text);
+  transition: transform 0.3s var(--spring), background 0.25s, border-color 0.25s, box-shadow 0.3s;
+}
+button:hover:not(:disabled) { border-color: var(--border-strong); background: var(--hover); transform: translateY(-1px); }
+button:active:not(:disabled) { transform: scale(0.97); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+a.btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+a.btn:hover { border-color: var(--border-strong); background: var(--hover); transform: translateY(-1px); }
+button.primary, a.btn.primary {
+  background: linear-gradient(135deg, var(--btn-from), var(--btn-to)); border-color: transparent; color: var(--on-btn);
+  font-weight: 600; box-shadow: 0 6px 18px var(--accent-soft);
+}
+button.primary:hover:not(:disabled), a.btn.primary:hover { background: linear-gradient(135deg, var(--btn-from), var(--btn-to)); box-shadow: 0 10px 26px var(--accent-border); }
+button.success { background: var(--ok); border-color: var(--ok); color: var(--on-ok); }
+button.success:hover:not(:disabled) { background: var(--ok); filter: brightness(1.08); }
+button.danger { color: var(--danger); border-color: var(--danger-border); }
+/* The confirming button of a destructive dialog. */
+button.danger.solid { background: linear-gradient(135deg, #ffaeae, #ea6b6b); border-color: transparent; color: #1a0b0b; font-weight: 600; }
+button.danger.solid:hover:not(:disabled) { background: linear-gradient(135deg, #ffaeae, #ea6b6b); box-shadow: 0 10px 24px var(--danger-soft); }
+button.sm { padding: 0.3rem 0.8rem; font-size: 12.5px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* badges ---------------------------------------------------------------------- */
+.badge {
+  display: inline-block; padding: 0.15rem 0.5rem; border-radius: 999px;
+  font-size: 11.5px; font-weight: 600; letter-spacing: 0.02em; white-space: nowrap;
+  background: var(--info-soft); color: var(--muted);
+}
+.badge.PENDING { background: var(--info-soft); color: var(--muted); }
+.badge.READY { background: var(--accent-soft); color: var(--accent); }
+.badge.RUNNING { background: var(--run-soft); color: var(--run); }
+.badge.WAITING_FOR_USER { background: var(--warn-soft); color: var(--warn); }
+.badge.WAITING_FOR_APPROVAL { background: var(--warn-soft); color: var(--warn); }
+.badge.COMPLETED { background: var(--ok-soft); color: var(--ok); }
+.badge.FAILED { background: var(--danger-soft); color: var(--danger); }
+.badge.SKIPPED, .badge.CANCELLED { background: var(--info-soft); color: var(--muted); }
+.badge.INTERRUPTED { background: var(--warn-soft); color: var(--warn); }
+.badge.ACTIVE { background: var(--run-soft); color: var(--run); }
+.badge.READY_FOR_PR, .badge.PR_CREATED, .badge.MERGED { background: var(--ok-soft); color: var(--ok); }
+.badge.NEEDS_HUMAN_REVIEW { background: var(--warn-soft); color: var(--warn); }
+.badge.LOW { background: var(--ok-soft); color: var(--ok); }
+.badge.MEDIUM { background: var(--warn-soft); color: var(--warn); }
+.badge.HIGH, .badge.CRITICAL { background: var(--danger-soft); color: var(--danger); }
+.badge.critical, .badge.high { background: var(--danger-soft); color: var(--danger); }
+.badge.medium { background: var(--warn-soft); color: var(--warn); }
+.badge.low, .badge.info { background: var(--info-soft); color: var(--muted); }
+
+/* A task's status as a pill with a dot, toned by statusTone() (taskPresentation.ts); the dot pulses
+   while the task is running or waiting on someone. */
+.status-pill {
+  display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.25rem 0.8rem; border-radius: var(--radius-pill);
+  font-size: 12px; font-weight: 600; white-space: nowrap; background: var(--info-soft); color: var(--muted);
+}
+.status-pill.running { background: var(--run-soft); color: var(--run); }
+.status-pill.attention { background: var(--warn-soft); color: var(--warn); }
+.status-pill.done { background: var(--ok-soft); color: var(--ok); }
+.status-pill.failed { background: var(--danger-soft); color: var(--danger); }
+.pulse-dot { position: relative; flex: none; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.status-pill.running .pulse-dot, .status-pill.attention .pulse-dot { animation: beat 1.6s ease-in-out infinite; }
+.status-pill.running .pulse-dot::after, .status-pill.attention .pulse-dot::after {
+  content: ""; position: absolute; inset: 0; border-radius: 50%; background: currentColor; animation: halo 1.6s var(--spring) infinite;
+}
+@keyframes beat { 0%, 100% { transform: scale(1); } 40% { transform: scale(1.25); } }
+@keyframes halo { 0% { transform: scale(1); opacity: 0.55; } 100% { transform: scale(3.2); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .pulse-dot, .pulse-dot::after { animation: none !important; } }
+
+/* A project's colour as a dot (--dot: projectColor(), projects.ts); a hollow ring for "No project". */
+.project-dot { flex: none; display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--dot, transparent); }
+.project-dot.none { box-shadow: inset 0 0 0 1.5px var(--border-strong); }
+.project-tag { display: inline-flex; align-items: center; gap: 0.4rem; min-width: 0; }
+
+.alert { padding: 0.7rem 1rem; border-radius: var(--radius-md); border: 1px solid; margin-bottom: 0.75rem; }
+.alert.error { background: var(--danger-soft); border-color: var(--danger-border); color: var(--danger); }
+.alert.warn { background: var(--warn-soft); border-color: var(--warn-border); color: var(--warn); }
+.alert.ok { background: var(--ok-soft); border-color: var(--ok-border); color: var(--ok); }
+.alert.info { background: var(--accent-soft); border-color: var(--accent-border); color: var(--accent-strong); }
+
+.check-list { list-style: none; padding: 0; margin: 0.4rem 0 0; }
+.check-list li { padding: 0.15rem 0; }
+.check-list li.ok::before { content: "✓ "; color: var(--ok); font-weight: 700; }
+.check-list li.bad::before { content: "✗ "; color: var(--danger); font-weight: 700; }
+
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 12.5px; }
+tr.clickable { cursor: pointer; }
+tr.clickable:hover td { background: var(--hover); }
+
+/* workflow canvas ------------------------------------------------------------- */
+/* The header, notices and canvas together fill the window, less a strip at the bottom where the
+   cards below peek above the fold; the canvas takes whatever height the header and notices leave.
+   A fixed canvas height ignored them, pushing the canvas's bottom edge (and its minimap) below the
+   fold and off-centring the camera's vertical framing. min-height, not height, so tall notices
+   push the cards down rather than overlap them. (1.5rem is .page's top padding.) */
+.task-fold {
+  --peek: 4rem;
+  display: flex; flex-direction: column;
+  min-height: calc(100vh - 1.5rem - var(--peek));
+  min-height: calc(100dvh - 1.5rem - var(--peek));
+}
+.task-layout {
+  display: grid; grid-template-columns: minmax(0, 1fr) 450px; gap: 1rem; flex: 1 0 520px;
+  transition: grid-template-columns 0.45s var(--spring), column-gap 0.45s var(--spring);
+}
+.task-layout .side { min-width: 0; transition: opacity 0.3s; }
+.task-layout .side > .panel { min-width: 450px; }
+/* Collapsed: the side panel gives its column back to the canvas. */
+.task-layout.side-collapsed { grid-template-columns: minmax(0, 1fr) 0; column-gap: 0; }
+.task-layout.side-collapsed .side { opacity: 0; visibility: hidden; pointer-events: none; overflow: hidden; transition: opacity 0.2s, visibility 0s 0.45s; }
+@media (max-width: 1100px) {
+  /* The side panel stacks under the canvas, so the canvas keeps its own height instead. */
+  .task-fold { min-height: 0; }
+  .task-layout, .task-layout.side-collapsed { grid-template-columns: 1fr; flex: none; }
+  .task-layout .canvas-wrap { height: clamp(520px, 72vh, 820px); }
+  .task-layout.side-collapsed .side { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .task-layout, .task-layout .side { transition: none; } }
+/* Budget, evidence and PR tracking sit under the canvas as a responsive row of cards. */
+.task-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: 1rem; align-items: start; margin-top: 1rem; }
+.task-strip > .panel { margin-bottom: 0; }
+.strip-card { transition: transform 0.35s var(--spring), border-color 0.3s, box-shadow 0.35s; }
+.strip-card:hover { transform: translateY(-4px); border-color: var(--accent-border); box-shadow: var(--elev); }
+.strip-card h2 { margin: 0; font-size: 15px; }
+.strip-card p { font-size: 13px; line-height: 1.5; }
+@media (prefers-reduced-motion: reduce) { .strip-card { transition: none; } .strip-card:hover { transform: none; } }
+button.active { color: var(--accent-strong); background: var(--accent-soft); border-color: var(--accent-border); }
+/* The canvas is dark in both themes (it carries .theme-dark), so the black node cards always
+   float on a near-black ground. Set here, after tokens.css, so it wins over the shared dark --panel. */
+.canvas-wrap {
+  --panel: #0a0a09;
+  color: var(--text); color-scheme: dark;
+  background: radial-gradient(120% 90% at 50% -10%, var(--canvas-glow), transparent 65%), var(--panel);
+  border: 1px solid var(--border); border-radius: var(--radius-lg); min-height: 520px; position: relative; overflow: hidden;
+  isolation: isolate;
+}
+/* Hidden until WorkflowCanvas.vue lands its first camera frame, so the graph never flashes at
+   vue-flow's default viewport before jumping to the focused node. */
+.canvas-wrap--unframed .vue-flow__transformationpane { visibility: hidden; }
+.canvas-actions { display: flex; gap: 0.4rem; }
+/* Minimap: state-coloured blocks, so where the live node sits in the whole workflow reads at a
+   glance while the camera is zoomed in on it. (styles.css loads before the vue-flow sheets, hence
+   the doubled class.) */
+.vue-flow__minimap.wf-minimap {
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden;
+  box-shadow: 0 2px 6px var(--shadow-1);
+}
+.wf-minimap .vue-flow__minimap-mask {
+  fill: var(--bg); fill-opacity: 0.65; stroke: var(--accent); stroke-width: 1.5px; vector-effect: non-scaling-stroke;
+}
+.wf-minimap .wf-minimap-node { fill: var(--border-strong); }
+.wf-minimap .wf-minimap-node.READY { fill: var(--accent); }
+.wf-minimap .wf-minimap-node.RUNNING { fill: var(--run); }
+.wf-minimap .wf-minimap-node.WAITING_FOR_USER,
+.wf-minimap .wf-minimap-node.WAITING_FOR_APPROVAL { fill: var(--warn); }
+.wf-minimap .wf-minimap-node.FAILED,
+.wf-minimap .wf-minimap-node.INTERRUPTED { fill: var(--danger); }
+.wf-minimap .wf-minimap-node.COMPLETED { fill: var(--ok); }
+
+/* Agent questions (QuestionModal.vue) cover the canvas until answered; the side panel and the
+   terminal drawer stay usable so the user can look things up before replying. */
+.question-overlay {
+  position: absolute; inset: 0; z-index: 10; display: grid; place-items: center; padding: 1rem;
+  background: rgb(28 27 23 / 28%); backdrop-filter: blur(3px);
+}
+:root[data-theme="dark"] .question-overlay { background: rgb(0 0 0 / 55%); }
+.question-dialog {
+  width: min(1140px, 100%); max-height: 100%; overflow: auto; box-sizing: border-box;
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 20px 26px 16px; box-shadow: 0 24px 60px var(--shadow-1);
+  display: flex; flex-direction: column; gap: 0.75rem;
+  animation: question-dialog-in 0.45s var(--spring) both;
+}
+.question-dialog__head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.question-dialog__head h3 { margin: 0; font-size: 16px; }
+.question-pager { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; }
+.question-dots { display: flex; gap: 5px; align-items: center; }
+.question-dot { width: 7px; height: 7px; border-radius: 4px; background: var(--border-strong); transition: width 0.35s var(--spring), background 0.35s; }
+.question-dot.on { width: 18px; background: var(--text); }
+.question-dot.done { background: var(--ok); }
+.question-dialog .dc-foot { border-top: 1px solid var(--border); padding-top: 12px; }
+@keyframes question-dialog-in { from { opacity: 0; transform: scale(0.97) translateY(10px); } to { opacity: 1; transform: none; } }
+.question-overlay-enter-active, .question-overlay-leave-active { transition: opacity 0.38s ease; }
+.question-overlay-leave-active .question-dialog { transition: opacity 0.38s ease, transform 0.38s var(--spring); }
+.question-overlay-enter-from, .question-overlay-leave-to { opacity: 0; }
+.question-overlay-leave-to .question-dialog { opacity: 0; transform: scale(0.97) translateY(6px); }
+@media (prefers-reduced-motion: reduce) {
+  .question-dialog { animation: none; }
+  .question-dot { transition: none; }
+  .question-overlay-leave-active .question-dialog { transform: none; }
+}
+.side { overflow: auto; }
+
+/* Running edges (".wf-edge-flow", set in WorkflowCanvas.vue): short dashes travel along the
+   rendered path itself via stroke-dashoffset, so it stays correct on any edge shape — the
+   straight spine, a diagonal branch into/out of a review node, or the curved loop-back — unlike
+   a fixed-axis gradient, which only lines up on a perfectly horizontal path. */
+.vue-flow__edge.wf-edge-flow .vue-flow__edge-path {
+  stroke-dasharray: 7 11;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 3px var(--edge-flow-light)) drop-shadow(0 0 6px var(--edge-flow-mid));
+  animation: wf-edge-flow-dash 0.85s linear infinite;
+}
+@keyframes wf-edge-flow-dash { to { stroke-dashoffset: -36px; } }
+
+/* Nodes always render with a fixed black-card palette internally, regardless of the app theme, so
+   they read as black cards floating on the canvas (which follows the theme itself). Text/border/
+   status colors below are the light-on-black side of that pairing, not the app's dark theme
+   (which is tuned for a dark-gray panel, not true black). */
+.wf-node {
+  --bg: #000000;
+  --panel: #1a1a1a;
+  --border: #3a3a3a;
+  --border-strong: #55555a;
+  --hover: #26262b;
+  --text: #f5f5f7;
+  --muted: #a8adb8;
+  --accent: #c6f04a;
+  --accent-hover: #d6f56f;
+  --accent-soft: rgba(198, 241, 74, 0.16);
+  --accent-border: rgba(198, 241, 74, 0.45);
+  --accent-strong: #dcf77a;
+  --accent-glow: rgba(198, 241, 74, 0.5);
+  --on-ok: #0e0e0c;
+  --ok: #3ec9a7;
+  --ok-soft: rgba(62, 201, 167, 0.16);
+  --ok-border: rgba(62, 201, 167, 0.45);
+  --warn: #f0b04a;
+  --warn-soft: rgba(240, 176, 74, 0.16);
+  --warn-border: rgba(240, 176, 74, 0.45);
+  --warn-glow: #ffce8a;
+  --danger: #ef6b63;
+  --danger-soft: rgba(239, 107, 99, 0.16);
+  --danger-border: rgba(239, 107, 99, 0.45);
+  --danger-glow: #ff9e9e;
+  --run: #c6f04a;
+  --run-soft: rgba(198, 241, 74, 0.16);
+  --run-glow: #dcf77a;
+  --run-purple: #3ec9a7;
+  --run-red: #f0b04a;
+  --info-soft: #1a1a1a;
+  --shadow-1: rgba(0, 0, 0, 0.6);
+  --shadow-2: rgba(0, 0, 0, 0.4);
+  /* System fonts, as before the app moved to Inter: the 262px cards are laid out for them. */
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+/* Shadow is composed from two layers so the selection ring and elevation stack independently. */
+.wf-node {
+  --ring: 0 0 0 0 transparent;
+  --elev: 0 2px 6px var(--shadow-1), 0 1px 2px var(--shadow-2);
+  /* Border width, also read by the footer to fit its corners inside the border. */
+  --bw: 1.5px;
+  width: 262px; background: var(--panel); border: var(--bw) solid var(--border); border-radius: var(--radius-lg);
+  font-size: 12.5px; box-shadow: var(--ring), var(--elev);
+}
+.wf-node .wf-body { padding: 0.85rem 1rem 0.65rem; }
+/* Selected: a crisp ring plus a soft blurred glow around it, so it reads clearly even next to a
+   running node's own animated border. */
+.wf-node.selected { --ring: 0 0 0 3px var(--accent-soft), 0 0 20px 4px var(--accent-glow); border-color: var(--accent); }
+/* Running / waiting-for-user: a conic gradient sweeps around the border (angle animated via a
+   registered property), plus a raised, tinted elevation. Colour-only motion, so it is kept under
+   prefers-reduced-motion. */
+@property --wf-angle { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+/* RUNNING cycles through blue/purple/red for extra visibility instead of a single hue. */
+.wf-node.RUNNING {
+  --elev: 0 10px 26px rgba(198,241,74,0.26), 0 3px 8px var(--shadow-1);
+  /* Whole px: Chrome floors fractional border widths, so 2.5px would draw as 2px. */
+  border-color: transparent; --bw: 3px; border-width: var(--bw);
+  background:
+    linear-gradient(var(--panel), var(--panel)) padding-box,
+    conic-gradient(from var(--wf-angle),
+      var(--run) 0deg, var(--run-purple) 60deg, var(--run-red) 120deg,
+      var(--run) 180deg, var(--run-purple) 240deg, var(--run-red) 300deg,
+      var(--run) 360deg) border-box;
+  animation: wf-node-running 2.4s linear infinite;
+}
+/* Waiting for a human: same animated-border technique as RUNNING, in a red hue so it reads as
+   "needs you", distinct from the blue "in progress" running state. */
+.wf-node.WAITING_FOR_USER {
+  --elev: 0 10px 24px rgba(234,107,107,0.35), 0 3px 8px var(--shadow-1);
+  border-color: transparent; --bw: 3px; border-width: var(--bw);
+  background:
+    linear-gradient(var(--panel), var(--panel)) padding-box,
+    conic-gradient(from var(--wf-angle), var(--danger) 0deg, var(--danger-glow) 90deg, var(--danger) 180deg, var(--danger-glow) 270deg, var(--danger) 360deg) border-box;
+  animation: wf-node-running 2.4s linear infinite;
+}
+@keyframes wf-node-running { to { --wf-angle: 360deg; } }
+/* Waiting for approval is a stronger ask than waiting-for-user (a gate that blocks the whole
+   run): same spinning-border technique, but in orange with a pulsing glow layered on top so it
+   stands out from both the red "needs a reply" and blue "in progress" states. */
+.wf-node.WAITING_FOR_APPROVAL {
+  --elev: 0 10px 24px rgba(230,171,74,0.35), 0 3px 8px var(--shadow-1);
+  border-color: transparent; --bw: 3px; border-width: var(--bw);
+  background:
+    linear-gradient(var(--panel), var(--panel)) padding-box,
+    conic-gradient(from var(--wf-angle), var(--warn) 0deg, var(--warn-glow) 90deg, var(--warn) 180deg, var(--warn-glow) 270deg, var(--warn) 360deg) border-box;
+  animation: wf-node-running 2.4s linear infinite, wf-node-approval-pulse 1.6s ease-in-out infinite;
+}
+@keyframes wf-node-approval-pulse {
+  0%, 100% { box-shadow: var(--ring), 0 0 0 0 rgba(230, 171, 74, 0.6), var(--elev); }
+  50% { box-shadow: var(--ring), 0 0 24px 8px rgba(230, 171, 74, 0.75), var(--elev); }
+}
+/* Failed: same spinning-border technique in red, plus a pulsing red glow so a failure keeps
+   demanding attention rather than sitting as a static border color. */
+.wf-node.FAILED {
+  --elev: 0 10px 24px rgba(234,107,107,0.35), 0 3px 8px var(--shadow-1);
+  border-color: transparent; --bw: 3px; border-width: var(--bw);
+  background:
+    linear-gradient(var(--panel), var(--panel)) padding-box,
+    conic-gradient(from var(--wf-angle), var(--danger) 0deg, var(--danger-glow) 90deg, var(--danger) 180deg, var(--danger-glow) 270deg, var(--danger) 360deg) border-box;
+  animation: wf-node-running 2.4s linear infinite, wf-node-failed-pulse 1.6s ease-in-out infinite;
+}
+@keyframes wf-node-failed-pulse {
+  0%, 100% { box-shadow: var(--ring), 0 0 0 0 rgba(234, 107, 107, 0.6), var(--elev); }
+  50% { box-shadow: var(--ring), 0 0 24px 8px rgba(234, 107, 107, 0.75), var(--elev); }
+}
+/* Ready to run: a pulsing green glow invites action without the busy sweep of RUNNING. */
+.wf-node.READY {
+  border-color: var(--ok);
+  animation: wf-node-ready-pulse 2s ease-in-out infinite;
+}
+@keyframes wf-node-ready-pulse {
+  0%, 100% { box-shadow: var(--ring), 0 0 0 0 rgba(63, 207, 142, 0.55), var(--elev); }
+  50% { box-shadow: var(--ring), 0 0 16px 5px rgba(63, 207, 142, 0.65), var(--elev); }
+}
+.wf-node.COMPLETED { border-color: var(--ok); }
+.wf-node.INTERRUPTED { border-color: var(--warn); border-style: dashed; }
+/* Not-yet-reachable / terminal-inactive nodes are de-emphasized and sit flat (no elevation). */
+.wf-node.PENDING, .wf-node.SKIPPED, .wf-node.CANCELLED { --elev: 0 0 0 0 transparent; opacity: 0.85; border-style: dashed; }
+.wf-node.PENDING .title, .wf-node.SKIPPED .title, .wf-node.CANCELLED .title { color: var(--muted); }
+.wf-node .head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+.wf-node .harness-logo {
+  width: 26px; height: 26px; border-radius: 10px; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.wf-node .harness-logo.gate { background: var(--warn-soft); color: var(--warn-glow); }
+.wf-node .titles { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.wf-node .title {
+  font-weight: 600; font-size: 13px; color: var(--text);
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.wf-node .subtitle { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wf-node .subtitle .badge { margin-left: 4px; }
+.wf-node .badge { flex-shrink: 0; }
+.wf-node .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.wf-node .chip {
+  font-size: 11px; padding: 2px 9px; border-radius: var(--radius-pill);
+  background: #26262b; border: 1px solid #333338; color: #d6d9e0;
+}
+.wf-node .chip.mono { font-family: var(--mono); }
+.wf-node .chip.warn { background: var(--warn-soft); border-color: var(--warn-border); color: var(--warn-glow); }
+.wf-node .chip.danger { background: var(--danger-soft); border-color: var(--danger-border); color: var(--danger-glow); }
+.wf-node .wf-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+  padding: 0.5rem 1rem 0.55rem; background: #121214; border-top: 1px solid #2c2c31;
+  border-radius: 0 0 calc(var(--radius-lg) - var(--bw)) calc(var(--radius-lg) - var(--bw));
+  font-family: var(--mono); font-size: 11.5px; color: #d6d9e0; white-space: nowrap;
+}
+.wf-node .wf-foot .elapsed { display: inline-flex; align-items: center; gap: 0.35rem; }
+.wf-node .wf-foot .cost { overflow: hidden; text-overflow: ellipsis; }
+.wf-node .wf-foot .dim { color: var(--muted); }
+.wf-node .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--run); animation: wf-live-dot 1.4s ease-in-out infinite; }
+@keyframes wf-live-dot { 50% { opacity: 0.35; } }
+.wf-node .actions { display: flex; gap: 0.35rem; margin-top: 0.5rem; flex-wrap: wrap; }
+.wf-node .input-required {
+  margin-top: 0.4rem; padding: 0.3rem 0.5rem; border-radius: var(--radius-sm);
+  background: var(--warn-soft); color: var(--warn); font-weight: 600;
+}
+.wf-node .message { margin-top: 0.35rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+
+.event-log { max-height: 320px; overflow: auto; font-size: 12.5px; }
+.event-log .ev { display: grid; grid-template-columns: 62px 1fr; gap: 0.5rem; padding: 0.2rem 0; border-bottom: 1px dashed var(--border); }
+.event-log .ev.error { color: var(--danger); }
+.event-log .ev.warning { color: var(--warn); }
+.event-log time { color: var(--muted); font-family: var(--mono); font-size: 11.5px; }
+
+.finding { border: 1px solid var(--border); border-radius: var(--radius-md); padding: 0.5rem 0.7rem; margin-bottom: 0.5rem; }
+.finding .head { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+.finding .loc { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.finding.resolved, .finding.accepted { opacity: 0.65; }
+
+.picker { border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--panel); }
+.picker .crumb { padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border); display: flex; gap: 0.5rem; align-items: center; font-family: var(--mono); font-size: 12px; }
+.picker ul { list-style: none; margin: 0; padding: 0; max-height: 260px; overflow: auto; }
+.picker li { padding: 0.35rem 0.7rem; cursor: pointer; display: flex; justify-content: space-between; }
+.picker li:hover { background: var(--hover); }
+.picker .footer { padding: 0.5rem 0.6rem; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 0.5rem; }
+
+.jira-results-panel {
+  position: absolute; z-index: 5; top: 100%; left: 0; right: 0; margin-top: 4px;
+  border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--panel); box-shadow: var(--elev);
+}
+.jira-results { list-style: none; padding: 0; margin: 0; max-height: 220px; overflow: auto; }
+.jira-results li { padding: 0.35rem 0.7rem; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; }
+.jira-results li:not(.jira-section-label):hover, .jira-results li.active { background: var(--hover); }
+.jira-results .jira-section-label {
+  cursor: default; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--muted); padding: 0.3rem 0.7rem 0.15rem; background: none;
+}
+.jira-results .jira-icon { width: 14px; height: 14px; flex: none; }
+.jira-status { margin: 0; padding: 0.4rem 0.7rem; }
+.jira-status-error { color: var(--danger); }
+
+.tabs { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.9rem; }
+.tabs button { border: none; background: var(--info-soft); padding: 0.4rem 0.9rem; color: var(--muted); }
+.tabs button:hover:not(:disabled) { color: var(--text); background: var(--hover); }
+.tabs button.active { color: var(--accent-strong); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent-border); }
+
+.md { font-size: 13px; line-height: 1.55; }
+.md > *:first-child { margin-top: 0; }
+.md > *:last-child { margin-bottom: 0; }
+.md h1, .md h2, .md h3, .md h4, .md h5, .md h6 { margin: 0.9em 0 0.35em; line-height: 1.3; }
+.md h1 { font-size: 1.25em; }
+.md h2 { font-size: 1.15em; }
+.md h3 { font-size: 1.05em; }
+.md h4, .md h5, .md h6 { font-size: 1em; }
+.md p { margin: 0.5em 0; }
+.md ul, .md ol { margin: 0.4em 0; padding-left: 1.4em; }
+.md li { margin: 0.15em 0; }
+.md li > p { margin: 0.2em 0; }
+.md a { color: var(--accent); }
+.md code { font-family: var(--mono); font-size: 0.9em; background: var(--hover); border: 1px solid var(--border); border-radius: 4px; padding: 0.1em 0.35em; }
+.md pre { font-family: var(--mono); font-size: 0.9em; background: var(--hover); border: 1px solid var(--border); border-radius: 6px; padding: 0.6em 0.75em; overflow-x: auto; margin: 0.5em 0; }
+.md pre code { background: none; border: none; padding: 0; }
+.md blockquote { margin: 0.5em 0; padding: 0.1em 0.9em; border-left: 3px solid var(--border-strong); color: var(--muted); }
+.md table { border-collapse: collapse; margin: 0.5em 0; font-size: 0.95em; }
+.md th, .md td { border: 1px solid var(--border); padding: 0.3em 0.6em; text-align: left; }
+.md th { background: var(--hover); }
+.md hr { border: none; border-top: 1px solid var(--border); margin: 0.8em 0; }
+.md img { max-width: 100%; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 0.35rem; }
+.dot.on { background: var(--ok); }
+.dot.off { background: var(--danger); }

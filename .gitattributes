@@ -1,0 +1,4 @@
+# bash fails on CRLF line endings, which core.autocrlf would give shell scripts on Windows.
+*.sh text eol=lf
+# Exact bytes Python wrote (line endings included); never convert them.
+contract/golden/workspace/** -text

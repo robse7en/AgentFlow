@@ -1,0 +1,392 @@
+{
+  "additionalContext": "str",
+  "agentOverrides": {},
+  "approvedRequirements": {
+    "acceptanceCriteria": "str",
+    "assumptions": "str",
+    "implementationPlan": "str",
+    "requirements": "str",
+    "risks": "str"
+  },
+  "archivedAt": "null",
+  "assessment": {
+    "complexity": "str",
+    "complexityScore": "number",
+    "filesAffected": [],
+    "finalSha": "str",
+    "fixesMade": "null",
+    "humanReviewRecommendation": "str",
+    "implementationPerformed": "null",
+    "keyFindings": [],
+    "knownLimitations": [],
+    "originalScope": "null",
+    "outstandingUncertainty": [],
+    "overallRisk": "str",
+    "regressionRisk": "str",
+    "requirementsVerified": "bool",
+    "reviewFindings": "null",
+    "reviewIterations": "number",
+    "riskFactors": [],
+    "securityRisk": "str",
+    "status": "str",
+    "taskSummary": "str",
+    "testsPerformed": "str"
+  },
+  "assessmentMarkdown": "str",
+  "attention": [
+    {
+      "action": "str",
+      "label": "str",
+      "nodeKey": "str",
+      "questions": "number",
+      "since": "str",
+      "state": "str"
+    }
+  ],
+  "baseBranch": "str",
+  "blockers": [],
+  "branchName": "str",
+  "budget": {
+    "daily": {
+      "knownUsd": "number",
+      "limitUsd": "null",
+      "reservedUsd": "number",
+      "unknownRuns": "number",
+      "warning": "bool"
+    },
+    "dayUtc": "str",
+    "launchReserveUsd": "number",
+    "task": {
+      "knownUsd": "number",
+      "limitUsd": "null",
+      "reservedUsd": "number",
+      "unknownRuns": "number",
+      "warning": "bool"
+    },
+    "warningPercent": "number"
+  },
+  "createdAt": "str",
+  "currentSha": "str",
+  "edges": [
+    {
+      "source": "str",
+      "target": "str"
+    }
+  ],
+  "events": [
+    {
+      "data": {
+        "anyOf": [
+          {
+            "baseBranch": "str",
+            "harness": "str",
+            "repository": "str",
+            "requestedModel": "null",
+            "sha": "str"
+          },
+          "null"
+        ]
+      },
+      "id": "number",
+      "level": "str",
+      "message": "str",
+      "nodeKey": "null|str",
+      "timestamp": "str"
+    }
+  ],
+  "executionEvidence": [
+    {
+      "billingMode": "str",
+      "confirmedModel": "null",
+      "durationSeconds": "number",
+      "iteration": "number",
+      "nodeKey": "str",
+      "requestedModel": "null",
+      "runId": "number",
+      "usage": "null",
+      "verification": {
+        "anyOf": [
+          {
+            "commands": [
+              {
+                "command": [
+                  "str"
+                ],
+                "exitCode": "number",
+                "output": "str"
+              }
+            ],
+            "passed": "bool",
+            "sha": "str"
+          },
+          "null"
+        ]
+      }
+    }
+  ],
+  "findings": [
+    {
+      "blocking": "bool",
+      "createdAt": "str",
+      "dbId": "number",
+      "description": "str",
+      "file": "str",
+      "id": "str",
+      "iteration": "number",
+      "line": "number",
+      "occurrence": "number",
+      "recommendation": "str",
+      "resolution": "str",
+      "resolvedAt": "str",
+      "response": "str",
+      "responseNote": "str",
+      "reviewedSha": "str",
+      "severity": "str",
+      "status": "str",
+      "title": "str",
+      "type": "str"
+    }
+  ],
+  "harnessCwd": "str",
+  "jiraKey": "str",
+  "jiraTitle": "null",
+  "maxRequirementsRevisions": "number",
+  "maxReviewIterations": "number",
+  "mergedAt": "null",
+  "nodes": [
+    {
+      "blockingCount": "number",
+      "checkpointSha": "null|str",
+      "configOverride": {},
+      "description": "str",
+      "displayState": "str",
+      "effectiveConfig": {
+        "anyOf": [
+          {
+            "billingMode": "str",
+            "harness": "str",
+            "harnessAvailable": "bool",
+            "harnessDisplayName": "str",
+            "model": "null",
+            "reasoning": "str",
+            "requiresMeteredApproval": "bool",
+            "routingReason": "str"
+          },
+          "null"
+        ]
+      },
+      "error": "null",
+      "executionMode": "str",
+      "findingsCount": "number",
+      "iteration": "number",
+      "key": "str",
+      "kind": "str",
+      "label": "str",
+      "lastRun": {
+        "anyOf": [
+          {
+            "completedAt": "str",
+            "error": "null",
+            "exitCode": "null",
+            "harness": "str",
+            "heartbeat": {
+              "observedAt": "str",
+              "phase": "null",
+              "receivedAt": "null",
+              "warningSeconds": "number",
+              "warningSince": "str"
+            },
+            "id": "number",
+            "model": "null",
+            "promptPath": "str",
+            "reasoning": "str",
+            "result": {
+              "affectedComponents": [
+                "str"
+              ],
+              "assumptions": [],
+              "checkpointSha": "null",
+              "complexity": "str",
+              "complexityScore": "number",
+              "filesAffected": [],
+              "filesChanged": [
+                "str"
+              ],
+              "finalSha": "str",
+              "findingResponses": [
+                {
+                  "action": "str",
+                  "id": "str",
+                  "rationale": "str"
+                }
+              ],
+              "findings": [],
+              "fixesMade": "null",
+              "humanReviewRecommendation": "str",
+              "implementationPerformed": "null",
+              "keyFindings": [],
+              "knownIssues": [],
+              "knownLimitations": [],
+              "openQuestions": [],
+              "originalScope": "null",
+              "outstandingUncertainty": [],
+              "overallRisk": "str",
+              "priorFindings": [
+                {
+                  "evidence": "str",
+                  "id": "str",
+                  "status": "str"
+                }
+              ],
+              "regressionRisk": "str",
+              "requirementsVerified": "bool",
+              "reviewFindings": "null",
+              "reviewIterations": "number",
+              "reviewedSha": "str",
+              "riskFactors": [],
+              "risks": [],
+              "securityRisk": "str",
+              "status": "str",
+              "summary": "str",
+              "taskSummary": "str",
+              "tests": {
+                "executed": "number",
+                "failed": "number",
+                "notes": "null",
+                "passed": "number"
+              },
+              "testsPerformed": "str",
+              "verdict": "str"
+            },
+            "resultPath": "str",
+            "runDir": "str",
+            "runNumber": "number",
+            "startedAt": "str",
+            "state": "str"
+          },
+          "null"
+        ]
+      },
+      "message": "str",
+      "openQuestions": "number",
+      "role": "null|str",
+      "runCount": "number",
+      "state": "str",
+      "usage": {
+        "anyOf": [
+          {
+            "apiCostUsd": "number",
+            "billedCostUsd": "null",
+            "cachedInputTokens": "number",
+            "costUsd": "null",
+            "estimatedCostUsd": "null",
+            "inputTokens": "number",
+            "meteredRuns": "number",
+            "meteredRunsWithCost": "number",
+            "outputTokens": "number",
+            "runs": "number",
+            "runsWithBilledCost": "number",
+            "runsWithCost": "number",
+            "runsWithEstimatedCost": "number",
+            "runsWithTokens": "number",
+            "runsWithUsage": "number",
+            "subscriptionRuns": "number",
+            "totalTokens": "number",
+            "unknownBillingRuns": "number"
+          },
+          "null"
+        ]
+      },
+      "worker": "null"
+    }
+  ],
+  "phase": "str",
+  "prBaseBranch": "null",
+  "prCreatedAt": "null",
+  "prSyncPaused": "bool",
+  "prUrl": "null",
+  "projectId": "null",
+  "projectRelativePath": "str",
+  "questions": [
+    {
+      "actionable": "bool",
+      "answer": "str",
+      "answered": "bool",
+      "answeredAt": "str",
+      "choices": [],
+      "createdAt": "str",
+      "decision": "null",
+      "message": "str",
+      "nodeKey": "str",
+      "role": "str",
+      "runId": "number",
+      "uid": "str"
+    }
+  ],
+  "repositoryRoot": "str",
+  "requirements": {
+    "acceptanceCriteria": "str",
+    "assumptions": "str",
+    "implementationPlan": "str",
+    "requirements": "str",
+    "risks": "str"
+  },
+  "requirementsDigest": "str",
+  "requirementsDraftDigest": "str",
+  "requirementsFeedback": [],
+  "reviewIteration": "number",
+  "sessions": [
+    {
+      "activity": "str",
+      "endedAt": "null|str",
+      "harness": "str",
+      "harnessSessionId": "null",
+      "id": "number",
+      "model": "null",
+      "nodeKey": "str",
+      "paneId": "str",
+      "reasoning": "str",
+      "role": "str",
+      "screenState": "null|str",
+      "screenStateAt": "str",
+      "startedAt": "str",
+      "status": "str",
+      "tabId": "number",
+      "tabName": "str"
+    }
+  ],
+  "status": "str",
+  "statusMessage": "null",
+  "taskDir": "str",
+  "taskSource": "str",
+  "totalUsage": {
+    "apiCostUsd": "number",
+    "billedCostUsd": "null",
+    "cachedInputTokens": "number",
+    "costUsd": "null",
+    "estimatedCostUsd": "null",
+    "inputTokens": "number",
+    "meteredRuns": "number",
+    "meteredRunsWithCost": "number",
+    "outputTokens": "number",
+    "runs": "number",
+    "runsWithBilledCost": "number",
+    "runsWithCost": "number",
+    "runsWithEstimatedCost": "number",
+    "runsWithTokens": "number",
+    "runsWithUsage": "number",
+    "subscriptionRuns": "number",
+    "totalTokens": "number",
+    "unknownBillingRuns": "number"
+  },
+  "updatedAt": "str",
+  "workerWorktreeCount": "null",
+  "worktreeExists": "null",
+  "worktreePath": "str",
+  "zellij": {
+    "attachCommand": "str",
+    "session": "str",
+    "webUrl": "null"
+  },
+  "zellijSession": "str"
+}

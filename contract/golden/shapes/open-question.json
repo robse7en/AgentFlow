@@ -1,0 +1,44 @@
+{
+  "actionable": "bool",
+  "answer": "null",
+  "answered": "bool",
+  "answeredAt": "null",
+  "choices": [
+    "str"
+  ],
+  "createdAt": "str",
+  "decision": {
+    "choices": [
+      {
+        "followUp": {
+          "choices": [
+            {
+              "detail": "str",
+              "label": "str",
+              "note": "str",
+              "recommended": "bool",
+              "source": "str",
+              "warning": "str"
+            }
+          ],
+          "message": "str"
+        },
+        "label": "str",
+        "recommended": "bool",
+        "warning": "str"
+      }
+    ],
+    "context": "str",
+    "risk": "str"
+  },
+  "harness": "str",
+  "jiraKey": "str",
+  "jiraTitle": "null",
+  "message": "str",
+  "model": "null",
+  "nodeKey": "str",
+  "nodeLabel": "str",
+  "role": "str",
+  "runId": "number",
+  "uid": "str"
+}

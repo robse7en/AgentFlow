@@ -1,0 +1,40 @@
+{
+  "archivedAt": "null",
+  "attention": [
+    {
+      "action": "str",
+      "label": "str",
+      "nodeKey": "str",
+      "questions": "number",
+      "since": "str",
+      "state": "str"
+    }
+  ],
+  "baseBranch": "str",
+  "branchName": "str",
+  "createdAt": "str",
+  "currentSha": "null",
+  "jiraKey": "str",
+  "jiraTitle": "null",
+  "maxRequirementsRevisions": "number",
+  "maxReviewIterations": "number",
+  "mergedAt": "null",
+  "phase": "str",
+  "prBaseBranch": "null",
+  "prCreatedAt": "null",
+  "prSyncPaused": "bool",
+  "prUrl": "null",
+  "projectId": "null",
+  "projectRelativePath": "null",
+  "repositoryRoot": "str",
+  "reviewIteration": "number",
+  "status": "str",
+  "statusMessage": "null",
+  "taskSource": "str",
+  "totalUsage": "null",
+  "updatedAt": "str",
+  "workerWorktreeCount": "null",
+  "worktreeExists": "null",
+  "worktreePath": "str",
+  "zellijSession": "str"
+}

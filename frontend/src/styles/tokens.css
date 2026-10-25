@@ -1,0 +1,114 @@
+/* Design tokens. Light is the default; dark is applied through <html data-theme="dark">, which the
+   inline script in index.html and useTheme() keep in sync. Components only read these variables. */
+:root {
+  --bg: #f4f2ec;
+  --panel: #ffffff;
+  --input-bg: #ffffff;
+  --border: #e0dccf;
+  --border-strong: #c9c4b4;
+  --hover: #f1eee5;
+  --text: #1c1b17;
+  --muted: #6b675a;
+  --accent: #4f7a00;
+  --accent-hover: #3f6200;
+  --accent-soft: #eef3dc;
+  --accent-border: #cddba0;
+  --accent-strong: #3a5a00;
+  --btn-from: #dcf77a;
+  --btn-to: #a8d93a;
+  --on-btn: #0e0e0c;
+  --on-ok: #ffffff;
+  /* --ok, --warn and --run are also text colours on their -soft backgrounds (badges, pills,
+     alerts), so each keeps at least 4.5:1 against it. */
+  --ok: #0b7560;
+  --ok-soft: #dff3ee;
+  --ok-border: #a9dccf;
+  --warn: #8f5500;
+  --warn-soft: #fff2dc;
+  --warn-border: #f0d49c;
+  --danger: #c4372f;
+  --danger-soft: #fdecea;
+  --danger-border: #f0b9b4;
+  --run: #436800;
+  --run-soft: #eef3dc;
+  --run-glow: #9fc83a;
+  /* Edge flow-animation colours (the ".wf-edge-flow" dash animation) — a fixed grey/white pair,
+     independent of the theme. */
+  --edge-flow-mid: #9a9a9a;
+  --edge-flow-light: #f5f5f5;
+  --info-soft: #efece3;
+  --shadow-1: rgba(70, 60, 30, 0.12);
+  --shadow-2: rgba(70, 60, 30, 0.07);
+  --canvas-glow: rgba(79, 122, 0, 0.08);
+  /* Soft corner glows behind the whole page. */
+  --page-glow-accent: rgba(92, 122, 10, 0.16);
+  --page-glow-warn: rgba(179, 107, 0, 0.07);
+  /* Project colours, by the names the backend stores (workflow/projects.py PROJECT_COLORS). */
+  --project-blue: #2f6fb3;
+  --project-purple: #8a4fb0;
+  --project-orange: #b8641a;
+  --project-teal: #0b7560;
+  --project-green: #4f7a00;
+  --project-red: #c4372f;
+  --project-pink: #b8407a;
+  --project-slate: #5c6672;
+  --font: "Inter Variable", Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  /* Default elevation for floating panels (popovers, dropdowns). */
+  --elev: 0 12px 28px var(--shadow-1), 0 2px 8px var(--shadow-2);
+
+  /* Shape and motion shared by every component. */
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-pill: 999px;
+  --spring: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --sidebar-width: 260px;
+  --sidebar-width-collapsed: 84px;
+  color-scheme: light;
+}
+
+/* .theme-dark opts a surface into the dark palette whatever the app theme (the workflow canvas). */
+:root[data-theme="dark"], .theme-dark {
+  --bg: #0e0e0c;
+  --panel: #151513;
+  --input-bg: #1b1b18;
+  --border: #2e2d28;
+  --border-strong: #46443d;
+  --hover: #23231f;
+  --text: #f1eee6;
+  --muted: #a29e92;
+  --accent: #c6f04a;
+  --accent-hover: #d6f56f;
+  --accent-soft: rgba(198, 241, 74, 0.14);
+  --accent-border: rgba(198, 241, 74, 0.4);
+  --accent-strong: #dcf77a;
+  --on-ok: #0e0e0c;
+  --ok: #3ec9a7;
+  --ok-soft: rgba(62, 201, 167, 0.14);
+  --ok-border: rgba(62, 201, 167, 0.4);
+  --warn: #f0b04a;
+  --warn-soft: rgba(240, 176, 74, 0.14);
+  --warn-border: rgba(240, 176, 74, 0.4);
+  --danger: #ef6b63;
+  --danger-soft: rgba(239, 107, 99, 0.14);
+  --danger-border: rgba(239, 107, 99, 0.4);
+  --run: #c6f04a;
+  --run-soft: rgba(198, 241, 74, 0.14);
+  --run-glow: #dcf77a;
+  --info-soft: #1d1d1a;
+  --shadow-1: rgba(0, 0, 0, 0.5);
+  --shadow-2: rgba(0, 0, 0, 0.35);
+  --canvas-glow: rgba(198, 241, 74, 0.1);
+  --page-glow-accent: rgba(198, 241, 74, 0.16);
+  --page-glow-warn: rgba(240, 176, 74, 0.07);
+  --project-blue: #6aa8ea;
+  --project-purple: #c08fe2;
+  --project-orange: #eba15d;
+  --project-teal: #3ec9a7;
+  --project-green: #a8d93a;
+  --project-red: #ef6b63;
+  --project-pink: #ec8cbc;
+  --project-slate: #a3adb8;
+  color-scheme: dark;
+}

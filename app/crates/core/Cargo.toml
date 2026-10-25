@@ -1,0 +1,46 @@
+[package]
+name = "agentflow-core"
+description = "AgentFlow backend: workflow engine, persistence and the loopback HTTP API"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+chrono.workspace = true
+indexmap.workspace = true
+pyjson.workspace = true
+regex.workspace = true
+url.workspace = true
+rustls.workspace = true
+portable-pty.workspace = true
+vt100.workspace = true
+axum.workspace = true
+getrandom.workspace = true
+base64.workspace = true
+sha2.workspace = true
+async-trait.workspace = true
+rusqlite.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_path_to_error.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tokio-stream.workspace = true
+futures-util.workspace = true
+tokio-tungstenite.workspace = true
+# The bundled usage collectors download the models.dev price catalog over HTTPS.
+ureq = { workspace = true, features = ["tls"] }
+unicode-general-category.workspace = true
+uuid.workspace = true
+tempfile.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-sys.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+tower.workspace = true
+# Paused time for the zellij tests, whose waits poll every 250ms.
+tokio = { workspace = true, features = ["test-util"] }

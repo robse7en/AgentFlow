@@ -1,0 +1,18 @@
+{
+  "agentOverrides": {
+    "implementer": {
+      "harness": "str"
+    }
+  },
+  "archivedAt": "null",
+  "color": "str",
+  "createdAt": "str",
+  "defaultBaseBranch": "str",
+  "defaultProjectRelativePath": "str",
+  "defaultRepositoryPath": "str",
+  "description": "str",
+  "id": "number",
+  "name": "str",
+  "slug": "str",
+  "updatedAt": "str"
+}

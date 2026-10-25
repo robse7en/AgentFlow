@@ -1,0 +1,972 @@
+[
+  {
+    "name": "claude-basic",
+    "collector": "claude",
+    "session": "sess",
+    "files": {
+      ".claude/projects/proj/sess.jsonl": "{\"type\": \"user\", \"message\": {\"content\": \"hi\"}}\n\nnot json\n   \n{\"type\": \"assistant\", \"message\": {\"id\": \"m1\", \"model\": \"gpt-test\", \"usage\": {\"input_tokens\": 1200, \"output_tokens\": 300, \"cache_creation_input_tokens\": 500, \"cache_read_input_tokens\": 7000}, \"stop_reason\": \"tool_use\"}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m1\", \"model\": \"gpt-test\", \"usage\": {\"input_tokens\": 1200, \"output_tokens\": 300, \"cache_creation_input_tokens\": 500, \"cache_read_input_tokens\": 7000}, \"stop_reason\": \"tool_use\"}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m2\", \"model\": \"gpt-test\", \"usage\": {\"input_tokens\": 10, \"output_tokens\": 45, \"cache_read_input_tokens\": 8100, \"cache_creation_input_tokens\": 260, \"cache_creation\": {\"ephemeral_1h_input_tokens\": 60}}, \"stop_reason\": \"end_turn\"}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"s\", \"model\": \"<synthetic>\", \"usage\": {\"input_tokens\": 1200, \"output_tokens\": 300, \"cache_creation_input_tokens\": 500, \"cache_read_input_tokens\": 7000}}}\n{\"type\": \"assistant\", \"message\": {\"model\": \"gpt-test\"}}",
+      ".local/share/copilot-api/models-dev-api.json": "{\"openai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 2, \"output\": 10, \"cache_read\": 0.2, \"cache_write\": 2.5, \"tiers\": [{\"input\": 4, \"output\": 15, \"cache_read\": 0.4, \"cache_write\": 5, \"tier\": {\"type\": \"context\", \"size\": 272000}}, {\"input\": 3, \"output\": 12, \"tier\": {\"type\": \"context\", \"size\": 128000}}, {\"input\": 9, \"tier\": {\"type\": \"output\", \"size\": 1000}}]}}, \"gpt-nullcache\": {\"cost\": {\"input\": 1.25, \"output\": 7.5, \"cache_read\": null}}, \"gpt-free\": {\"cost\": {\"input\": 0, \"output\": 0}}}}, \"zz-other\": {\"models\": {\"other-model\": {\"cost\": {\"input\": 0.3, \"output\": 0.7, \"cache_read\": 0.03}}}}, \"anthropic\": {\"models\": {\"claude-test-5-5\": {\"cost\": {\"input\": 4, \"output\": 20, \"cache_read\": 0.2, \"cache_write\": 5}}}}, \"google\": null, \"xai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 99, \"output\": 99}}}}}"
+    },
+    "ledger": null,
+    "exit": 0,
+    "report": {
+      "inputTokens": 17070,
+      "outputTokens": 345,
+      "cachedInputTokens": 15100,
+      "model": "gpt-test",
+      "source": "claude-code-transcript",
+      "scope": "session",
+      "costUsd": 0.01088,
+      "costKind": "estimated"
+    }
+  },
+  {
+    "name": "claude-open-turn",
+    "collector": "claude",
+    "session": "sess",
+    "files": {
+      ".claude/projects/proj/sess.jsonl": "{\"type\": \"assistant\", \"message\": {\"id\": \"m1\", \"model\": \"gpt-test\", \"usage\": {\"input_tokens\": 1200, \"output_tokens\": 300, \"cache_creation_input_tokens\": 500, \"cache_read_input_tokens\": 7000}, \"stop_reason\": \"end_turn\"}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m2\", \"model\": \"gpt-test\", \"usage\": {\"input_tokens\": 10, \"output_tokens\": 45, \"cache_read_input_tokens\": 8100, \"cache_creation_input_tokens\": 260, \"cache_creation\": {\"ephemeral_1h_input_tokens\": 60}}, \"stop_reason\": \"tool_use\"}}",
+      ".local/share/copilot-api/models-dev-api.json": "{\"openai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 2, \"output\": 10, \"cache_read\": 0.2, \"cache_write\": 2.5, \"tiers\": [{\"input\": 4, \"output\": 15, \"cache_read\": 0.4, \"cache_write\": 5, \"tier\": {\"type\": \"context\", \"size\": 272000}}, {\"input\": 3, \"output\": 12, \"tier\": {\"type\": \"context\", \"size\": 128000}}, {\"input\": 9, \"tier\": {\"type\": \"output\", \"size\": 1000}}]}}, \"gpt-nullcache\": {\"cost\": {\"input\": 1.25, \"output\": 7.5, \"cache_read\": null}}, \"gpt-free\": {\"cost\": {\"input\": 0, \"output\": 0}}}}, \"zz-other\": {\"models\": {\"other-model\": {\"cost\": {\"input\": 0.3, \"output\": 0.7, \"cache_read\": 0.03}}}}, \"anthropic\": {\"models\": {\"claude-test-5-5\": {\"cost\": {\"input\": 4, \"output\": 20, \"cache_read\": 0.2, \"cache_write\": 5}}}}, \"google\": null, \"xai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 99, \"output\": 99}}}}}"
+    },
+    "ledger": null,
+    "exit": 75,
+    "report": {
+      "inputTokens": 17070,
+      "outputTokens": 345,
+      "cachedInputTokens": 15100,
+      "model": "gpt-test",
+      "source": "claude-code-transcript",
+      "scope": "session",
+      "costUsd": 0.01088,
+      "costKind": "estimated"
+    }
+  },
+  {
+    "name": "claude-pause-on-a-skipped-entry",
+    "collector": "claude",
+    "session": "sess",
+    "files": {
+      ".claude/projects/proj/sess.jsonl": "{\"type\": \"assistant\", \"message\": {\"id\": \"m1\", \"model\": \"gpt-test\", \"usage\": {\"input_tokens\": 1200, \"output_tokens\": 300, \"cache_creation_input_tokens\": 500, \"cache_read_input_tokens\": 7000}, \"stop_reason\": \"end_turn\"}}\n{\"type\": \"assistant\", \"message\": {\"model\": \"<synthetic>\", \"usage\": {\"input_tokens\": 10, \"output_tokens\": 45, \"cache_read_input_tokens\": 8100, \"cache_creation_input_tokens\": 260, \"cache_creation\": {\"ephemeral_1h_input_tokens\": 60}}, \"stop_reason\": \"pause_turn\"}}",
+      ".local/share/copilot-api/models-dev-api.json": "{\"openai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 2, \"output\": 10, \"cache_read\": 0.2, \"cache_write\": 2.5, \"tiers\": [{\"input\": 4, \"output\": 15, \"cache_read\": 0.4, \"cache_write\": 5, \"tier\": {\"type\": \"context\", \"size\": 272000}}, {\"input\": 3, \"output\": 12, \"tier\": {\"type\": \"context\", \"size\": 128000}}, {\"input\": 9, \"tier\": {\"type\": \"output\", \"size\": 1000}}]}}, \"gpt-nullcache\": {\"cost\": {\"input\": 1.25, \"output\": 7.5, \"cache_read\": null}}, \"gpt-free\": {\"cost\": {\"input\": 0, \"output\": 0}}}}, \"zz-other\": {\"models\": {\"other-model\": {\"cost\": {\"input\": 0.3, \"output\": 0.7, \"cache_read\": 0.03}}}}, \"anthropic\": {\"models\": {\"claude-test-5-5\": {\"cost\": {\"input\": 4, \"output\": 20, \"cache_read\": 0.2, \"cache_write\": 5}}}}, \"google\": null, \"xai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 99, \"output\": 99}}}}}"
+    },
+    "ledger": null,
+    "exit": 75,
+    "report": {
+      "inputTokens": 8700,
+      "outputTokens": 300,
+      "cachedInputTokens": 7000,
+      "model": "gpt-test",
+      "source": "claude-code-transcript",
+      "scope": "session",
+      "costUsd": 0.00805,
+      "costKind": "estimated"
+    }
+  },
+  {
+    "name": "claude-closed-after-tool-use",
+    "collector": "claude",
+    "session": "sess",
+    "files": {
+      ".claude/projects/proj/sess.jsonl": "{\"type\": \"assistant\", \"message\": {\"id\": \"m1\", \"model\": \"gpt-test\", \"usage\": {\"input_tokens\": 1200, \"output_tokens\": 300, \"cache_creation_input_tokens\": 500, \"cache_read_input_tokens\": 7000}, \"stop_reason\": \"tool_use\"}}\n{\"type\": \"user\", \"message\": {}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m1\", \"stop_reason\": \"end_turn\"}}",
+      ".local/share/copilot-api/models-dev-api.json": "{\"openai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 2, \"output\": 10, \"cache_read\": 0.2, \"cache_write\": 2.5, \"tiers\": [{\"input\": 4, \"output\": 15, \"cache_read\": 0.4, \"cache_write\": 5, \"tier\": {\"type\": \"context\", \"size\": 272000}}, {\"input\": 3, \"output\": 12, \"tier\": {\"type\": \"context\", \"size\": 128000}}, {\"input\": 9, \"tier\": {\"type\": \"output\", \"size\": 1000}}]}}, \"gpt-nullcache\": {\"cost\": {\"input\": 1.25, \"output\": 7.5, \"cache_read\": null}}, \"gpt-free\": {\"cost\": {\"input\": 0, \"output\": 0}}}}, \"zz-other\": {\"models\": {\"other-model\": {\"cost\": {\"input\": 0.3, \"output\": 0.7, \"cache_read\": 0.03}}}}, \"anthropic\": {\"models\": {\"claude-test-5-5\": {\"cost\": {\"input\": 4, \"output\": 20, \"cache_read\": 0.2, \"cache_write\": 5}}}}, \"google\": null, \"xai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 99, \"output\": 99}}}}}"
+    },
+    "ledger": null,
+    "exit": 0,
+    "report": {
+      "inputTokens": 8700,
+      "outputTokens": 300,
+      "cachedInputTokens": 7000,
+      "model": "gpt-test",
+      "source": "claude-code-transcript",
+      "scope": "session",
+      "costUsd": 0.00805,
+      "costKind": "estimated"
+    }
+  },
+  {
+    "name": "claude-no-message-ids",
+    "collector": "claude",
+    "session": "sess",
+    "files": {
+      ".claude/projects/proj/sess.jsonl": "{\"type\": \"assistant\", \"message\": {\"id\": null, \"model\": \"gpt-test\", \"usage\": {\"input_tokens\": 10, \"output_tokens\": 45, \"cache_read_input_tokens\": 8100, \"cache_creation_input_tokens\": 260, \"cache_creation\": {\"ephemeral_1h_input_tokens\": 60}}}}\n{\"type\": \"assistant\", \"message\": {\"id\": null, \"model\": \"gpt-test\", \"usage\": {\"input_tokens\": 10, \"output_tokens\": 45, \"cache_read_input_tokens\": 8100, \"cache_creation_input_tokens\": 260, \"cache_creation\": {\"ephemeral_1h_input_tokens\": 60}}}}",
+      ".local/share/copilot-api/models-dev-api.json": "{\"openai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 2, \"output\": 10, \"cache_read\": 0.2, \"cache_write\": 2.5, \"tiers\": [{\"input\": 4, \"output\": 15, \"cache_read\": 0.4, \"cache_write\": 5, \"tier\": {\"type\": \"context\", \"size\": 272000}}, {\"input\": 3, \"output\": 12, \"tier\": {\"type\": \"context\", \"size\": 128000}}, {\"input\": 9, \"tier\": {\"type\": \"output\", \"size\": 1000}}]}}, \"gpt-nullcache\": {\"cost\": {\"input\": 1.25, \"output\": 7.5, \"cache_read\": null}}, \"gpt-free\": {\"cost\": {\"input\": 0, \"output\": 0}}}}, \"zz-other\": {\"models\": {\"other-model\": {\"cost\": {\"input\": 0.3, \"output\": 0.7, \"cache_read\": 0.03}}}}, \"anthropic\": {\"models\": {\"claude-test-5-5\": {\"cost\": {\"input\": 4, \"output\": 20, \"cache_read\": 0.2, \"cache_write\": 5}}}}, \"google\": null, \"xai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 99, \"output\": 99}}}}}"
+    },
+    "ledger": null,
+    "exit": 0,
+    "report": {
+      "inputTokens": 16740,
+      "outputTokens": 90,
+      "cachedInputTokens": 16200,
+      "model": "gpt-test",
+      "source": "claude-code-transcript",
+      "scope": "session",
+      "costUsd": 0.00566,
+      "costKind": "estimated"
+    }
+  },
+  {
+    "name": "claude-long-context",
+    "collector": "claude",
+    "session": "sess",
+    "files": {
+      ".claude/projects/proj/sess.jsonl": "{\"type\": \"assistant\", \"message\": {\"id\": \"m1\", \"model\": \"GPT-Test[1m]\", \"usage\": {\"input_tokens\": 300000, \"output_tokens\": 10}}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m2\", \"model\": \"openai/gpt-test\", \"usage\": {\"input_tokens\": 150000, \"output_tokens\": 20}}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m3\", \"model\": \"gpt-test\", \"usage\": {\"input_tokens\": 100000, \"output_tokens\": 30, \"cache_read_input_tokens\": 172000}}}",
+      ".local/share/copilot-api/models-dev-api.json": "{\"openai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 2, \"output\": 10, \"cache_read\": 0.2, \"cache_write\": 2.5, \"tiers\": [{\"input\": 4, \"output\": 15, \"cache_read\": 0.4, \"cache_write\": 5, \"tier\": {\"type\": \"context\", \"size\": 272000}}, {\"input\": 3, \"output\": 12, \"tier\": {\"type\": \"context\", \"size\": 128000}}, {\"input\": 9, \"tier\": {\"type\": \"output\", \"size\": 1000}}]}}, \"gpt-nullcache\": {\"cost\": {\"input\": 1.25, \"output\": 7.5, \"cache_read\": null}}, \"gpt-free\": {\"cost\": {\"input\": 0, \"output\": 0}}}}, \"zz-other\": {\"models\": {\"other-model\": {\"cost\": {\"input\": 0.3, \"output\": 0.7, \"cache_read\": 0.03}}}}, \"anthropic\": {\"models\": {\"claude-test-5-5\": {\"cost\": {\"input\": 4, \"output\": 20, \"cache_read\": 0.2, \"cache_write\": 5}}}}, \"google\": null, \"xai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 99, \"output\": 99}}}}}"
+    },
+    "ledger": null,
+    "exit": 0,
+    "report": {
+      "inputTokens": 722000,
+      "outputTokens": 60,
+      "cachedInputTokens": 172000,
+      "model": "gpt-test",
+      "source": "claude-code-transcript",
+      "scope": "session",
+      "costUsd": 2.46675,
+      "costKind": "estimated"
+    }
+  },
+  {
+    "name": "claude-one-hour-cache-and-dot-names",
+    "collector": "claude",
+    "session": "sess",
+    "files": {
+      ".claude/projects/proj/sess.jsonl": "{\"type\": \"assistant\", \"message\": {\"id\": \"m1\", \"model\": \"claude-test-5.5\", \"usage\": {\"input_tokens\": 0, \"output_tokens\": 0, \"cache_creation_input_tokens\": 300, \"cache_creation\": {\"ephemeral_1h_input_tokens\": 100}}}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m2\", \"model\": \" Claude-Test-5.5 \", \"usage\": {\"input_tokens\": 7, \"output_tokens\": 3, \"cache_creation_input_tokens\": 50, \"cache_creation\": {\"ephemeral_1h_input_tokens\": 80}}}}",
+      ".local/share/copilot-api/models-dev-api.json": "{\"openai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 2, \"output\": 10, \"cache_read\": 0.2, \"cache_write\": 2.5, \"tiers\": [{\"input\": 4, \"output\": 15, \"cache_read\": 0.4, \"cache_write\": 5, \"tier\": {\"type\": \"context\", \"size\": 272000}}, {\"input\": 3, \"output\": 12, \"tier\": {\"type\": \"context\", \"size\": 128000}}, {\"input\": 9, \"tier\": {\"type\": \"output\", \"size\": 1000}}]}}, \"gpt-nullcache\": {\"cost\": {\"input\": 1.25, \"output\": 7.5, \"cache_read\": null}}, \"gpt-free\": {\"cost\": {\"input\": 0, \"output\": 0}}}}, \"zz-other\": {\"models\": {\"other-model\": {\"cost\": {\"input\": 0.3, \"output\": 0.7, \"cache_read\": 0.03}}}}, \"anthropic\": {\"models\": {\"claude-test-5-5\": {\"cost\": {\"input\": 4, \"output\": 20, \"cache_read\": 0.2, \"cache_write\": 5}}}}, \"google\": null, \"xai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 99, \"output\": 99}}}}}"
+    },
+    "ledger": null,
+    "exit": 0,
+    "report": {
+      "inputTokens": 357,
+      "outputTokens": 3,
+      "cachedInputTokens": 0,
+      "model": " Claude-Test-5.5 ",
+      "source": "claude-code-transcript",
+      "scope": "session",
+      "costUsd": 0.002288,
+      "costKind": "estimated"
+    }
+  },
+  {
+    "name": "claude-unknown-model-drops-the-estimate",
+    "collector": "claude",
+    "session": "sess",
+    "files": {
+      ".claude/projects/proj/sess.jsonl": "{\"type\": \"assistant\", \"message\": {\"id\": \"m1\", \"model\": \"gpt-test\", \"usage\": {\"input_tokens\": 1200, \"output_tokens\": 300, \"cache_creation_input_tokens\": 500, \"cache_read_input_tokens\": 7000}}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m2\", \"model\": \"mystery-model\", \"usage\": {\"input_tokens\": 10, \"output_tokens\": 45, \"cache_read_input_tokens\": 8100, \"cache_creation_input_tokens\": 260, \"cache_creation\": {\"ephemeral_1h_input_tokens\": 60}}}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m3\", \"model\": \"gpt-test\", \"usage\": {\"input_tokens\": 10, \"output_tokens\": 45, \"cache_read_input_tokens\": 8100, \"cache_creation_input_tokens\": 260, \"cache_creation\": {\"ephemeral_1h_input_tokens\": 60}}}}",
+      ".local/share/copilot-api/models-dev-api.json": "{\"openai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 2, \"output\": 10, \"cache_read\": 0.2, \"cache_write\": 2.5, \"tiers\": [{\"input\": 4, \"output\": 15, \"cache_read\": 0.4, \"cache_write\": 5, \"tier\": {\"type\": \"context\", \"size\": 272000}}, {\"input\": 3, \"output\": 12, \"tier\": {\"type\": \"context\", \"size\": 128000}}, {\"input\": 9, \"tier\": {\"type\": \"output\", \"size\": 1000}}]}}, \"gpt-nullcache\": {\"cost\": {\"input\": 1.25, \"output\": 7.5, \"cache_read\": null}}, \"gpt-free\": {\"cost\": {\"input\": 0, \"output\": 0}}}}, \"zz-other\": {\"models\": {\"other-model\": {\"cost\": {\"input\": 0.3, \"output\": 0.7, \"cache_read\": 0.03}}}}, \"anthropic\": {\"models\": {\"claude-test-5-5\": {\"cost\": {\"input\": 4, \"output\": 20, \"cache_read\": 0.2, \"cache_write\": 5}}}}, \"google\": null, \"xai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 99, \"output\": 99}}}}}"
+    },
+    "ledger": null,
+    "exit": 0,
+    "report": {
+      "inputTokens": 25440,
+      "outputTokens": 390,
+      "cachedInputTokens": 23200,
+      "model": "gpt-test",
+      "source": "claude-code-transcript",
+      "scope": "session"
+    }
+  },
+  {
+    "name": "claude-null-and-missing-cache-rates",
+    "collector": "claude",
+    "session": "sess",
+    "files": {
+      ".claude/projects/proj/sess.jsonl": "{\"type\": \"assistant\", \"message\": {\"id\": \"m1\", \"model\": \"gpt-nullcache\", \"usage\": {\"input_tokens\": 1200, \"output_tokens\": 300, \"cache_creation_input_tokens\": 500, \"cache_read_input_tokens\": 7000}}}\n{\"type\": \"assistant\", \"message\": {\"id\": \"m2\", \"model\": \"other-model\", \"usage\": {\"input_tokens\": 10, \"output_tokens\": 45, \"cache_read_input_tokens\": 8100, \"cache_creation_input_tokens\": 260, \"cache_creation\": {\"ephemeral_1h_input_tokens\": 60}}}}",
+      ".local/share/copilot-api/models-dev-api.json": "{\"openai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 2, \"output\": 10, \"cache_read\": 0.2, \"cache_write\": 2.5, \"tiers\": [{\"input\": 4, \"output\": 15, \"cache_read\": 0.4, \"cache_write\": 5, \"tier\": {\"type\": \"context\", \"size\": 272000}}, {\"input\": 3, \"output\": 12, \"tier\": {\"type\": \"context\", \"size\": 128000}}, {\"input\": 9, \"tier\": {\"type\": \"output\", \"size\": 1000}}]}}, \"gpt-nullcache\": {\"cost\": {\"input\": 1.25, \"output\": 7.5, \"cache_read\": null}}, \"gpt-free\": {\"cost\": {\"input\": 0, \"output\": 0}}}}, \"zz-other\": {\"models\": {\"other-model\": {\"cost\": {\"input\": 0.3, \"output\": 0.7, \"cache_read\": 0.03}}}}, \"anthropic\": {\"models\": {\"claude-test-5-5\": {\"cost\": {\"input\": 4, \"output\": 20, \"cache_read\": 0.2, \"cache_write\": 5}}}}, \"google\": null, \"xai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 99, \"output\": 99}}}}}"
+    },
+    "ledger": null,
+    "exit": 0,
+    "report": {
+      "inputTokens": 17070,
+      "outputTokens": 345,
+      "cachedInputTokens": 15100,
+      "model": "other-model",
+      "source": "claude-code-transcript",
+      "scope": "session",
+      "costUsd": 0.0047485,
+      "costKind": "estimated"
+    }
+  },
+  {
+    "name": "claude-zero-rates-are-not-prices",
+    "collector": "claude",
+    "session": "sess",
+    "files": {
+      ".claude/projects/proj/sess.jsonl": "{\"type\": \"assistant\", \"message\": {\"id\": \"m1\", \"model\": \"gpt-free\", \"usage\": {\"input_tokens\": 1200, \"output_tokens\": 300, \"cache_creation_input_tokens\": 500, \"cache_read_input_tokens\": 7000}}}",
+      ".local/share/copilot-api/models-dev-api.json": "{\"openai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 2, \"output\": 10, \"cache_read\": 0.2, \"cache_write\": 2.5, \"tiers\": [{\"input\": 4, \"output\": 15, \"cache_read\": 0.4, \"cache_write\": 5, \"tier\": {\"type\": \"context\", \"size\": 272000}}, {\"input\": 3, \"output\": 12, \"tier\": {\"type\": \"context\", \"size\": 128000}}, {\"input\": 9, \"tier\": {\"type\": \"output\", \"size\": 1000}}]}}, \"gpt-nullcache\": {\"cost\": {\"input\": 1.25, \"output\": 7.5, \"cache_read\": null}}, \"gpt-free\": {\"cost\": {\"input\": 0, \"output\": 0}}}}, \"zz-other\": {\"models\": {\"other-model\": {\"cost\": {\"input\": 0.3, \"output\": 0.7, \"cache_read\": 0.03}}}}, \"anthropic\": {\"models\": {\"claude-test-5-5\": {\"cost\": {\"input\": 4, \"output\": 20, \"cache_read\": 0.2, \"cache_write\": 5}}}}, \"google\": null, \"xai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 99, \"output\": 99}}}}}"
+    },
+    "ledger": null,
+    "exit": 0,
+    "report": {
+      "inputTokens": 8700,
+      "outputTokens": 300,
+      "cachedInputTokens": 7000,
+      "model": "gpt-free",
+      "source": "claude-code-transcript",
+      "scope": "session"
+    }
+  },
+  {
+    "name": "claude-loose-numbers",
+    "collector": "claude",
+    "session": "sess",
+    "files": {
+      ".claude/projects/proj/sess.jsonl": "{\"type\": \"assistant\", \"message\": {\"id\": \"m1\", \"model\": \"gpt-test\", \"usage\": {\"input_tokens\": \"12\", \"output_tokens\": 3.9, \"cache_read_input_tokens\": true, \"cache_creation_input_tokens\": null, \"cache_creation\": {}}}}",
+      ".local/share/copilot-api/models-dev-api.json": "{\"openai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 2, \"output\": 10, \"cache_read\": 0.2, \"cache_write\": 2.5, \"tiers\": [{\"input\": 4, \"output\": 15, \"cache_read\": 0.4, \"cache_write\": 5, \"tier\": {\"type\": \"context\", \"size\": 272000}}, {\"input\": 3, \"output\": 12, \"tier\": {\"type\": \"context\", \"size\": 128000}}, {\"input\": 9, \"tier\": {\"type\": \"output\", \"size\": 1000}}]}}, \"gpt-nullcache\": {\"cost\": {\"input\": 1.25, \"output\": 7.5, \"cache_read\": null}}, \"gpt-free\": {\"cost\": {\"input\": 0, \"output\": 0}}}}, \"zz-other\": {\"models\": {\"other-model\": {\"cost\": {\"input\": 0.3, \"output\": 0.7, \"cache_read\": 0.03}}}}, \"anthropic\": {\"models\": {\"claude-test-5-5\": {\"cost\": {\"input\": 4, \"output\": 20, \"cache_read\": 0.2, \"cache_write\": 5}}}}, \"google\": null, \"xai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 99, \"output\": 99}}}}}"
+    },
+    "ledger": null,
+    "exit": 0,
+    "report": {
+      "inputTokens": 13,
+      "outputTokens": 3,
+      "cachedInputTokens": 1,
+      "model": "gpt-test",
+      "source": "claude-code-transcript",
+      "scope": "session",
+      "costUsd": 5.42e-05,
+      "costKind": "estimated"
+    }
+  },
+  {
+    "name": "claude-crlf-lines",
+    "collector": "claude",
+    "session": "sess",
+    "files": {
+      ".claude/projects/proj/sess.jsonl": "{\"type\": \"assistant\", \"message\": {\"id\": \"m1\", \"model\": \"gpt-test\", \"usage\": {\"input_tokens\": 1200, \"output_tokens\": 300, \"cache_creation_input_tokens\": 500, \"cache_read_input_tokens\": 7000}}}\r\n{\"type\": \"assistant\", \"message\": {\"id\": \"m2\", \"model\": \"gpt-test\", \"usage\": {\"input_tokens\": 10, \"output_tokens\": 45, \"cache_read_input_tokens\": 8100, \"cache_creation_input_tokens\": 260, \"cache_creation\": {\"ephemeral_1h_input_tokens\": 60}}}}\r\n",
+      ".local/share/copilot-api/models-dev-api.json": "{\"openai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 2, \"output\": 10, \"cache_read\": 0.2, \"cache_write\": 2.5, \"tiers\": [{\"input\": 4, \"output\": 15, \"cache_read\": 0.4, \"cache_write\": 5, \"tier\": {\"type\": \"context\", \"size\": 272000}}, {\"input\": 3, \"output\": 12, \"tier\": {\"type\": \"context\", \"size\": 128000}}, {\"input\": 9, \"tier\": {\"type\": \"output\", \"size\": 1000}}]}}, \"gpt-nullcache\": {\"cost\": {\"input\": 1.25, \"output\": 7.5, \"cache_read\": null}}, \"gpt-free\": {\"cost\": {\"input\": 0, \"output\": 0}}}}, \"zz-other\": {\"models\": {\"other-model\": {\"cost\": {\"input\": 0.3, \"output\": 0.7, \"cache_read\": 0.03}}}}, \"anthropic\": {\"models\": {\"claude-test-5-5\": {\"cost\": {\"input\": 4, \"output\": 20, \"cache_read\": 0.2, \"cache_write\": 5}}}}, \"google\": null, \"xai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 99, \"output\": 99}}}}}"
+    },
+    "ledger": null,
+    "exit": 0,
+    "report": {
+      "inputTokens": 17070,
+      "outputTokens": 345,
+      "cachedInputTokens": 15100,
+      "model": "gpt-test",
+      "source": "claude-code-transcript",
+      "scope": "session",
+      "costUsd": 0.01088,
+      "costKind": "estimated"
+    }
+  },
+  {
+    "name": "claude-proxy-billed",
+    "collector": "claude",
+    "session": "sess",
+    "files": {
+      ".claude/projects/proj/sess.jsonl": "{\"type\": \"assistant\", \"message\": {\"id\": \"m1\", \"model\": \"gpt-test\", \"usage\": {\"input_tokens\": 1200, \"output_tokens\": 300, \"cache_creation_input_tokens\": 500, \"cache_read_input_tokens\": 7000}}}",
+      ".local/share/copilot-api/models-dev-api.json": "{\"openai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 2, \"output\": 10, \"cache_read\": 0.2, \"cache_write\": 2.5, \"tiers\": [{\"input\": 4, \"output\": 15, \"cache_read\": 0.4, \"cache_write\": 5, \"tier\": {\"type\": \"context\", \"size\": 272000}}, {\"input\": 3, \"output\": 12, \"tier\": {\"type\": \"context\", \"size\": 128000}}, {\"input\": 9, \"tier\": {\"type\": \"output\", \"size\": 1000}}]}}, \"gpt-nullcache\": {\"cost\": {\"input\": 1.25, \"output\": 7.5, \"cache_read\": null}}, \"gpt-free\": {\"cost\": {\"input\": 0, \"output\": 0}}}}, \"zz-other\": {\"models\": {\"other-model\": {\"cost\": {\"input\": 0.3, \"output\": 0.7, \"cache_read\": 0.03}}}}, \"anthropic\": {\"models\": {\"claude-test-5-5\": {\"cost\": {\"input\": 4, \"output\": 20, \"cache_read\": 0.2, \"cache_write\": 5}}}}, \"google\": null, \"xai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 99, \"output\": 99}}}}}"
+    },
+    "ledger": [
+      [
+        "sess",
+        2000000000,
+        "USD"
+      ],
+      [
+        "sess",
+        500000001,
+        "USD"
+      ],
+      [
+        "other",
+        9,
+        "USD"
+      ]
+    ],
+    "exit": 0,
+    "report": {
+      "inputTokens": 8700,
+      "outputTokens": 300,
+      "cachedInputTokens": 7000,
+      "model": "gpt-test",
+      "source": "claude-code-transcript+copilot-api",
+      "scope": "session",
+      "costUsd": 2.500000001,
+      "costKind": "billed"
+    }
+  },
+  {
+    "name": "claude-proxy-null-cost",
+    "collector": "claude",
+    "session": "sess",
+    "files": {
+      ".claude/projects/proj/sess.jsonl": "{\"type\": \"assistant\", \"message\": {\"id\": \"m1\", \"model\": \"gpt-test\", \"usage\": {\"input_tokens\": 1200, \"output_tokens\": 300, \"cache_creation_input_tokens\": 500, \"cache_read_input_tokens\": 7000}}}",
+      ".local/share/copilot-api/models-dev-api.json": "{\"openai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 2, \"output\": 10, \"cache_read\": 0.2, \"cache_write\": 2.5, \"tiers\": [{\"input\": 4, \"output\": 15, \"cache_read\": 0.4, \"cache_write\": 5, \"tier\": {\"type\": \"context\", \"size\": 272000}}, {\"input\": 3, \"output\": 12, \"tier\": {\"type\": \"context\", \"size\": 128000}}, {\"input\": 9, \"tier\": {\"type\": \"output\", \"size\": 1000}}]}}, \"gpt-nullcache\": {\"cost\": {\"input\": 1.25, \"output\": 7.5, \"cache_read\": null}}, \"gpt-free\": {\"cost\": {\"input\": 0, \"output\": 0}}}}, \"zz-other\": {\"models\": {\"other-model\": {\"cost\": {\"input\": 0.3, \"output\": 0.7, \"cache_read\": 0.03}}}}, \"anthropic\": {\"models\": {\"claude-test-5-5\": {\"cost\": {\"input\": 4, \"output\": 20, \"cache_read\": 0.2, \"cache_write\": 5}}}}, \"google\": null, \"xai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 99, \"output\": 99}}}}}"
+    },
+    "ledger": [
+      [
+        "sess",
+        2000000000,
+        "USD"
+      ],
+      [
+        "sess",
+        null,
+        null
+      ]
+    ],
+    "exit": 0,
+    "report": {
+      "inputTokens": 8700,
+      "outputTokens": 300,
+      "cachedInputTokens": 7000,
+      "model": "gpt-test",
+      "source": "claude-code-transcript",
+      "scope": "session",
+      "costUsd": 0.00805,
+      "costKind": "estimated"
+    }
+  },
+  {
+    "name": "claude-proxy-other-currency",
+    "collector": "claude",
+    "session": "sess",
+    "files": {
+      ".claude/projects/proj/sess.jsonl": "{\"type\": \"assistant\", \"message\": {\"id\": \"m1\", \"model\": \"gpt-test\", \"usage\": {\"input_tokens\": 1200, \"output_tokens\": 300, \"cache_creation_input_tokens\": 500, \"cache_read_input_tokens\": 7000}}}",
+      ".local/share/copilot-api/models-dev-api.json": "{\"openai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 2, \"output\": 10, \"cache_read\": 0.2, \"cache_write\": 2.5, \"tiers\": [{\"input\": 4, \"output\": 15, \"cache_read\": 0.4, \"cache_write\": 5, \"tier\": {\"type\": \"context\", \"size\": 272000}}, {\"input\": 3, \"output\": 12, \"tier\": {\"type\": \"context\", \"size\": 128000}}, {\"input\": 9, \"tier\": {\"type\": \"output\", \"size\": 1000}}]}}, \"gpt-nullcache\": {\"cost\": {\"input\": 1.25, \"output\": 7.5, \"cache_read\": null}}, \"gpt-free\": {\"cost\": {\"input\": 0, \"output\": 0}}}}, \"zz-other\": {\"models\": {\"other-model\": {\"cost\": {\"input\": 0.3, \"output\": 0.7, \"cache_read\": 0.03}}}}, \"anthropic\": {\"models\": {\"claude-test-5-5\": {\"cost\": {\"input\": 4, \"output\": 20, \"cache_read\": 0.2, \"cache_write\": 5}}}}, \"google\": null, \"xai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 99, \"output\": 99}}}}}"
+    },
+    "ledger": [
+      [
+        "sess",
+        2000000000,
+        "USD"
+      ],
+      [
+        "sess",
+        5,
+        "EUR"
+      ]
+    ],
+    "exit": 0,
+    "report": {
+      "inputTokens": 8700,
+      "outputTokens": 300,
+      "cachedInputTokens": 7000,
+      "model": "gpt-test",
+      "source": "claude-code-transcript",
+      "scope": "session",
+      "costUsd": 0.00805,
+      "costKind": "estimated"
+    }
+  },
+  {
+    "name": "claude-proxy-no-rows",
+    "collector": "claude",
+    "session": "sess",
+    "files": {
+      ".claude/projects/proj/sess.jsonl": "{\"type\": \"assistant\", \"message\": {\"id\": \"m1\", \"model\": \"gpt-test\", \"usage\": {\"input_tokens\": 1200, \"output_tokens\": 300, \"cache_creation_input_tokens\": 500, \"cache_read_input_tokens\": 7000}}}",
+      ".local/share/copilot-api/models-dev-api.json": "{\"openai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 2, \"output\": 10, \"cache_read\": 0.2, \"cache_write\": 2.5, \"tiers\": [{\"input\": 4, \"output\": 15, \"cache_read\": 0.4, \"cache_write\": 5, \"tier\": {\"type\": \"context\", \"size\": 272000}}, {\"input\": 3, \"output\": 12, \"tier\": {\"type\": \"context\", \"size\": 128000}}, {\"input\": 9, \"tier\": {\"type\": \"output\", \"size\": 1000}}]}}, \"gpt-nullcache\": {\"cost\": {\"input\": 1.25, \"output\": 7.5, \"cache_read\": null}}, \"gpt-free\": {\"cost\": {\"input\": 0, \"output\": 0}}}}, \"zz-other\": {\"models\": {\"other-model\": {\"cost\": {\"input\": 0.3, \"output\": 0.7, \"cache_read\": 0.03}}}}, \"anthropic\": {\"models\": {\"claude-test-5-5\": {\"cost\": {\"input\": 4, \"output\": 20, \"cache_read\": 0.2, \"cache_write\": 5}}}}, \"google\": null, \"xai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 99, \"output\": 99}}}}}"
+    },
+    "ledger": [
+      [
+        "other",
+        1,
+        "USD"
+      ]
+    ],
+    "exit": 0,
+    "report": {
+      "inputTokens": 8700,
+      "outputTokens": 300,
+      "cachedInputTokens": 7000,
+      "model": "gpt-test",
+      "source": "claude-code-transcript",
+      "scope": "session",
+      "costUsd": 0.00805,
+      "costKind": "estimated"
+    }
+  },
+  {
+    "name": "claude-own-catalog-cache",
+    "collector": "claude",
+    "session": "sess",
+    "files": {
+      ".claude/projects/proj/sess.jsonl": "{\"type\": \"assistant\", \"message\": {\"id\": \"m1\", \"model\": \"gpt-test\", \"usage\": {\"input_tokens\": 1200, \"output_tokens\": 300, \"cache_creation_input_tokens\": 500, \"cache_read_input_tokens\": 7000}}}",
+      ".cache/agentflow/models-dev-api.json": "{\"openai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 2, \"output\": 10, \"cache_read\": 0.2, \"cache_write\": 2.5, \"tiers\": [{\"input\": 4, \"output\": 15, \"cache_read\": 0.4, \"cache_write\": 5, \"tier\": {\"type\": \"context\", \"size\": 272000}}, {\"input\": 3, \"output\": 12, \"tier\": {\"type\": \"context\", \"size\": 128000}}, {\"input\": 9, \"tier\": {\"type\": \"output\", \"size\": 1000}}]}}, \"gpt-nullcache\": {\"cost\": {\"input\": 1.25, \"output\": 7.5, \"cache_read\": null}}, \"gpt-free\": {\"cost\": {\"input\": 0, \"output\": 0}}}}, \"zz-other\": {\"models\": {\"other-model\": {\"cost\": {\"input\": 0.3, \"output\": 0.7, \"cache_read\": 0.03}}}}, \"anthropic\": {\"models\": {\"claude-test-5-5\": {\"cost\": {\"input\": 4, \"output\": 20, \"cache_read\": 0.2, \"cache_write\": 5}}}}, \"google\": null, \"xai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 99, \"output\": 99}}}}}"
+    },
+    "ledger": null,
+    "exit": 0,
+    "report": {
+      "inputTokens": 8700,
+      "outputTokens": 300,
+      "cachedInputTokens": 7000,
+      "model": "gpt-test",
+      "source": "claude-code-transcript",
+      "scope": "session",
+      "costUsd": 0.00805,
+      "costKind": "estimated"
+    }
+  },
+  {
+    "name": "claude-only-synthetic",
+    "collector": "claude",
+    "session": "sess",
+    "files": {
+      ".claude/projects/proj/sess.jsonl": "{\"type\": \"assistant\", \"message\": {\"model\": \"<synthetic>\", \"usage\": {\"input_tokens\": 1200, \"output_tokens\": 300, \"cache_creation_input_tokens\": 500, \"cache_read_input_tokens\": 7000}}}",
+      ".local/share/copilot-api/models-dev-api.json": "{\"openai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 2, \"output\": 10, \"cache_read\": 0.2, \"cache_write\": 2.5, \"tiers\": [{\"input\": 4, \"output\": 15, \"cache_read\": 0.4, \"cache_write\": 5, \"tier\": {\"type\": \"context\", \"size\": 272000}}, {\"input\": 3, \"output\": 12, \"tier\": {\"type\": \"context\", \"size\": 128000}}, {\"input\": 9, \"tier\": {\"type\": \"output\", \"size\": 1000}}]}}, \"gpt-nullcache\": {\"cost\": {\"input\": 1.25, \"output\": 7.5, \"cache_read\": null}}, \"gpt-free\": {\"cost\": {\"input\": 0, \"output\": 0}}}}, \"zz-other\": {\"models\": {\"other-model\": {\"cost\": {\"input\": 0.3, \"output\": 0.7, \"cache_read\": 0.03}}}}, \"anthropic\": {\"models\": {\"claude-test-5-5\": {\"cost\": {\"input\": 4, \"output\": 20, \"cache_read\": 0.2, \"cache_write\": 5}}}}, \"google\": null, \"xai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 99, \"output\": 99}}}}}"
+    },
+    "ledger": null,
+    "exit": 1,
+    "report": null
+  },
+  {
+    "name": "claude-no-transcript",
+    "collector": "claude",
+    "session": "sess",
+    "files": {
+      ".local/share/copilot-api/models-dev-api.json": "{\"openai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 2, \"output\": 10, \"cache_read\": 0.2, \"cache_write\": 2.5, \"tiers\": [{\"input\": 4, \"output\": 15, \"cache_read\": 0.4, \"cache_write\": 5, \"tier\": {\"type\": \"context\", \"size\": 272000}}, {\"input\": 3, \"output\": 12, \"tier\": {\"type\": \"context\", \"size\": 128000}}, {\"input\": 9, \"tier\": {\"type\": \"output\", \"size\": 1000}}]}}, \"gpt-nullcache\": {\"cost\": {\"input\": 1.25, \"output\": 7.5, \"cache_read\": null}}, \"gpt-free\": {\"cost\": {\"input\": 0, \"output\": 0}}}}, \"zz-other\": {\"models\": {\"other-model\": {\"cost\": {\"input\": 0.3, \"output\": 0.7, \"cache_read\": 0.03}}}}, \"anthropic\": {\"models\": {\"claude-test-5-5\": {\"cost\": {\"input\": 4, \"output\": 20, \"cache_read\": 0.2, \"cache_write\": 5}}}}, \"google\": null, \"xai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 99, \"output\": 99}}}}}"
+    },
+    "ledger": null,
+    "exit": 1,
+    "report": null
+  },
+  {
+    "name": "claude-unsafe-session-id",
+    "collector": "claude",
+    "session": "a.b",
+    "files": {
+      ".claude/projects/proj/a.b.jsonl": "{\"type\": \"assistant\", \"message\": {\"id\": \"m1\", \"model\": \"gpt-test\", \"usage\": {\"input_tokens\": 1200, \"output_tokens\": 300, \"cache_creation_input_tokens\": 500, \"cache_read_input_tokens\": 7000}}}",
+      ".local/share/copilot-api/models-dev-api.json": "{\"openai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 2, \"output\": 10, \"cache_read\": 0.2, \"cache_write\": 2.5, \"tiers\": [{\"input\": 4, \"output\": 15, \"cache_read\": 0.4, \"cache_write\": 5, \"tier\": {\"type\": \"context\", \"size\": 272000}}, {\"input\": 3, \"output\": 12, \"tier\": {\"type\": \"context\", \"size\": 128000}}, {\"input\": 9, \"tier\": {\"type\": \"output\", \"size\": 1000}}]}}, \"gpt-nullcache\": {\"cost\": {\"input\": 1.25, \"output\": 7.5, \"cache_read\": null}}, \"gpt-free\": {\"cost\": {\"input\": 0, \"output\": 0}}}}, \"zz-other\": {\"models\": {\"other-model\": {\"cost\": {\"input\": 0.3, \"output\": 0.7, \"cache_read\": 0.03}}}}, \"anthropic\": {\"models\": {\"claude-test-5-5\": {\"cost\": {\"input\": 4, \"output\": 20, \"cache_read\": 0.2, \"cache_write\": 5}}}}, \"google\": null, \"xai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 99, \"output\": 99}}}}}"
+    },
+    "ledger": null,
+    "exit": 1,
+    "report": null
+  },
+  {
+    "name": "claude-message-not-an-object",
+    "collector": "claude",
+    "session": "sess",
+    "files": {
+      ".claude/projects/proj/sess.jsonl": "{\"type\": \"assistant\", \"message\": {\"id\": \"m1\", \"model\": \"gpt-test\", \"usage\": {\"input_tokens\": 1200, \"output_tokens\": 300, \"cache_creation_input_tokens\": 500, \"cache_read_input_tokens\": 7000}}}\n{\"type\": \"assistant\", \"message\": \"oops\"}",
+      ".local/share/copilot-api/models-dev-api.json": "{\"openai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 2, \"output\": 10, \"cache_read\": 0.2, \"cache_write\": 2.5, \"tiers\": [{\"input\": 4, \"output\": 15, \"cache_read\": 0.4, \"cache_write\": 5, \"tier\": {\"type\": \"context\", \"size\": 272000}}, {\"input\": 3, \"output\": 12, \"tier\": {\"type\": \"context\", \"size\": 128000}}, {\"input\": 9, \"tier\": {\"type\": \"output\", \"size\": 1000}}]}}, \"gpt-nullcache\": {\"cost\": {\"input\": 1.25, \"output\": 7.5, \"cache_read\": null}}, \"gpt-free\": {\"cost\": {\"input\": 0, \"output\": 0}}}}, \"zz-other\": {\"models\": {\"other-model\": {\"cost\": {\"input\": 0.3, \"output\": 0.7, \"cache_read\": 0.03}}}}, \"anthropic\": {\"models\": {\"claude-test-5-5\": {\"cost\": {\"input\": 4, \"output\": 20, \"cache_read\": 0.2, \"cache_write\": 5}}}}, \"google\": null, \"xai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 99, \"output\": 99}}}}}"
+    },
+    "ledger": null,
+    "exit": 1,
+    "report": null
+  },
+  {
+    "name": "claude-hidden-project-is-ignored",
+    "collector": "claude",
+    "session": "sess",
+    "files": {
+      ".local/share/copilot-api/models-dev-api.json": "{\"openai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 2, \"output\": 10, \"cache_read\": 0.2, \"cache_write\": 2.5, \"tiers\": [{\"input\": 4, \"output\": 15, \"cache_read\": 0.4, \"cache_write\": 5, \"tier\": {\"type\": \"context\", \"size\": 272000}}, {\"input\": 3, \"output\": 12, \"tier\": {\"type\": \"context\", \"size\": 128000}}, {\"input\": 9, \"tier\": {\"type\": \"output\", \"size\": 1000}}]}}, \"gpt-nullcache\": {\"cost\": {\"input\": 1.25, \"output\": 7.5, \"cache_read\": null}}, \"gpt-free\": {\"cost\": {\"input\": 0, \"output\": 0}}}}, \"zz-other\": {\"models\": {\"other-model\": {\"cost\": {\"input\": 0.3, \"output\": 0.7, \"cache_read\": 0.03}}}}, \"anthropic\": {\"models\": {\"claude-test-5-5\": {\"cost\": {\"input\": 4, \"output\": 20, \"cache_read\": 0.2, \"cache_write\": 5}}}}, \"google\": null, \"xai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 99, \"output\": 99}}}}}",
+      ".claude/projects/.hidden/sess.jsonl": "{\"type\": \"assistant\", \"message\": {\"id\": \"m1\", \"model\": \"gpt-test\", \"usage\": {\"input_tokens\": 1200, \"output_tokens\": 300, \"cache_creation_input_tokens\": 500, \"cache_read_input_tokens\": 7000}}}"
+    },
+    "ledger": null,
+    "exit": 1,
+    "report": null
+  },
+  {
+    "name": "codex-basic",
+    "collector": "codex",
+    "session": "abc",
+    "files": {
+      ".codex/sessions/2026/09/22/rollout-1.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"abc\", \"source\": \"cli\", \"cwd\": \"same\"}}\n{\"type\": \"turn_context\", \"payload\": {\"model\": \"gpt-test\"}}\n{\"type\": \"event_msg\", \"payload\": {\"type\": \"token_count\", \"info\": {\"total_token_usage\": {\"input_tokens\": 1000, \"cached_input_tokens\": 600, \"output_tokens\": 50}}}}\ngarbage\n{\"type\": \"event_msg\", \"payload\": {\"type\": \"token_count\", \"info\": {\"total_token_usage\": {\"input_tokens\": 5000, \"cached_input_tokens\": 3000, \"output_tokens\": 400, \"reasoning_output_tokens\": 300}}}}",
+      ".local/share/copilot-api/models-dev-api.json": "{\"openai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 2, \"output\": 10, \"cache_read\": 0.2, \"cache_write\": 2.5, \"tiers\": [{\"input\": 4, \"output\": 15, \"cache_read\": 0.4, \"cache_write\": 5, \"tier\": {\"type\": \"context\", \"size\": 272000}}, {\"input\": 3, \"output\": 12, \"tier\": {\"type\": \"context\", \"size\": 128000}}, {\"input\": 9, \"tier\": {\"type\": \"output\", \"size\": 1000}}]}}, \"gpt-nullcache\": {\"cost\": {\"input\": 1.25, \"output\": 7.5, \"cache_read\": null}}, \"gpt-free\": {\"cost\": {\"input\": 0, \"output\": 0}}}}, \"zz-other\": {\"models\": {\"other-model\": {\"cost\": {\"input\": 0.3, \"output\": 0.7, \"cache_read\": 0.03}}}}, \"anthropic\": {\"models\": {\"claude-test-5-5\": {\"cost\": {\"input\": 4, \"output\": 20, \"cache_read\": 0.2, \"cache_write\": 5}}}}, \"google\": null, \"xai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 99, \"output\": 99}}}}}"
+    },
+    "mtimes": {},
+    "exit": 0,
+    "report": {
+      "inputTokens": 5000,
+      "outputTokens": 400,
+      "cachedInputTokens": 3000,
+      "model": "gpt-test",
+      "source": "codex-cli-rollout",
+      "costKind": "estimated",
+      "costUsd": 0.0086,
+      "scope": "session"
+    }
+  },
+  {
+    "name": "codex-thread-settings-model",
+    "collector": "codex",
+    "session": "abc",
+    "files": {
+      ".codex/sessions/2026/09/22/r.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"abc\", \"source\": \"cli\", \"cwd\": \"same\"}}\n{\"type\": \"turn_context\", \"payload\": {\"model\": \"mystery\"}}\n{\"type\": \"event_msg\", \"payload\": {\"type\": \"thread_settings_applied\", \"thread_settings\": {\"model\": \"gpt-test\"}}}\n{\"type\": \"event_msg\", \"payload\": {\"type\": \"token_count\", \"info\": {\"total_token_usage\": {\"input_tokens\": 400000, \"cached_input_tokens\": 100, \"output_tokens\": 7, \"cache_write_input_tokens\": 900}}}}",
+      ".local/share/copilot-api/models-dev-api.json": "{\"openai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 2, \"output\": 10, \"cache_read\": 0.2, \"cache_write\": 2.5, \"tiers\": [{\"input\": 4, \"output\": 15, \"cache_read\": 0.4, \"cache_write\": 5, \"tier\": {\"type\": \"context\", \"size\": 272000}}, {\"input\": 3, \"output\": 12, \"tier\": {\"type\": \"context\", \"size\": 128000}}, {\"input\": 9, \"tier\": {\"type\": \"output\", \"size\": 1000}}]}}, \"gpt-nullcache\": {\"cost\": {\"input\": 1.25, \"output\": 7.5, \"cache_read\": null}}, \"gpt-free\": {\"cost\": {\"input\": 0, \"output\": 0}}}}, \"zz-other\": {\"models\": {\"other-model\": {\"cost\": {\"input\": 0.3, \"output\": 0.7, \"cache_read\": 0.03}}}}, \"anthropic\": {\"models\": {\"claude-test-5-5\": {\"cost\": {\"input\": 4, \"output\": 20, \"cache_read\": 0.2, \"cache_write\": 5}}}}, \"google\": null, \"xai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 99, \"output\": 99}}}}}"
+    },
+    "mtimes": {},
+    "exit": 0,
+    "report": {
+      "inputTokens": 400000,
+      "outputTokens": 7,
+      "cachedInputTokens": 100,
+      "model": "gpt-test",
+      "source": "codex-cli-rollout",
+      "costKind": "estimated",
+      "costUsd": 0.80034,
+      "scope": "session"
+    }
+  },
+  {
+    "name": "codex-unknown-model-has-no-cost",
+    "collector": "codex",
+    "session": "abc",
+    "files": {
+      ".codex/sessions/2026/09/22/r.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"abc\", \"source\": \"cli\", \"cwd\": \"same\"}}\n{\"type\": \"turn_context\", \"payload\": {\"model\": \"mystery\"}}\n{\"type\": \"event_msg\", \"payload\": {\"type\": \"token_count\", \"info\": {\"total_token_usage\": {\"input_tokens\": 10, \"output_tokens\": 1}}}}",
+      ".local/share/copilot-api/models-dev-api.json": "{\"openai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 2, \"output\": 10, \"cache_read\": 0.2, \"cache_write\": 2.5, \"tiers\": [{\"input\": 4, \"output\": 15, \"cache_read\": 0.4, \"cache_write\": 5, \"tier\": {\"type\": \"context\", \"size\": 272000}}, {\"input\": 3, \"output\": 12, \"tier\": {\"type\": \"context\", \"size\": 128000}}, {\"input\": 9, \"tier\": {\"type\": \"output\", \"size\": 1000}}]}}, \"gpt-nullcache\": {\"cost\": {\"input\": 1.25, \"output\": 7.5, \"cache_read\": null}}, \"gpt-free\": {\"cost\": {\"input\": 0, \"output\": 0}}}}, \"zz-other\": {\"models\": {\"other-model\": {\"cost\": {\"input\": 0.3, \"output\": 0.7, \"cache_read\": 0.03}}}}, \"anthropic\": {\"models\": {\"claude-test-5-5\": {\"cost\": {\"input\": 4, \"output\": 20, \"cache_read\": 0.2, \"cache_write\": 5}}}}, \"google\": null, \"xai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 99, \"output\": 99}}}}}"
+    },
+    "mtimes": {},
+    "exit": 0,
+    "report": {
+      "inputTokens": 10,
+      "outputTokens": 1,
+      "cachedInputTokens": 0,
+      "model": "mystery",
+      "source": "codex-cli-rollout",
+      "scope": "session"
+    }
+  },
+  {
+    "name": "codex-only-cli-sessions",
+    "collector": "codex",
+    "session": "abc",
+    "files": {
+      ".codex/sessions/2026/09/22/vscode.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"abc\", \"source\": \"vscode\", \"cwd\": \"same\"}}\n{\"type\": \"turn_context\", \"payload\": {\"model\": \"gpt-test\"}}\n{\"type\": \"event_msg\", \"payload\": {\"type\": \"token_count\", \"info\": {\"total_token_usage\": {\"input_tokens\": 1, \"output_tokens\": 1}}}}",
+      ".codex/sessions/2026/09/21/cli.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"session_id\": \"abc\", \"source\": \"cli\", \"cwd\": \"same\"}}\n{\"type\": \"turn_context\", \"payload\": {\"model\": \"gpt-test\"}}\n{\"type\": \"event_msg\", \"payload\": {\"type\": \"token_count\", \"info\": {\"total_token_usage\": {\"input_tokens\": 77, \"output_tokens\": 7}}}}",
+      ".local/share/copilot-api/models-dev-api.json": "{\"openai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 2, \"output\": 10, \"cache_read\": 0.2, \"cache_write\": 2.5, \"tiers\": [{\"input\": 4, \"output\": 15, \"cache_read\": 0.4, \"cache_write\": 5, \"tier\": {\"type\": \"context\", \"size\": 272000}}, {\"input\": 3, \"output\": 12, \"tier\": {\"type\": \"context\", \"size\": 128000}}, {\"input\": 9, \"tier\": {\"type\": \"output\", \"size\": 1000}}]}}, \"gpt-nullcache\": {\"cost\": {\"input\": 1.25, \"output\": 7.5, \"cache_read\": null}}, \"gpt-free\": {\"cost\": {\"input\": 0, \"output\": 0}}}}, \"zz-other\": {\"models\": {\"other-model\": {\"cost\": {\"input\": 0.3, \"output\": 0.7, \"cache_read\": 0.03}}}}, \"anthropic\": {\"models\": {\"claude-test-5-5\": {\"cost\": {\"input\": 4, \"output\": 20, \"cache_read\": 0.2, \"cache_write\": 5}}}}, \"google\": null, \"xai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 99, \"output\": 99}}}}}"
+    },
+    "mtimes": {},
+    "exit": 0,
+    "report": {
+      "inputTokens": 77,
+      "outputTokens": 7,
+      "cachedInputTokens": 0,
+      "model": "gpt-test",
+      "source": "codex-cli-rollout",
+      "costKind": "estimated",
+      "costUsd": 0.000224,
+      "scope": "session"
+    }
+  },
+  {
+    "name": "codex-newest-file-wins",
+    "collector": "codex",
+    "session": "abc",
+    "files": {
+      ".codex/sessions/2026/09/22/a.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"abc\", \"source\": \"cli\", \"cwd\": \"same\"}}\n{\"type\": \"turn_context\", \"payload\": {\"model\": \"gpt-test\"}}\n{\"type\": \"event_msg\", \"payload\": {\"type\": \"token_count\", \"info\": {\"total_token_usage\": {\"input_tokens\": 111, \"output_tokens\": 1}}}}",
+      ".codex/sessions/2026/09/22/b.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"abc\", \"source\": \"cli\", \"cwd\": \"same\"}}\n{\"type\": \"turn_context\", \"payload\": {\"model\": \"gpt-test\"}}\n{\"type\": \"event_msg\", \"payload\": {\"type\": \"token_count\", \"info\": {\"total_token_usage\": {\"input_tokens\": 222, \"output_tokens\": 2}}}}",
+      ".local/share/copilot-api/models-dev-api.json": "{\"openai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 2, \"output\": 10, \"cache_read\": 0.2, \"cache_write\": 2.5, \"tiers\": [{\"input\": 4, \"output\": 15, \"cache_read\": 0.4, \"cache_write\": 5, \"tier\": {\"type\": \"context\", \"size\": 272000}}, {\"input\": 3, \"output\": 12, \"tier\": {\"type\": \"context\", \"size\": 128000}}, {\"input\": 9, \"tier\": {\"type\": \"output\", \"size\": 1000}}]}}, \"gpt-nullcache\": {\"cost\": {\"input\": 1.25, \"output\": 7.5, \"cache_read\": null}}, \"gpt-free\": {\"cost\": {\"input\": 0, \"output\": 0}}}}, \"zz-other\": {\"models\": {\"other-model\": {\"cost\": {\"input\": 0.3, \"output\": 0.7, \"cache_read\": 0.03}}}}, \"anthropic\": {\"models\": {\"claude-test-5-5\": {\"cost\": {\"input\": 4, \"output\": 20, \"cache_read\": 0.2, \"cache_write\": 5}}}}, \"google\": null, \"xai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 99, \"output\": 99}}}}}"
+    },
+    "mtimes": {
+      ".codex/sessions/2026/09/22/a.jsonl": 1790000200,
+      ".codex/sessions/2026/09/22/b.jsonl": 1790000100
+    },
+    "exit": 0,
+    "report": {
+      "inputTokens": 111,
+      "outputTokens": 1,
+      "cachedInputTokens": 0,
+      "model": "gpt-test",
+      "source": "codex-cli-rollout",
+      "costKind": "estimated",
+      "costUsd": 0.000232,
+      "scope": "session"
+    }
+  },
+  {
+    "name": "codex-no-token-count",
+    "collector": "codex",
+    "session": "abc",
+    "files": {
+      ".codex/sessions/2026/09/22/r.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"abc\", \"source\": \"cli\", \"cwd\": \"same\"}}\n{\"type\": \"turn_context\", \"payload\": {\"model\": \"gpt-test\"}}",
+      ".local/share/copilot-api/models-dev-api.json": "{\"openai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 2, \"output\": 10, \"cache_read\": 0.2, \"cache_write\": 2.5, \"tiers\": [{\"input\": 4, \"output\": 15, \"cache_read\": 0.4, \"cache_write\": 5, \"tier\": {\"type\": \"context\", \"size\": 272000}}, {\"input\": 3, \"output\": 12, \"tier\": {\"type\": \"context\", \"size\": 128000}}, {\"input\": 9, \"tier\": {\"type\": \"output\", \"size\": 1000}}]}}, \"gpt-nullcache\": {\"cost\": {\"input\": 1.25, \"output\": 7.5, \"cache_read\": null}}, \"gpt-free\": {\"cost\": {\"input\": 0, \"output\": 0}}}}, \"zz-other\": {\"models\": {\"other-model\": {\"cost\": {\"input\": 0.3, \"output\": 0.7, \"cache_read\": 0.03}}}}, \"anthropic\": {\"models\": {\"claude-test-5-5\": {\"cost\": {\"input\": 4, \"output\": 20, \"cache_read\": 0.2, \"cache_write\": 5}}}}, \"google\": null, \"xai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 99, \"output\": 99}}}}}"
+    },
+    "mtimes": {},
+    "exit": 1,
+    "report": null
+  },
+  {
+    "name": "codex-empty-session-id",
+    "collector": "codex",
+    "session": "",
+    "files": {
+      ".codex/sessions/2026/09/22/r.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".local/share/copilot-api/models-dev-api.json": "{\"openai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 2, \"output\": 10, \"cache_read\": 0.2, \"cache_write\": 2.5, \"tiers\": [{\"input\": 4, \"output\": 15, \"cache_read\": 0.4, \"cache_write\": 5, \"tier\": {\"type\": \"context\", \"size\": 272000}}, {\"input\": 3, \"output\": 12, \"tier\": {\"type\": \"context\", \"size\": 128000}}, {\"input\": 9, \"tier\": {\"type\": \"output\", \"size\": 1000}}]}}, \"gpt-nullcache\": {\"cost\": {\"input\": 1.25, \"output\": 7.5, \"cache_read\": null}}, \"gpt-free\": {\"cost\": {\"input\": 0, \"output\": 0}}}}, \"zz-other\": {\"models\": {\"other-model\": {\"cost\": {\"input\": 0.3, \"output\": 0.7, \"cache_read\": 0.03}}}}, \"anthropic\": {\"models\": {\"claude-test-5-5\": {\"cost\": {\"input\": 4, \"output\": 20, \"cache_read\": 0.2, \"cache_write\": 5}}}}, \"google\": null, \"xai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 99, \"output\": 99}}}}}"
+    },
+    "mtimes": {},
+    "exit": 1,
+    "report": null
+  },
+  {
+    "name": "codex-scan-stops-after-30-days",
+    "collector": "codex",
+    "session": "abc",
+    "files": {
+      ".codex/sessions/2026/09/01/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/02/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/03/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/04/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/05/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/06/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/07/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/08/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/09/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/10/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/11/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/12/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/13/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/14/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/15/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/16/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/17/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/18/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/19/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/20/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/21/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/22/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/23/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/24/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/25/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/26/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/27/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/28/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/29/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/30/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/08/31/old.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"abc\", \"source\": \"cli\", \"cwd\": \"same\"}}\n{\"type\": \"turn_context\", \"payload\": {\"model\": \"gpt-test\"}}\n{\"type\": \"event_msg\", \"payload\": {\"type\": \"token_count\", \"info\": {\"total_token_usage\": {\"input_tokens\": 5, \"output_tokens\": 5}}}}",
+      ".local/share/copilot-api/models-dev-api.json": "{\"openai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 2, \"output\": 10, \"cache_read\": 0.2, \"cache_write\": 2.5, \"tiers\": [{\"input\": 4, \"output\": 15, \"cache_read\": 0.4, \"cache_write\": 5, \"tier\": {\"type\": \"context\", \"size\": 272000}}, {\"input\": 3, \"output\": 12, \"tier\": {\"type\": \"context\", \"size\": 128000}}, {\"input\": 9, \"tier\": {\"type\": \"output\", \"size\": 1000}}]}}, \"gpt-nullcache\": {\"cost\": {\"input\": 1.25, \"output\": 7.5, \"cache_read\": null}}, \"gpt-free\": {\"cost\": {\"input\": 0, \"output\": 0}}}}, \"zz-other\": {\"models\": {\"other-model\": {\"cost\": {\"input\": 0.3, \"output\": 0.7, \"cache_read\": 0.03}}}}, \"anthropic\": {\"models\": {\"claude-test-5-5\": {\"cost\": {\"input\": 4, \"output\": 20, \"cache_read\": 0.2, \"cache_write\": 5}}}}, \"google\": null, \"xai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 99, \"output\": 99}}}}}"
+    },
+    "mtimes": {},
+    "exit": 1,
+    "report": null
+  },
+  {
+    "name": "codex-thirtieth-day-is-scanned",
+    "collector": "codex",
+    "session": "abc",
+    "files": {
+      ".codex/sessions/2026/09/02/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/03/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/04/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/05/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/06/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/07/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/08/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/09/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/10/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/11/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/12/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/13/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/14/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/15/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/16/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/17/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/18/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/19/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/20/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/21/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/22/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/23/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/24/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/25/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/26/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/27/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/28/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/29/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/09/30/x.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"other\", \"source\": \"cli\", \"cwd\": \"same\"}}",
+      ".codex/sessions/2026/08/31/old.jsonl": "{\"type\": \"session_meta\", \"payload\": {\"id\": \"abc\", \"source\": \"cli\", \"cwd\": \"same\"}}\n{\"type\": \"turn_context\", \"payload\": {\"model\": \"gpt-test\"}}\n{\"type\": \"event_msg\", \"payload\": {\"type\": \"token_count\", \"info\": {\"total_token_usage\": {\"input_tokens\": 5, \"output_tokens\": 5}}}}",
+      ".local/share/copilot-api/models-dev-api.json": "{\"openai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 2, \"output\": 10, \"cache_read\": 0.2, \"cache_write\": 2.5, \"tiers\": [{\"input\": 4, \"output\": 15, \"cache_read\": 0.4, \"cache_write\": 5, \"tier\": {\"type\": \"context\", \"size\": 272000}}, {\"input\": 3, \"output\": 12, \"tier\": {\"type\": \"context\", \"size\": 128000}}, {\"input\": 9, \"tier\": {\"type\": \"output\", \"size\": 1000}}]}}, \"gpt-nullcache\": {\"cost\": {\"input\": 1.25, \"output\": 7.5, \"cache_read\": null}}, \"gpt-free\": {\"cost\": {\"input\": 0, \"output\": 0}}}}, \"zz-other\": {\"models\": {\"other-model\": {\"cost\": {\"input\": 0.3, \"output\": 0.7, \"cache_read\": 0.03}}}}, \"anthropic\": {\"models\": {\"claude-test-5-5\": {\"cost\": {\"input\": 4, \"output\": 20, \"cache_read\": 0.2, \"cache_write\": 5}}}}, \"google\": null, \"xai\": {\"models\": {\"gpt-test\": {\"cost\": {\"input\": 99, \"output\": 99}}}}}"
+    },
+    "mtimes": {},
+    "exit": 0,
+    "report": {
+      "inputTokens": 5,
+      "outputTokens": 5,
+      "cachedInputTokens": 0,
+      "model": "gpt-test",
+      "source": "codex-cli-rollout",
+      "costKind": "estimated",
+      "costUsd": 6e-05,
+      "scope": "session"
+    }
+  },
+  {
+    "name": "copilot-shutdown",
+    "collector": "copilot",
+    "session": "cs",
+    "files": {
+      ".copilot/session-state/cs/events.jsonl": "{\"type\": \"session.start\"}\n{\"type\": \"user.message\", \"data\": {}}\n{\"type\": \"assistant.turn_start\", \"data\": {}}\n{\"type\": \"assistant.message\", \"data\": {\"model\": \"gpt-test\"}}\n{\"type\": \"assistant.turn_end\", \"data\": {}}\n{\"type\": \"session.shutdown\", \"data\": {\"modelMetrics\": {\"gpt-test\": {\"usage\": {\"inputTokens\": 100}}}, \"totalNanoAiu\": 125000000000}}"
+    },
+    "exit": 0,
+    "report": {
+      "model": "gpt-test",
+      "costUsd": 1.25,
+      "costKind": "billed",
+      "scope": "session",
+      "source": "copilot-cli-events"
+    }
+  },
+  {
+    "name": "copilot-per-model-sum",
+    "collector": "copilot",
+    "session": "cs",
+    "files": {
+      ".copilot/session-state/cs/events.jsonl": "{\"type\": \"session.shutdown\", \"data\": {\"modelMetrics\": {\"gpt-test\": {\"usage\": {\"inputTokens\": 100}, \"totalNanoAiu\": 50000000001}, \"b\": {\"usage\": {\"inputTokens\": 100}, \"totalNanoAiu\": 50000000001}}}}"
+    },
+    "exit": 0,
+    "report": {
+      "model": "copilot",
+      "costUsd": 1.00000000002,
+      "costKind": "billed",
+      "scope": "session",
+      "source": "copilot-cli-events"
+    }
+  },
+  {
+    "name": "copilot-per-model-missing-one",
+    "collector": "copilot",
+    "session": "cs",
+    "files": {
+      ".copilot/session-state/cs/events.jsonl": "{\"type\": \"session.start\", \"data\": {\"selectedModel\": \"x\"}}\n{\"type\": \"session.shutdown\", \"data\": {\"modelMetrics\": {\"a\": {\"totalNanoAiu\": 5}, \"b\": {}}}}"
+    },
+    "exit": 1,
+    "report": null
+  },
+  {
+    "name": "copilot-checkpoint-after-turn",
+    "collector": "copilot",
+    "session": "cs",
+    "files": {
+      ".copilot/session-state/cs/events.jsonl": "{\"type\": \"session.start\", \"data\": {\"selectedModel\": \"gpt-test\"}}\n{\"type\": \"user.message\", \"data\": {}}\n{\"type\": \"assistant.turn_start\", \"data\": {}}\n{\"type\": \"assistant.message\", \"data\": {\"model\": \"gpt-test\"}}\n{\"type\": \"assistant.turn_end\", \"data\": {}}\n{\"type\": \"session.usage_checkpoint\", \"data\": {\"totalNanoAiu\": 634300000}}\n{\"type\": \"hook.end\"}"
+    },
+    "exit": 0,
+    "report": {
+      "model": "gpt-test",
+      "costUsd": 0.006343,
+      "costKind": "billed",
+      "scope": "session",
+      "source": "copilot-cli-events"
+    }
+  },
+  {
+    "name": "copilot-turn-after-snapshot-is-pending",
+    "collector": "copilot",
+    "session": "cs",
+    "files": {
+      ".copilot/session-state/cs/events.jsonl": "{\"type\": \"session.start\"}\n{\"type\": \"user.message\", \"data\": {}}\n{\"type\": \"assistant.turn_start\", \"data\": {}}\n{\"type\": \"assistant.message\", \"data\": {\"model\": \"gpt-test\"}}\n{\"type\": \"assistant.turn_end\", \"data\": {}}\n{\"type\": \"session.usage_checkpoint\", \"data\": {\"totalNanoAiu\": 1}}\n{\"type\": \"user.message\"}\n{\"type\": \"assistant.turn_start\"}"
+    },
+    "exit": 75,
+    "report": null
+  },
+  {
+    "name": "copilot-resumed-turn-is-pending",
+    "collector": "copilot",
+    "session": "cs",
+    "files": {
+      ".copilot/session-state/cs/events.jsonl": "{\"type\": \"session.start\"}\n{\"type\": \"session.shutdown\", \"data\": {\"modelMetrics\": {\"gpt-test\": {\"usage\": {\"inputTokens\": 100}}}, \"totalNanoAiu\": 1000000000}}\n{\"type\": \"session.resume\"}\n{\"type\": \"user.message\", \"data\": {}}\n{\"type\": \"assistant.turn_start\", \"data\": {}}\n{\"type\": \"assistant.message\", \"data\": {\"model\": \"gpt-test\"}}\n{\"type\": \"assistant.turn_end\", \"data\": {}}"
+    },
+    "exit": 75,
+    "report": null
+  },
+  {
+    "name": "copilot-resumed-before-a-turn",
+    "collector": "copilot",
+    "session": "cs",
+    "files": {
+      ".copilot/session-state/cs/events.jsonl": "{\"type\": \"session.start\"}\n{\"type\": \"user.message\", \"data\": {}}\n{\"type\": \"assistant.turn_start\", \"data\": {}}\n{\"type\": \"assistant.message\", \"data\": {\"model\": \"gpt-test\"}}\n{\"type\": \"assistant.turn_end\", \"data\": {}}\n{\"type\": \"session.shutdown\", \"data\": {\"modelMetrics\": {\"gpt-test\": {\"usage\": {\"inputTokens\": 100}}}, \"totalNanoAiu\": 2000000000}}\n{\"type\": \"session.resume\"}"
+    },
+    "exit": 0,
+    "report": {
+      "model": "gpt-test",
+      "costUsd": 0.02,
+      "costKind": "billed",
+      "scope": "session",
+      "source": "copilot-cli-events"
+    }
+  },
+  {
+    "name": "copilot-snapshot-without-credits",
+    "collector": "copilot",
+    "session": "cs",
+    "files": {
+      ".copilot/session-state/cs/events.jsonl": "{\"type\": \"session.shutdown\", \"data\": {\"modelMetrics\": {\"gpt-test\": {\"usage\": {\"inputTokens\": 100}}}, \"totalNanoAiu\": 2000000000}}\n{\"type\": \"session.resume\"}\n{\"type\": \"session.shutdown\", \"data\": {\"modelMetrics\": {}}}"
+    },
+    "exit": 1,
+    "report": null
+  },
+  {
+    "name": "copilot-models-sorted-and-joined",
+    "collector": "copilot",
+    "session": "cs",
+    "files": {
+      ".copilot/session-state/cs/events.jsonl": "{\"type\": \"session.start\", \"data\": {\"selectedModel\": \"x\"}}\n{\"type\": \"assistant.message\", \"data\": {\"model\": \"zeta\"}}\n{\"type\": \"assistant.message\", \"data\": {\"model\": \"alpha\"}}\n{\"type\": \"assistant.message\", \"data\": {\"model\": \"zeta\"}}\n{\"type\": \"session.shutdown\", \"data\": {\"modelMetrics\": {\"gpt-test\": {\"usage\": {\"inputTokens\": 100}}}, \"totalNanoAiu\": 3}}"
+    },
+    "exit": 0,
+    "report": {
+      "model": "alpha+zeta",
+      "costUsd": 3e-11,
+      "costKind": "billed",
+      "scope": "session",
+      "source": "copilot-cli-events"
+    }
+  },
+  {
+    "name": "copilot-model-change",
+    "collector": "copilot",
+    "session": "cs",
+    "files": {
+      ".copilot/session-state/cs/events.jsonl": "{\"type\": \"session.start\", \"data\": {\"selectedModel\": \"first\"}}\n{\"type\": \"session.model_change\", \"data\": {\"newModel\": \"second\"}}\n{\"type\": \"session.shutdown\", \"data\": {\"modelMetrics\": {\"gpt-test\": {\"usage\": {\"inputTokens\": 100}}}, \"totalNanoAiu\": 7}}"
+    },
+    "exit": 0,
+    "report": {
+      "model": "second",
+      "costUsd": 7e-11,
+      "costKind": "billed",
+      "scope": "session",
+      "source": "copilot-cli-events"
+    }
+  },
+  {
+    "name": "copilot-no-model-at-all",
+    "collector": "copilot",
+    "session": "cs",
+    "files": {
+      ".copilot/session-state/cs/events.jsonl": "{\"type\": \"session.shutdown\", \"data\": {\"modelMetrics\": {\"gpt-test\": {\"usage\": {\"inputTokens\": 100}}}, \"totalNanoAiu\": 9}}"
+    },
+    "exit": 0,
+    "report": {
+      "model": "copilot",
+      "costUsd": 9e-11,
+      "costKind": "billed",
+      "scope": "session",
+      "source": "copilot-cli-events"
+    }
+  },
+  {
+    "name": "copilot-float-credits-are-not-credits",
+    "collector": "copilot",
+    "session": "cs",
+    "files": {
+      ".copilot/session-state/cs/events.jsonl": "{\"type\": \"session.shutdown\", \"data\": {\"totalNanoAiu\": 1.0}}"
+    },
+    "exit": 1,
+    "report": null
+  },
+  {
+    "name": "copilot-bool-credits-are-not-credits",
+    "collector": "copilot",
+    "session": "cs",
+    "files": {
+      ".copilot/session-state/cs/events.jsonl": "{\"type\": \"session.shutdown\", \"data\": {\"totalNanoAiu\": true, \"modelMetrics\": {\"m\": {\"totalNanoAiu\": 4}}}}"
+    },
+    "exit": 0,
+    "report": {
+      "model": "copilot",
+      "costUsd": 4e-11,
+      "costKind": "billed",
+      "scope": "session",
+      "source": "copilot-cli-events"
+    }
+  },
+  {
+    "name": "copilot-activity-data-not-an-object",
+    "collector": "copilot",
+    "session": "cs",
+    "files": {
+      ".copilot/session-state/cs/events.jsonl": "{\"type\": \"tool.call\", \"data\": [1]}\n{\"type\": \"session.shutdown\", \"data\": {\"modelMetrics\": {\"gpt-test\": {\"usage\": {\"inputTokens\": 100}}}, \"totalNanoAiu\": 11}}"
+    },
+    "exit": 0,
+    "report": {
+      "model": "copilot",
+      "costUsd": 1.1e-10,
+      "costKind": "billed",
+      "scope": "session",
+      "source": "copilot-cli-events"
+    }
+  },
+  {
+    "name": "copilot-tool-event-after-snapshot-is-pending",
+    "collector": "copilot",
+    "session": "cs",
+    "files": {
+      ".copilot/session-state/cs/events.jsonl": "{\"type\": \"session.shutdown\", \"data\": {\"modelMetrics\": {\"gpt-test\": {\"usage\": {\"inputTokens\": 100}}}, \"totalNanoAiu\": 5}}\n{\"type\": \"tool.execution_start\"}"
+    },
+    "exit": 75,
+    "report": null
+  },
+  {
+    "name": "copilot-subagent-event-after-snapshot-is-pending",
+    "collector": "copilot",
+    "session": "cs",
+    "files": {
+      ".copilot/session-state/cs/events.jsonl": "{\"type\": \"session.shutdown\", \"data\": {\"modelMetrics\": {\"gpt-test\": {\"usage\": {\"inputTokens\": 100}}}, \"totalNanoAiu\": 5}}\n{\"type\": \"subagent.started\"}"
+    },
+    "exit": 75,
+    "report": null
+  },
+  {
+    "name": "copilot-model-event-after-snapshot-is-pending",
+    "collector": "copilot",
+    "session": "cs",
+    "files": {
+      ".copilot/session-state/cs/events.jsonl": "{\"type\": \"session.shutdown\", \"data\": {\"modelMetrics\": {\"gpt-test\": {\"usage\": {\"inputTokens\": 100}}}, \"totalNanoAiu\": 5}}\n{\"type\": \"model.call_failure\"}"
+    },
+    "exit": 75,
+    "report": null
+  },
+  {
+    "name": "copilot-user-event-after-snapshot-is-pending",
+    "collector": "copilot",
+    "session": "cs",
+    "files": {
+      ".copilot/session-state/cs/events.jsonl": "{\"type\": \"session.shutdown\", \"data\": {\"modelMetrics\": {\"gpt-test\": {\"usage\": {\"inputTokens\": 100}}}, \"totalNanoAiu\": 5}}\n{\"type\": \"user.message\"}"
+    },
+    "exit": 75,
+    "report": null
+  },
+  {
+    "name": "copilot-assistant-event-after-snapshot-is-pending",
+    "collector": "copilot",
+    "session": "cs",
+    "files": {
+      ".copilot/session-state/cs/events.jsonl": "{\"type\": \"session.shutdown\", \"data\": {\"modelMetrics\": {\"gpt-test\": {\"usage\": {\"inputTokens\": 100}}}, \"totalNanoAiu\": 5}}\n{\"type\": \"assistant.turn_start\"}"
+    },
+    "exit": 75,
+    "report": null
+  },
+  {
+    "name": "copilot-other-events-after-snapshot-are-settled",
+    "collector": "copilot",
+    "session": "cs",
+    "files": {
+      ".copilot/session-state/cs/events.jsonl": "{\"type\": \"session.shutdown\", \"data\": {\"modelMetrics\": {\"gpt-test\": {\"usage\": {\"inputTokens\": 100}}}, \"totalNanoAiu\": 5}}\n{\"type\": \"session.info\"}\n{\"type\": \"hook.start\"}\n{\"type\": \"toolbox\"}\n{\"type\": \"\"}\n{\"data\": {}}"
+    },
+    "exit": 0,
+    "report": {
+      "model": "copilot",
+      "costUsd": 5e-11,
+      "costKind": "billed",
+      "scope": "session",
+      "source": "copilot-cli-events"
+    }
+  },
+  {
+    "name": "copilot-no-events-file",
+    "collector": "copilot",
+    "session": "cs",
+    "files": {
+      ".copilot/session-state/cs/events.jsonl": ""
+    },
+    "exit": 1,
+    "report": null
+  },
+  {
+    "name": "copilot-unsafe-session-id",
+    "collector": "copilot",
+    "session": "../x",
+    "files": {
+      ".copilot/session-state/../x/events.jsonl": "{\"type\": \"session.shutdown\", \"data\": {\"modelMetrics\": {\"gpt-test\": {\"usage\": {\"inputTokens\": 100}}}, \"totalNanoAiu\": 1}}"
+    },
+    "exit": 1,
+    "report": null
+  },
+  {
+    "name": "copilot-type-not-a-string",
+    "collector": "copilot",
+    "session": "cs",
+    "files": {
+      ".copilot/session-state/cs/events.jsonl": "{\"type\": 5}\n{\"type\": \"session.shutdown\", \"data\": {\"modelMetrics\": {\"gpt-test\": {\"usage\": {\"inputTokens\": 100}}}, \"totalNanoAiu\": 1}}"
+    },
+    "exit": 1,
+    "report": null
+  }
+]

@@ -1,0 +1,10 @@
+{
+  "productName": "AgentFlow Installer Validation",
+  "identifier": "dev.agentflow.installer-validation",
+  "mainBinaryName": "agentflow-installer-validation",
+  "bundle": {
+    "windows": {
+      "nsis": { "startMenuFolder": "AgentFlow Installer Validation" }
+    }
+  }
+}

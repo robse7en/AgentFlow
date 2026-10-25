@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.pyc
+backend/.venv/
+backend/*.egg-info/
+.pytest_cache/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Local data
+*.db
+*.db-wal
+*.db-shm
+.agentflow/
+data/.agentflow/
+.review-tmp/
+.start.pid
+
+# Local tooling / machine-specific
+config.json
+config.json.bak
+config.json.tmp
+.pytest-branch-suffix-*/
+.serena/
+
+# Rust
+app/target/
+app/src-tauri/target/
+app/src-tauri/gen/
+.desktop-tools/
+.installer-test-tmp/
+.port-test-tmp/
+.tauri
+# Desktop binaries and built UI copied to the checkout root
+/*.exe
+/ui/
+config.json.*.bak
+deploy/update-server/releases/
+/.worktrees
+
+# Original design spec, kept locally only
+/AgentFlow — Local Human-Gated AI Engineering Workflow.md

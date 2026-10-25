@@ -1,0 +1,24 @@
+{
+  "branch": {
+    "exists": "bool",
+    "name": "str",
+    "sha": "str",
+    "unmergedCommits": "number",
+    "unpushedCommits": "null",
+    "upstream": "null"
+  },
+  "sessionWillBeClosed": "bool",
+  "taskFolder": {
+    "exists": "bool",
+    "path": "str"
+  },
+  "unknownCostRunsToday": "number",
+  "workerBranches": [],
+  "workerWorktrees": [],
+  "worktree": {
+    "dirtyPaths": [],
+    "error": "null",
+    "exists": "bool",
+    "path": "str"
+  }
+}

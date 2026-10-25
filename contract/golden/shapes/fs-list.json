@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "name": "str",
+      "path": "str"
+    }
+  ],
+  "home": "str",
+  "isGitRepo": "bool",
+  "parent": "str",
+  "path": "str",
+  "roots": [
+    "str"
+  ]
+}

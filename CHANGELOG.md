@@ -1,0 +1,200 @@
+# Changelog
+
+Desktop version history, reconstructed from repository commits on 2026-10-24.
+Dates are the version commits' author dates. Entries describe source changes between
+version checkpoints; they do not certify that installers were built, distributed, or
+tested. The frontend and Python package versions are independent of desktop versions.
+
+Each version has a local annotated `v<version>` Git tag at the source checkpoint
+shown below. Tags must be pushed separately to share them with other checkouts.
+
+## 1.1.6 - 2026-10-25
+
+Source: the version commit tagged `v1.1.6` on `main`.
+
+- Let agents ask decision-tree questions with `flowctl question --file`: the agent's pick,
+  consequence notes, a risk level, a context line, an agent's note with its source per
+  choice, and one follow-up question per branch. `--message`/`--choice` still asks a flat
+  question.
+- Answer by picking a path, sent to the agent as one line (`2: …`, `1.1: A → B` or
+  `other: …`), from the task page, Slack (the notice switches to the follow-up's buttons in
+  place) or a new Decisions inbox listing open questions across tasks.
+
+## 1.1.5 - 2026-10-25
+
+Source: `0907170` (`v1.1.5`) on `main`.
+
+- Plan Parallel tasks with the Architect, resuming its discovery conversation, instead
+  of a fresh Orchestrator. A configured `agents.orchestrator`, or an Orchestrator
+  override on a task or project, keeps the separate planner; stored tasks are unchanged.
+- Stop the example config, setup wizard and desktop onboarding writing
+  `agents.orchestrator`.
+- Include everything in 1.1.4, merged into `main` in `2546d4d`.
+
+## 1.1.4 - 2026-10-24
+
+Source: `75a9586` (`v1.1.4`). Recorded on `feature/custom-agent-instructions`, which
+was merged into `main` in `2546d4d` for 1.1.5.
+
+- Add repository-based shared agent instructions, effective briefing previews, and
+  immutable task snapshots, with explicit updates for future runs.
+- Include interrupted snapshot recovery and accurate uncommitted-file status.
+
+## 1.1.3 - 2026-10-23
+
+Source: `eb4d3fc` (`v1.1.3`).
+
+- Fix worktree cleanup failures and log cleanup errors.
+- Accept hidden Zellij client windows narrower than the configured headless width.
+
+## 1.1.2 - 2026-10-23
+
+Source: `f2a3aa0` (`v1.1.2`).
+
+- Open pull requests against the task's base branch and flag pull requests targeting
+  another branch.
+
+## 1.1.1 - 2026-10-23
+
+Source: `2e5bc6f` (`v1.1.1`).
+
+- Keep dashboard headers and filters fixed while the task list scrolls.
+
+## 1.1.0 - 2026-10-22
+
+Source: `222e639` (`v1.1.0`).
+
+- Group tasks into projects in both the Python backend and Rust core.
+- Add a Projects page and a project filter on the task dashboard.
+- Use "working directory" consistently in server messages.
+
+## 1.0.1 - 2026-10-22
+
+Source: `7af36c2` (`v1.0.1`).
+
+- Introduce the A-shaped logo and use it for the desktop app icon.
+
+## 1.0.0 - 2026-10-21
+
+Source: `461ed86` (`v1.0.0`).
+
+- Redesign the frontend with a sidebar shell, theme tokens, task rows, curved
+  workflow nodes, dashboard statistics, task headers, cards, and a dark canvas.
+- Keep row menus above subsequent rows and improve status text contrast to AA.
+
+## 0.1.13 - 2026-10-21
+
+Source: `c8c69d1` (`v0.1.13`).
+
+- Display observational agent heartbeats on workflow nodes and worker cards.
+
+## 0.1.12 - 2026-10-21
+
+Source: `b884790` (`v0.1.12`).
+
+- Prepare new worktrees using per-repository setup configuration.
+- Record Orca-inspired improvement proposals checked against the Rust core.
+
+## 0.1.11 - 2026-10-21
+
+Source: `69c576c` (`v0.1.11`).
+
+- Include rollback cost and error detection in the final risk assessment.
+- Refresh the configuration test baseline to include `zellij.useInDesktop`.
+
+## 0.1.10 - 2026-10-21
+
+Source: `204fe62` (`v0.1.10`).
+
+- Branch new tasks from the remote base when the local base branch is behind it.
+
+## 0.1.9 - 2026-10-21
+
+Source: `5a081f5` (`v0.1.9`).
+
+- Open the workflow canvas zoomed in on the node needing attention.
+
+## 0.1.8 - 2026-10-20
+
+Source: `7713645` (`v0.1.8`).
+
+- Add harness logos, compact chips, and time/cost footers to workflow nodes.
+
+## 0.1.7 - 2026-10-14
+
+Source: `11fcab6` (`v0.1.7`).
+
+- Run task creation, worktree cleanup, and deletion in the background.
+- Close leftover task Zellij sessions during cleanup and deletion.
+- Apply Rust formatting and fix Clippy warnings.
+
+## 0.1.6 - 2026-10-14
+
+Source: `875436d` (`v0.1.6`).
+
+- Find Jira tickets in search even when they have never been opened in Jira.
+
+## 0.1.5 - 2026-10-12
+
+Source: `7c5ba2f` (`v0.1.5`).
+
+- Allow desktop agents to run in Zellij.
+- Fix `flowctl` shims on installed desktops.
+
+## 0.1.4 - 2026-10-08
+
+Source: `b60a006` (`v0.1.4`).
+
+- Offer forced worktree cleanup for branches merged outside a pull request.
+
+## 0.1.3 - 2026-10-08
+
+Source: `3430a24` (`v0.1.3`).
+
+- Add signed over-the-air desktop updates through a configurable LAN update server.
+
+## 0.1.2 - 2026-10-08
+
+Source: `d15dddf` (`v0.1.2`).
+
+- Make Jira optional and support local prompt tasks.
+- Defer coding CLI connection until an agent's first run, and allow setup to skip
+  Jira and CLI configuration.
+- Confirm before closing the desktop with work in progress.
+- Add Change instance to desktop Settings and keep new setup independent of the
+  existing instance selection.
+- Fix setup authorization failures caused by a null origin.
+- Show Connecting during initial pairing and report the built-in terminal as available.
+- Fix a Copilot implementer refusing to read its briefing.
+
+## 0.1.1 - 2026-10-05
+
+Source: `bf101a6` (`v0.1.1`).
+
+- Add a Windows desktop installer and guided instance setup.
+
+## 0.1.0 - 2026-10-05
+
+Source: `abf1359` (`v0.1.0`). Initial desktop source baseline at the Rust port merge;
+no separate release bump or distribution record was found for this version.
+
+- Introduce the Rust desktop core, CLI callbacks, task lifecycle, configuration,
+  SQLite persistence, authentication, WebSocket API, and harness integrations.
+- Add embedded terminals, Git worktree handling, workflow and integration support,
+  and Windows desktop rebuild scripts.
+
+## Maintaining this record
+
+For each future desktop release:
+
+1. Update the desktop version and any corresponding workspace package versions.
+2. Add a dated entry here describing the changes since the previous version.
+3. Commit the version and changelog together on the intended release branch.
+4. Create an annotated tag on that commit:
+   `git tag -a vX.Y.Z -m "AgentFlow X.Y.Z"`.
+5. Use the same release notes when building the installer with `-ReleaseNotes`.
+6. When publishing is authorized, push the release commit and its specific tag:
+   `git push origin vX.Y.Z`. Never move an existing published release tag.
+
+The historical tags above point to the original version commits, so their source
+trees predate this reconstructed changelog.

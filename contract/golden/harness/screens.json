@@ -1,0 +1,369 @@
+[
+  {
+    "name": "empty",
+    "rows": [],
+    "states": {
+      "claude": "unknown",
+      "codex": "unknown",
+      "copilot": "unknown",
+      "generic-cli": "unknown",
+      "mystery-type": "unknown"
+    }
+  },
+  {
+    "name": "blank-rows",
+    "rows": [
+      "",
+      "   ",
+      ""
+    ],
+    "states": {
+      "claude": "unknown",
+      "codex": "unknown",
+      "copilot": "unknown",
+      "generic-cli": "unknown",
+      "mystery-type": "unknown"
+    }
+  },
+  {
+    "name": "claude-idle",
+    "rows": [
+      "\u256d\u2500\u2500\u2500\u256e",
+      "\u2502 > \u2502",
+      "\u2570\u2500\u2500\u2500\u256f",
+      "  ? for shortcuts"
+    ],
+    "states": {
+      "claude": "idle",
+      "codex": "unknown",
+      "copilot": "unknown",
+      "generic-cli": "unknown",
+      "mystery-type": "unknown"
+    }
+  },
+  {
+    "name": "claude-working",
+    "rows": [
+      "\u273b Thinking\u2026 (12s \u00b7 esc to interrupt)",
+      "",
+      ">"
+    ],
+    "states": {
+      "claude": "working",
+      "codex": "working",
+      "copilot": "working",
+      "generic-cli": "unknown",
+      "mystery-type": "unknown"
+    }
+  },
+  {
+    "name": "claude-trust-dialog",
+    "rows": [
+      "Quick safety check: Is this a project you created or one you trust?",
+      "",
+      "\u276f 1. Yes, I trust this folder",
+      "  2. No, exit",
+      "",
+      "Enter to confirm \u00b7 Esc to cancel",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    "states": {
+      "claude": "blocked",
+      "codex": "unknown",
+      "copilot": "unknown",
+      "generic-cli": "unknown",
+      "mystery-type": "unknown"
+    }
+  },
+  {
+    "name": "claude-permission",
+    "rows": [
+      "Bash command",
+      "  rm -rf build",
+      "Do you want to proceed?",
+      "\u276f 1. Yes",
+      "  2. No"
+    ],
+    "states": {
+      "claude": "blocked",
+      "codex": "unknown",
+      "copilot": "unknown",
+      "generic-cli": "unknown",
+      "mystery-type": "unknown"
+    }
+  },
+  {
+    "name": "dialog-scrolled-out",
+    "rows": [
+      "Do you want to proceed?",
+      "line 0",
+      "line 1",
+      "line 2",
+      "line 3",
+      "line 4",
+      "line 5",
+      "line 6",
+      "line 7",
+      "line 8",
+      "line 9",
+      "line 10",
+      "line 11"
+    ],
+    "states": {
+      "claude": "unknown",
+      "codex": "unknown",
+      "copilot": "unknown",
+      "generic-cli": "unknown",
+      "mystery-type": "unknown"
+    }
+  },
+  {
+    "name": "dialog-just-in-tail",
+    "rows": [
+      "Do you want to proceed?",
+      "line 0",
+      "line 1",
+      "line 2",
+      "line 3",
+      "line 4",
+      "line 5",
+      "line 6",
+      "line 7",
+      "line 8",
+      "line 9",
+      "line 10"
+    ],
+    "states": {
+      "claude": "blocked",
+      "codex": "unknown",
+      "copilot": "unknown",
+      "generic-cli": "unknown",
+      "mystery-type": "unknown"
+    }
+  },
+  {
+    "name": "lone-prompt",
+    "rows": [
+      "some output",
+      ">"
+    ],
+    "states": {
+      "claude": "idle",
+      "codex": "unknown",
+      "copilot": "idle",
+      "generic-cli": "unknown",
+      "mystery-type": "unknown"
+    }
+  },
+  {
+    "name": "indented-prompt",
+    "rows": [
+      "some output",
+      "   >   "
+    ],
+    "states": {
+      "claude": "idle",
+      "codex": "unknown",
+      "copilot": "idle",
+      "generic-cli": "unknown",
+      "mystery-type": "unknown"
+    }
+  },
+  {
+    "name": "codex-idle",
+    "rows": [
+      "\u258c Send a message",
+      "",
+      "\u203a"
+    ],
+    "states": {
+      "claude": "unknown",
+      "codex": "idle",
+      "copilot": "unknown",
+      "generic-cli": "unknown",
+      "mystery-type": "unknown"
+    }
+  },
+  {
+    "name": "codex-working",
+    "rows": [
+      "\u2022 Working (3s \u2022 esc to interrupt)"
+    ],
+    "states": {
+      "claude": "working",
+      "codex": "working",
+      "copilot": "working",
+      "generic-cli": "unknown",
+      "mystery-type": "unknown"
+    }
+  },
+  {
+    "name": "codex-approval",
+    "rows": [
+      "Allow command?",
+      "  cargo test",
+      "Approve this command [y/N]"
+    ],
+    "states": {
+      "claude": "unknown",
+      "codex": "blocked",
+      "copilot": "unknown",
+      "generic-cli": "unknown",
+      "mystery-type": "unknown"
+    }
+  },
+  {
+    "name": "copilot-idle",
+    "rows": [
+      " D:\\Dev\\AgentFlow [\u2387 main]",
+      "\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+      "\u276f",
+      "\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+      " \u2190 open sidebar \u00b7 / commands \u00b7 ? help \u00b7 tab next tab        GitHub Copilot \u2022 GPT-5.6 Luna"
+    ],
+    "states": {
+      "claude": "blocked",
+      "codex": "unknown",
+      "copilot": "idle",
+      "generic-cli": "unknown",
+      "mystery-type": "unknown"
+    }
+  },
+  {
+    "name": "copilot-loading",
+    "rows": [
+      " \u25c9 Loading: 11 instructions, 9 agents, 2 plugins"
+    ],
+    "states": {
+      "claude": "unknown",
+      "codex": "unknown",
+      "copilot": "working",
+      "generic-cli": "unknown",
+      "mystery-type": "unknown"
+    }
+  },
+  {
+    "name": "copilot-select",
+    "rows": [
+      "\u2502 \u276f 1. Yes",
+      "\u2502   3. No (Esc)",
+      "\u2502 \u2191/\u2193 to navigate \u00b7 enter to select \u00b7 esc to cancel"
+    ],
+    "states": {
+      "claude": "blocked",
+      "codex": "unknown",
+      "copilot": "blocked",
+      "generic-cli": "unknown",
+      "mystery-type": "unknown"
+    }
+  },
+  {
+    "name": "copilot-yes-no",
+    "rows": [
+      "Run this? (y/N)"
+    ],
+    "states": {
+      "claude": "unknown",
+      "codex": "unknown",
+      "copilot": "blocked",
+      "generic-cli": "unknown",
+      "mystery-type": "unknown"
+    }
+  },
+  {
+    "name": "copilot-ask-user",
+    "rows": [
+      "Copilot needs information.",
+      "Paste prompt.md or provide an in-workspace copy path.",
+      ">",
+      "enter accept · ctrl+d decline · esc cancel"
+    ],
+    "states": {
+      "claude": "idle",
+      "codex": "unknown",
+      "copilot": "blocked",
+      "generic-cli": "unknown",
+      "mystery-type": "unknown"
+    }
+  },
+  {
+    "name": "uppercase",
+    "rows": [
+      "ESC TO INTERRUPT"
+    ],
+    "states": {
+      "claude": "working",
+      "codex": "working",
+      "copilot": "unknown",
+      "generic-cli": "unknown",
+      "mystery-type": "unknown"
+    }
+  },
+  {
+    "name": "word-boundary",
+    "rows": [
+      "rethinking the plan",
+      "networking"
+    ],
+    "states": {
+      "claude": "unknown",
+      "codex": "unknown",
+      "copilot": "unknown",
+      "generic-cli": "unknown",
+      "mystery-type": "unknown"
+    }
+  },
+  {
+    "name": "unrecognised",
+    "rows": [
+      "$ ls",
+      "README.md  src"
+    ],
+    "states": {
+      "claude": "unknown",
+      "codex": "unknown",
+      "copilot": "unknown",
+      "generic-cli": "unknown",
+      "mystery-type": "unknown"
+    }
+  }
+]

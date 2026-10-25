@@ -1,0 +1,22 @@
+[package]
+name = "agentflow-desktop"
+version = "1.1.6"
+edition = "2024"
+license = "Apache-2.0"
+publish = false
+
+[workspace]
+
+[dependencies]
+agentflow-core = { path = "../crates/core" }
+axum = "0.8"
+tokio = { version = "1", features = ["rt-multi-thread", "net", "sync", "time"] }
+tauri = { version = "2", features = [] }
+tauri-plugin-single-instance = "2"
+tauri-plugin-updater = "2"
+serde_json = "1"
+serde = { version = "1", features = ["derive"] }
+tempfile = "3"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }

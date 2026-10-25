@@ -1,0 +1,151 @@
+{
+  "additionalContext": "str",
+  "agentOverrides": {},
+  "approvedRequirements": "null",
+  "archivedAt": "null",
+  "assessment": "null",
+  "assessmentMarkdown": "str",
+  "attention": [
+    {
+      "action": "str",
+      "label": "str",
+      "nodeKey": "str",
+      "questions": "number",
+      "since": "str",
+      "state": "str"
+    }
+  ],
+  "baseBranch": "str",
+  "blockers": [
+    "str"
+  ],
+  "branchName": "str",
+  "budget": {
+    "daily": {
+      "knownUsd": "number",
+      "limitUsd": "null",
+      "reservedUsd": "number",
+      "unknownRuns": "number",
+      "warning": "bool"
+    },
+    "dayUtc": "str",
+    "launchReserveUsd": "number",
+    "task": {
+      "knownUsd": "number",
+      "limitUsd": "null",
+      "reservedUsd": "number",
+      "unknownRuns": "number",
+      "warning": "bool"
+    },
+    "warningPercent": "number"
+  },
+  "createdAt": "str",
+  "currentSha": "null",
+  "edges": [
+    {
+      "source": "str",
+      "target": "str"
+    }
+  ],
+  "events": [
+    {
+      "data": {
+        "anyOf": [
+          {
+            "baseBranch": "str",
+            "repository": "str"
+          },
+          "null"
+        ]
+      },
+      "id": "number",
+      "level": "str",
+      "message": "str",
+      "nodeKey": "null",
+      "timestamp": "str"
+    }
+  ],
+  "executionEvidence": [],
+  "findings": [],
+  "harnessCwd": "str",
+  "jiraKey": "str",
+  "jiraTitle": "null",
+  "maxRequirementsRevisions": "number",
+  "maxReviewIterations": "number",
+  "mergedAt": "null",
+  "nodes": [
+    {
+      "blockingCount": "number",
+      "checkpointSha": "null",
+      "configOverride": {},
+      "description": "str",
+      "displayState": "str",
+      "effectiveConfig": {
+        "anyOf": [
+          {
+            "billingMode": "str",
+            "harness": "str",
+            "harnessAvailable": "bool",
+            "harnessDisplayName": "str",
+            "model": "null",
+            "reasoning": "str",
+            "requiresMeteredApproval": "bool",
+            "routingReason": "str"
+          },
+          "null"
+        ]
+      },
+      "error": "null",
+      "executionMode": "str",
+      "findingsCount": "number",
+      "iteration": "number",
+      "key": "str",
+      "kind": "str",
+      "label": "str",
+      "lastRun": "null",
+      "message": "null",
+      "openQuestions": "number",
+      "role": "null|str",
+      "runCount": "number",
+      "state": "str",
+      "usage": "null",
+      "worker": "null"
+    }
+  ],
+  "phase": "str",
+  "prBaseBranch": "null",
+  "prCreatedAt": "null",
+  "prSyncPaused": "bool",
+  "prUrl": "null",
+  "projectId": "null",
+  "projectRelativePath": "str",
+  "questions": [],
+  "repositoryRoot": "str",
+  "requirements": {
+    "acceptanceCriteria": "str",
+    "assumptions": "str",
+    "implementationPlan": "str",
+    "requirements": "str",
+    "risks": "str"
+  },
+  "requirementsDigest": "null",
+  "requirementsDraftDigest": "str",
+  "requirementsFeedback": [],
+  "reviewIteration": "number",
+  "sessions": [],
+  "status": "str",
+  "statusMessage": "null",
+  "taskDir": "str",
+  "taskSource": "str",
+  "totalUsage": "null",
+  "updatedAt": "str",
+  "workerWorktreeCount": "null",
+  "worktreeExists": "null",
+  "worktreePath": "str",
+  "zellij": {
+    "attachCommand": "str",
+    "session": "str",
+    "webUrl": "null"
+  },
+  "zellijSession": "str"
+}

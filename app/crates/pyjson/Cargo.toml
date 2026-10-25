@@ -1,0 +1,10 @@
+[package]
+name = "pyjson"
+description = "JSON text formatted the way Python's json.dumps(indent=2) writes it"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde_json.workspace = true

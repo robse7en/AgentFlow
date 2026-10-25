@@ -1,0 +1,182 @@
+{
+  "app": {
+    "dataDirectory": "data/.agentflow",
+    "databasePath": "data/.agentflow/agentflow.db"
+  },
+
+  "server": {
+    "host": "127.0.0.1",
+    "port": 8765,
+    "runAsAdministrator": true
+  },
+
+  "workspace": {
+    "worktreeDirectory": "data/.agentflow/worktrees",
+    "taskDirectory": "data/.agentflow/tasks",
+    "branchPrefix": "",
+    "defaultRepositoryDirectory": null
+  },
+
+  "workflow": {
+    "costControls": {
+      "taskBudgetUsd": null,
+      "dailyBudgetUsd": null,
+      "warningPercent": 80,
+      "launchReserveUsd": 1,
+      "copilotRoles": [],
+      "requireMeteredApproval": false
+    },
+    "implementationMode": "direct",
+    "maxConcurrentAgents": 4,
+    "verificationCommands": [],
+    "maxReviewIterations": 5,
+    "maxRequirementsRevisions": 3,
+    "defaultExecutionMode": "manual",
+    "requireRequirementsApproval": true,
+    "requireFinalApproval": true,
+    "commitCheckpoints": true
+  },
+
+  "zellij": {
+    "command": "zellij",
+    "sessionPrefix": "agentflow-",
+    "webClientEnabled": false,
+    "webClientBaseUrl": "http://127.0.0.1:8082",
+    "shell": null,
+    "headlessCols": 200,
+    "headlessRows": 50,
+    "useInDesktop": false
+  },
+
+  "jira": {
+    "attachmentHosts": ["api.media.atlassian.com"],
+    "maxAttachments": 30,
+    "maxAttachmentBytes": 20000000,
+    "maxTotalAttachmentBytes": 100000000,
+    "fetchComments": true,
+    "maxFramesPerVideo": 20,
+    "frameExtractionTimeoutSeconds": 120,
+    "ffmpegPath": null,
+    "enabled": true,
+    "baseUrl": "https://yourcompany.atlassian.net",
+    "email": "you@yourcompany.com",
+    "apiToken": null,
+    "autoTransitionStatus": null,
+    "autoTransitionFromStatuses": ["To Do"]
+  },
+
+  "slack": {
+    "enabled": false,
+    "botToken": null,
+    "appToken": null,
+    "userId": null,
+    "command": "/agentflow",
+    "includeQuestionText": true,
+    "notify": ["WAITING_FOR_USER", "WAITING_FOR_APPROVAL", "FAILED", "INTERRUPTED", "NEEDS_HUMAN_REVIEW", "READY_FOR_PR"],
+    "uiBaseUrl": "http://127.0.0.1:5173",
+    "allowActions": ["answer", "create", "run", "requestChanges", "approveRequirements", "cancel", "markPr"],
+    "details": ["requirements", "findings", "errors", "cost", "activity", "pr", "ticket"],
+    "digestAt": null,
+    "ask": {
+      "enabled": false,
+      "harness": "claude",
+      "model": null,
+      "timeoutSeconds": 90,
+      "allowMetered": false
+    }
+  },
+
+  "github": {
+    "prSync": true,
+    "pollIntervalSeconds": 120,
+    "command": "gh",
+    "hosts": ["github.com"]
+  },
+
+  "harnesses": {
+    "claude": {
+      "trustedRepositories": [],
+      "enabled": true,
+      "type": "claude",
+      "displayName": "Claude Code",
+      "command": "claude",
+      "args": [],
+      "usageCommand": ["python", "scripts/usage_claude.py"],
+      "defaultModel": "claude-sonnet-5",
+      "availableModels": ["claude-opus-5", "claude-sonnet-5", "claude-fable-5-1", "claude-haiku-4-5-20251001"]
+    },
+
+    "codex": {
+      "enabled": true,
+      "type": "codex",
+      "displayName": "Codex CLI",
+      "command": "codex",
+      "args": [],
+      "usageCommand": ["python", "scripts/usage_codex.py"],
+      "defaultModel": "gpt-5.6-luna",
+      "availableModels": ["gpt-6-astra", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-5.5"]
+    },
+
+    "copilot": {
+      "enabled": false,
+      "type": "copilot",
+      "displayName": "GitHub Copilot CLI",
+      "command": "copilot",
+      "args": [
+        "--allow-all-tools",
+        "--allow-all-paths",
+        "--deny-tool=shell(rm)",
+        "--deny-tool=shell(rmdir)",
+        "--deny-tool=shell(del)",
+        "--deny-tool=shell(erase)",
+        "--deny-tool=shell(rd)",
+        "--deny-tool=shell(Remove-Item)",
+        "--deny-tool=shell(ri)",
+        "--deny-tool=shell(git push)",
+        "--deny-tool=shell(git clean)"
+      ],
+      "usageCommand": ["python", "scripts/usage_copilot.py"],
+      "defaultModel": "gpt-5.6-luna",
+      "availableModels": ["gpt-5.6-luna", "gpt-5.6-sol", "gpt-5.6-terra", "claude-opus-5", "claude-sonnet-5", "claude-haiku-4.5"]
+    },
+
+    "my-agent": {
+      "enabled": false,
+      "type": "generic-cli",
+      "displayName": "My Coding Agent",
+      "command": "C:/some/location/my-agent.exe",
+      "args": [],
+      "env": {},
+      "modelArgument": "--model",
+      "reasoningArgument": "--reasoning",
+      "promptArgument": "positional",
+      "reasoningMap": { "high": "high", "medium": "medium", "low": "low" }
+    }
+  },
+
+  "agents": {
+    "architect": {
+      "harness": "claude",
+      "model": null,
+      "reasoning": "high"
+    },
+
+    "implementer": {
+      "harness": "codex",
+      "model": null,
+      "reasoning": "high"
+    },
+
+    "codeReviewer": {
+      "harness": "claude",
+      "model": null,
+      "reasoning": "high"
+    },
+
+    "securityReviewer": {
+      "harness": "claude",
+      "model": null,
+      "reasoning": "high"
+    }
+  }
+}

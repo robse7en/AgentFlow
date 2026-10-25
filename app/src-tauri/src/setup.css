@@ -1,0 +1,14 @@
+:root { color-scheme: dark light; font-family: system-ui, sans-serif; }
+body { margin: 0; background: light-dark(#f4f6f9, #131722); color: light-dark(#202838, #e4e8f0); }
+main { max-width: 760px; padding: 32px; margin: auto; }
+h1 { font-size: 30px; } h2 { font-size: 21px; margin-top: 0; }
+section { padding: 24px; margin: 24px 0; background: light-dark(white, #1d2331); border-radius: 12px; }
+label { display: block; margin: 18px 0; font-weight: 600; }
+input:not([type=checkbox]), select { box-sizing: border-box; display: block; width: 100%; padding: 10px;
+    margin-top: 7px; border: 1px solid #718096; border-radius: 5px; font: inherit; }
+button { padding: 11px 20px; background: #4b64df; color: white; border: 0; border-radius: 5px;
+    cursor: pointer; font: inherit; font-weight: 600; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid #93c5fd; }
+p, li { line-height: 1.6; } li { margin: 8px 0; }
+.hint { font-size: 13px; opacity: .85; } .message:not(:empty) { padding: 14px; border: 1px solid #e49d51; }
+code { overflow-wrap: anywhere; } .check { font-size: 14px; line-height: 1.5; }

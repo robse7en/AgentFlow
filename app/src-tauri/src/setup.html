@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Set up AgentFlow</title>
+    <link rel="stylesheet" href="/setup.css">
+</head>
+<body>
+<main>
+    <h1>Set up AgentFlow</h1>
+    <p>Open an existing instance or create one. Jira and coding CLI sign-in can wait until you need them.</p>
+    <p role="alert" class="message">{{MESSAGE}}</p>
+    <section>
+        <h2>Use an existing instance</h2>
+        <p>Keep your settings, credentials, task history and worktrees in their current locations.
+            Close the previous AgentFlow desktop or web server before continuing.</p>
+        <form method="post" action="/setup">
+            <input type="hidden" name="token" value="{{TOKEN}}">
+            <input type="hidden" name="mode" value="existing">
+            <label>Full path to config.json
+                <input name="config_path" required value="{{CONFIG_INPUT}}" placeholder="D:\Dev\AgentFlow\config.json">
+            </label>
+            <label>Base directory for relative paths (optional)
+                <input name="base_directory" value="{{BASE_DIRECTORY}}" placeholder="Detected from the checkout or config folder">
+            </label>
+            <p class="hint">For a custom config outside the original installation, enter the directory
+                the old instance used to resolve relative data paths.</p>
+            <label class="check"><input type="checkbox" name="closed" value="yes" required>
+                I have closed the previous instance.</label>
+            <button type="submit">Use existing instance</button>
+        </form>
+    </section>
+    <section>
+        <h2>New installation</h2>
+        <p>Your configuration will be saved at <code>{{CONFIG_PATH}}</code>.</p>
+        <p>Available tools: {{TOOLS}}</p>
+        <p class="hint">You can explore now and connect a coding CLI before your first agent run. In PowerShell, use
+            <code>winget install --id Git.Git --exact --source winget</code>, then the command
+            for your CLI below. Sign in through that CLI and reopen AgentFlow after installation.</p>
+        <ul>
+            <li>Claude Code: <code>winget install --id Anthropic.ClaudeCode --exact --source winget</code></li>
+            <li>Codex: <code>winget install --id OpenAI.Codex --exact --source winget</code></li>
+            <li>Copilot: <code>winget install --id GitHub.Copilot --exact --source winget</code></li>
+        </ul>
+        <form method="post" action="/setup">
+            <input type="hidden" name="token" value="{{TOKEN}}">
+            <input type="hidden" name="mode" value="new">
+            <label>Repository folder (optional)<input name="repository" value="{{REPOSITORY}}"></label>
+            <label>Coding CLI for all five roles
+                <select name="harness">
+                    <option value="claude" {{HARNESS_claude}}>Claude Code</option>
+                    <option value="codex" {{HARNESS_codex}}>Codex CLI</option>
+                    <option value="copilot" {{HARNESS_copilot}}>GitHub Copilot CLI</option>
+                </select>
+            </label>
+            <label>How this CLI is billed
+                <select name="billing">
+                    <option value="unknown" {{BILLING_unknown}}>Unknown</option>
+                    <option value="subscription" {{BILLING_subscription}}>Subscription (including Copilot)</option>
+                    <option value="metered" {{BILLING_metered}}>Metered API</option>
+                </select>
+            </label>
+            <p>Jira is optional. Leave its fields blank to use local prompt tasks; when updating a
+                configuration, blank fields keep its Jira settings if they are complete. After an error,
+                re-enter your token if configuring Jira.</p>
+            <label>Jira deployment
+                <select name="jira_kind">
+                    <option value="cloud" {{JIRA_KIND_cloud}}>Jira Cloud</option>
+                    <option value="server" {{JIRA_KIND_server}}>Jira Server / Data Center</option>
+                </select>
+            </label>
+            <label>Jira base URL<input type="url" name="jira_url" value="{{JIRA_URL}}" placeholder="https://your-team.atlassian.net"></label>
+            <label>Jira email (Cloud only)<input type="email" name="jira_email" value="{{JIRA_EMAIL}}"></label>
+            <label>Jira API token / personal access token
+                <input type="password" name="jira_token" autocomplete="off">
+            </label>
+            <p class="hint">The token is stored in your local config.json, using AgentFlow's existing format.
+                Setup validates the fields locally. Jira authentication is checked when you use Jira.</p>
+            <label class="check"><input type="checkbox" name="repair" value="yes">
+                Update a configuration already at this path. Keep its other settings and back it up;
+                assign all five roles to the selected coding CLI.</label>
+            <p class="hint">For Jira Cloud, the Atlassian MCP URL is
+                <code>https://mcp.atlassian.com/v2/mcp</code>. Configure it in your coding CLI.
+                AgentFlow also uses your Jira REST connection for ticket sync.</p>
+            <button type="submit">Save and open AgentFlow</button>
+        </form>
+    </section>
+    <p class="hint">Embedded terminals are included. Python, Node.js and Zellij are not required
+        to run this desktop installation. Optional Slack, GitHub and advanced role settings
+        use the existing configuration format.</p>
+</main>
+</body>
+</html>

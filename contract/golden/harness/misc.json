@@ -1,0 +1,48 @@
+{
+  "promptReferences": {
+    "C:/tasks/DE-1/runs/7/prompt.md": "Read the file C:/tasks/DE-1/runs/7/prompt.md and follow the instructions in it exactly. It is your task briefing.",
+    "C:\\tasks\\DE 1\\runs\\7\\prompt.md": "Read the file C:/tasks/DE 1/runs/7/prompt.md and follow the instructions in it exactly. It is your task briefing."
+  },
+  "zellijVersions": [
+    {
+      "version": "zellij 0.44.0",
+      "supported": true
+    },
+    {
+      "version": "zellij 0.45.1",
+      "supported": true
+    },
+    {
+      "version": "zellij 1.0.0",
+      "supported": true
+    },
+    {
+      "version": "zellij 0.43.9",
+      "supported": false
+    },
+    {
+      "version": "zellij",
+      "supported": false
+    },
+    {
+      "version": null,
+      "supported": false
+    },
+    {
+      "version": "zellij 0.44.0-rc1",
+      "supported": true
+    },
+    {
+      "version": "0.44.0",
+      "supported": true
+    },
+    {
+      "version": "zellij v0.100.2",
+      "supported": true
+    },
+    {
+      "version": "zellij 0.9.99",
+      "supported": false
+    }
+  ]
+}

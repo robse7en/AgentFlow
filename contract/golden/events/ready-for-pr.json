@@ -1,0 +1,85 @@
+{
+  "(task)": [
+    "info: Task created {\"baseBranch\": \"main\", \"repository\": \"<REPO>\"}",
+    "info: Worktree created: <TMP>\\worktrees\\<KEY> on branch agent/<KEY>",
+    "info: Zellij session created: agentflow-<KEY>",
+    "info: Requirements approved",
+    "info: Code Review passed and Security Review passed",
+    "info: Final assessment received. Risk: LOW",
+    "info: Task is READY_FOR_PR"
+  ],
+  "architect": [
+    "info: Architect \u2192 RUNNING: Launching agent",
+    "info: Architect started: stub in zellij tab 'Architect' (cwd <TMP>\\worktrees\\<KEY>\\src) {\"harness\": \"stub\", \"requestedModel\": null}",
+    "info: Architect \u2192 RUNNING: Run #1 (stub)",
+    "info: Architect \u2192 WAITING_FOR_USER: Input required",
+    "warning: Architect asked: Stub question: should this apply to all tenants?",
+    "info: Architect \u2192 RUNNING: All replies sent; agent resumed",
+    "info: Human replied to question <UID>",
+    "info: Architect \u2192 COMPLETED: Stub discovery complete"
+  ],
+  "code_review": [
+    "info: Code Review \u2192 READY",
+    "info: Code Review \u2192 RUNNING: Launching agent",
+    "info: Code Review started: stub in zellij tab 'Code Review' (cwd <TMP>\\worktrees\\<KEY>\\src) {\"harness\": \"stub\", \"requestedModel\": null}",
+    "info: Code Review \u2192 RUNNING: Run #1 (stub)",
+    "info: Code Review \u2192 COMPLETED: 1 finding(s), 1 blocking \u2014 changes_required",
+    "info: Code Review \u2192 READY",
+    "info: Starting Code Review in a fresh conversation for review round 2",
+    "info: Code Review \u2192 RUNNING: Launching agent",
+    "info: Code Review started: stub in zellij tab 'Code Review' (cwd <TMP>\\worktrees\\<KEY>\\src) {\"harness\": \"stub\", \"requestedModel\": null}",
+    "info: Code Review \u2192 RUNNING: Run #2 (stub)",
+    "info: Code Review \u2192 COMPLETED: 0 finding(s), 0 blocking \u2014 approved"
+  ],
+  "consolidate": [
+    "info: Consolidate Findings \u2192 READY",
+    "info: Consolidate Findings \u2192 RUNNING",
+    "info: Consolidate Findings \u2192 COMPLETED: Iteration 1: 2 blocking finding(s) \u2192 Implementer fixes",
+    "info: Consolidate Findings \u2192 PENDING",
+    "info: Consolidate Findings \u2192 READY",
+    "info: Consolidate Findings \u2192 RUNNING",
+    "info: Consolidate Findings \u2192 COMPLETED: Iteration 2: no blocking findings \u2014 reviews passed"
+  ],
+  "final_architect": [
+    "info: Final Architect Verification \u2192 READY",
+    "info: Final Architect Verification \u2192 RUNNING: Launching agent",
+    "info: Final Architect Verification started: stub in zellij tab 'Architect' (cwd <TMP>\\worktrees\\<KEY>\\src) {\"harness\": \"stub\", \"requestedModel\": null}",
+    "info: Final Architect Verification \u2192 RUNNING: Run #1 (stub)",
+    "info: Final Architect Verification \u2192 COMPLETED: Assessment received. Risk LOW"
+  ],
+  "implementer": [
+    "info: Implementer \u2192 READY",
+    "info: Implementer \u2192 RUNNING: Launching agent",
+    "info: Implementer started: stub in zellij tab 'Implementer' (cwd <TMP>\\worktrees\\<KEY>\\src) {\"harness\": \"stub\", \"requestedModel\": null}",
+    "info: Implementer \u2192 RUNNING: Run #1 (stub)",
+    "info: Implementer \u2192 COMPLETED: Stub implementation: appended to STUB_NOTES.md",
+    "info: Checkpoint SHA <SHORT-SHA> (committed) {\"sha\": \"<SHA>\"}",
+    "info: Implementer \u2192 READY: Fix 2 finding(s) from iteration 1",
+    "info: Implementer \u2192 RUNNING: Launching agent",
+    "info: Implementer started: stub in zellij tab 'Implementer' (cwd <TMP>\\worktrees\\<KEY>\\src) {\"harness\": \"stub\", \"requestedModel\": null}",
+    "info: Implementer \u2192 RUNNING: Run #2 (stub)",
+    "info: Implementer \u2192 COMPLETED: Stub implementation: appended to STUB_NOTES.md",
+    "info: Checkpoint SHA <SHORT-SHA> (committed) {\"sha\": \"<SHA>\"}"
+  ],
+  "ready_for_pr": [
+    "info: Ready for PR \u2192 WAITING_FOR_APPROVAL: Confirm the assessment to mark Ready for PR",
+    "info: Ready for PR \u2192 COMPLETED: Ready for PR"
+  ],
+  "requirements_gate": [
+    "info: Requirements Approval \u2192 WAITING_FOR_APPROVAL: Review requirements and approve",
+    "info: Requirements Approval \u2192 COMPLETED: Requirements approved"
+  ],
+  "security_review": [
+    "info: Security Review \u2192 READY",
+    "info: Security Review \u2192 RUNNING: Launching agent",
+    "info: Security Review started: stub in zellij tab 'Security' (cwd <TMP>\\worktrees\\<KEY>\\src) {\"harness\": \"stub\", \"requestedModel\": null}",
+    "info: Security Review \u2192 RUNNING: Run #1 (stub)",
+    "info: Security Review \u2192 COMPLETED: 1 finding(s), 1 blocking \u2014 changes_required",
+    "info: Security Review \u2192 READY",
+    "info: Starting Security in a fresh conversation for review round 2",
+    "info: Security Review \u2192 RUNNING: Launching agent",
+    "info: Security Review started: stub in zellij tab 'Security' (cwd <TMP>\\worktrees\\<KEY>\\src) {\"harness\": \"stub\", \"requestedModel\": null}",
+    "info: Security Review \u2192 RUNNING: Run #2 (stub)",
+    "info: Security Review \u2192 COMPLETED: 0 finding(s), 0 blocking \u2014 approved"
+  ]
+}

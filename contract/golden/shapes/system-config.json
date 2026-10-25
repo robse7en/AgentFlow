@@ -1,0 +1,115 @@
+{
+  "agents": {
+    "architect": {
+      "harness": "str",
+      "model": "null",
+      "reasoning": "str"
+    },
+    "codeReviewer": {
+      "harness": "str",
+      "model": "null",
+      "reasoning": "str"
+    },
+    "implementer": {
+      "harness": "str",
+      "model": "null",
+      "reasoning": "str"
+    },
+    "orchestrator": {
+      "harness": "str",
+      "model": "null",
+      "reasoning": "str"
+    },
+    "securityReviewer": {
+      "harness": "str",
+      "model": "null",
+      "reasoning": "str"
+    }
+  },
+  "configPath": "str",
+  "dataDirectory": "str",
+  "databasePath": "str",
+  "defaultRepositoryDirectory": "null",
+  "github": {
+    "command": "str",
+    "hosts": [
+      "str"
+    ],
+    "pollIntervalSeconds": "number",
+    "prSync": "bool"
+  },
+  "harnesses": [
+    {
+      "automaticTrustWorkspaces": [],
+      "available": "bool",
+      "availableModels": [],
+      "billingMode": "str",
+      "command": "str",
+      "defaultModel": "null",
+      "displayName": "str",
+      "enabled": "bool",
+      "inheritedEnvironment": "str",
+      "key": "str",
+      "message": "null",
+      "resolvedPath": "str",
+      "supportsModel": "bool",
+      "supportsReasoning": "bool",
+      "supportsResume": "bool",
+      "type": "str",
+      "version": "str"
+    }
+  ],
+  "jiraBaseUrl": "null",
+  "jiraEnabled": "bool",
+  "platform": "str",
+  "python": "str",
+  "system": {
+    "git": {
+      "available": "bool",
+      "version": "str"
+    },
+    "terminal": {
+      "available": "bool",
+      "backend": "str",
+      "version": "str"
+    },
+    "zellij": {
+      "available": "bool",
+      "command": "str",
+      "version": "str"
+    }
+  },
+  "taskDirectory": "str",
+  "workflow": {
+    "commitCheckpoints": "bool",
+    "costControls": {
+      "copilotRoles": [],
+      "dailyBudgetUsd": "null",
+      "launchReserveUsd": "number",
+      "requireMeteredApproval": "bool",
+      "taskBudgetUsd": "null",
+      "warningPercent": "number"
+    },
+    "defaultExecutionMode": "str",
+    "heartbeatWarningSeconds": "number",
+    "implementationMode": "str",
+    "maxConcurrentAgents": "number",
+    "maxRequirementsRevisions": "number",
+    "maxReviewIterations": "number",
+    "requireFinalApproval": "bool",
+    "requireRequirementsApproval": "bool",
+    "usdToNzdRate": "number",
+    "verificationCommands": []
+  },
+  "worktreeDirectory": "str",
+  "zellij": {
+    "command": "str",
+    "headlessCols": "number",
+    "headlessRows": "number",
+    "sessionPrefix": "str",
+    "shell": "null",
+    "useInDesktop": "bool",
+    "webClientBaseUrl": "str",
+    "webClientEnabled": "bool"
+  }
+}

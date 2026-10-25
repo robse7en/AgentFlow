@@ -1,0 +1,93 @@
+[
+  {
+    "name": "missing-file",
+    "input": null,
+    "cwd": "D:/agentflow/worktrees/DE-1",
+    "written": false,
+    "output": null
+  },
+  {
+    "name": "new-entry",
+    "input": "{\"projects\": {\"C:/Other/Project\": {\"hasTrustDialogAccepted\": true}}}",
+    "cwd": "D:/agentflow/worktrees/DE-1",
+    "written": true,
+    "output": "{\"projects\": {\"C:/Other/Project\": {\"hasTrustDialogAccepted\": true}, \"D:/agentflow/worktrees/DE-1\": {\"hasTrustDialogAccepted\": true}}}"
+  },
+  {
+    "name": "keeps-other-fields",
+    "input": "{\"projects\": {\"D:/agentflow/worktrees/DE-1\": {\"hasTrustDialogAccepted\": false, \"allowedTools\": [\"Bash\"]}}}",
+    "cwd": "D:/agentflow/worktrees/DE-1",
+    "written": true,
+    "output": "{\"projects\": {\"D:/agentflow/worktrees/DE-1\": {\"hasTrustDialogAccepted\": true, \"allowedTools\": [\"Bash\"]}}}"
+  },
+  {
+    "name": "already-trusted",
+    "input": "{\"projects\": {\"D:/agentflow/worktrees/DE-1\": {\"hasTrustDialogAccepted\": true}}}",
+    "cwd": "D:/agentflow/worktrees/DE-1",
+    "written": false,
+    "output": null
+  },
+  {
+    "name": "trusted-as-1",
+    "input": "{\"projects\": {\"D:/agentflow/worktrees/DE-1\": {\"hasTrustDialogAccepted\": 1}}}",
+    "cwd": "D:/agentflow/worktrees/DE-1",
+    "written": true,
+    "output": "{\"projects\": {\"D:/agentflow/worktrees/DE-1\": {\"hasTrustDialogAccepted\": true}}}"
+  },
+  {
+    "name": "corrupt",
+    "input": "not valid json",
+    "cwd": "D:/agentflow/worktrees/DE-1",
+    "written": false,
+    "output": null
+  },
+  {
+    "name": "not-an-object",
+    "input": "[1, 2]",
+    "cwd": "D:/agentflow/worktrees/DE-1",
+    "written": false,
+    "output": null
+  },
+  {
+    "name": "projects-not-an-object",
+    "input": "{\"projects\": [\"x\"]}",
+    "cwd": "D:/agentflow/worktrees/DE-1",
+    "written": false,
+    "output": null
+  },
+  {
+    "name": "entry-not-an-object",
+    "input": "{\"projects\": {\"D:/agentflow/worktrees/DE-1\": \"yes\"}}",
+    "cwd": "D:/agentflow/worktrees/DE-1",
+    "written": true,
+    "output": "{\"projects\": {\"D:/agentflow/worktrees/DE-1\": {\"hasTrustDialogAccepted\": true}}}"
+  },
+  {
+    "name": "no-projects",
+    "input": "{\"numStartups\": 3}",
+    "cwd": "D:/agentflow/worktrees/DE-1",
+    "written": true,
+    "output": "{\"numStartups\": 3, \"projects\": {\"D:/agentflow/worktrees/DE-1\": {\"hasTrustDialogAccepted\": true}}}"
+  },
+  {
+    "name": "backslash-cwd",
+    "input": "{}",
+    "cwd": "D:\\agentflow\\worktrees\\DE-2",
+    "written": true,
+    "output": "{\"projects\": {\"D:/agentflow/worktrees/DE-2\": {\"hasTrustDialogAccepted\": true}}}"
+  },
+  {
+    "name": "dot-segments",
+    "input": "{}",
+    "cwd": "D:/agentflow/./worktrees//DE-3/",
+    "written": true,
+    "output": "{\"projects\": {\"D:/agentflow/worktrees/DE-3\": {\"hasTrustDialogAccepted\": true}}}"
+  },
+  {
+    "name": "node-formatted",
+    "input": "{\n  \"numStartups\": 12,\n  \"tipsHistory\": {\"a\": 1e-7, \"b\": 1.5, \"c\": 1e21},\n  \"big\": 123456789012345680000,\n  \"name\": \"R\u00e9\\u00e9 \ud83d\ude00\",\n  \"dupe\": 1,\n  \"dupe\": 2,\n  \"projects\": {\"C:/x\": {\"history\": [], \"n\": null, \"ok\": false}}\n}\n",
+    "cwd": "D:/agentflow/worktrees/DE-1",
+    "written": true,
+    "output": "{\"numStartups\": 12, \"tipsHistory\": {\"a\": 1e-07, \"b\": 1.5, \"c\": 1e+21}, \"big\": 123456789012345680000, \"name\": \"R\\u00e9\\u00e9 \\ud83d\\ude00\", \"dupe\": 2, \"projects\": {\"C:/x\": {\"history\": [], \"n\": null, \"ok\": false}, \"D:/agentflow/worktrees/DE-1\": {\"hasTrustDialogAccepted\": true}}}"
+  }
+]

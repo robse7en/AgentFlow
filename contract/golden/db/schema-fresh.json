@@ -1,0 +1,1765 @@
+{
+  "agent_access": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "VARCHAR(36)",
+        "notnull": true,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "name": "task_id",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "run_id",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "role",
+        "type": "VARCHAR(64)",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "token_hash",
+        "type": "VARCHAR(64)",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      }
+    ],
+    "indexes": {
+      "<pk:id>": {
+        "unique": true,
+        "origin": "pk",
+        "columns": [
+          "id"
+        ]
+      },
+      "<u:run_id>": {
+        "unique": true,
+        "origin": "u",
+        "columns": [
+          "run_id"
+        ]
+      },
+      "<u:token_hash>": {
+        "unique": true,
+        "origin": "u",
+        "columns": [
+          "token_hash"
+        ]
+      },
+      "ix_agent_access_task_id": {
+        "unique": false,
+        "origin": "c",
+        "columns": [
+          "task_id"
+        ]
+      }
+    },
+    "foreignKeys": [
+      [
+        "node_runs",
+        "run_id",
+        "id"
+      ],
+      [
+        "tasks",
+        "task_id",
+        "id"
+      ]
+    ]
+  },
+  "agent_questions": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "name": "uid",
+        "type": "VARCHAR(36)",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "task_id",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "node_run_id",
+        "type": "INTEGER",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "role",
+        "type": "VARCHAR(64)",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "message",
+        "type": "TEXT",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "choices",
+        "type": "JSON",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "answered",
+        "type": "BOOLEAN",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "answer",
+        "type": "TEXT",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "created_at",
+        "type": "DATETIME",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "answered_at",
+        "type": "DATETIME",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "decision",
+        "type": "JSON",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      }
+    ],
+    "indexes": {
+      "ix_agent_questions_task_id": {
+        "unique": false,
+        "origin": "c",
+        "columns": [
+          "task_id"
+        ]
+      },
+      "ix_agent_questions_uid": {
+        "unique": true,
+        "origin": "c",
+        "columns": [
+          "uid"
+        ]
+      }
+    },
+    "foreignKeys": [
+      [
+        "tasks",
+        "task_id",
+        "id"
+      ]
+    ]
+  },
+  "agent_sessions": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "name": "task_id",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "role",
+        "type": "VARCHAR(64)",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "harness",
+        "type": "VARCHAR(64)",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "model",
+        "type": "VARCHAR(128)",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "reasoning",
+        "type": "VARCHAR(32)",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "zellij_tab_name",
+        "type": "VARCHAR(128)",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "zellij_tab_id",
+        "type": "INTEGER",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "zellij_pane_id",
+        "type": "VARCHAR(32)",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "harness_session_id",
+        "type": "VARCHAR(128)",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "status",
+        "type": "VARCHAR(32)",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "screen_state",
+        "type": "VARCHAR(16)",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "screen_state_at",
+        "type": "DATETIME",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "current_run_id",
+        "type": "INTEGER",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "started_at",
+        "type": "DATETIME",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "ended_at",
+        "type": "DATETIME",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      }
+    ],
+    "indexes": {
+      "ix_agent_sessions_task_id": {
+        "unique": false,
+        "origin": "c",
+        "columns": [
+          "task_id"
+        ]
+      }
+    },
+    "foreignKeys": [
+      [
+        "tasks",
+        "task_id",
+        "id"
+      ]
+    ]
+  },
+  "chat_threads": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "name": "task_id",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "platform",
+        "type": "VARCHAR(32)",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "channel",
+        "type": "VARCHAR(64)",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "thread_id",
+        "type": "VARCHAR(64)",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "title",
+        "type": "TEXT",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "notified",
+        "type": "JSON",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "updated_at",
+        "type": "DATETIME",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      }
+    ],
+    "indexes": {
+      "<u:task_id,platform>": {
+        "unique": true,
+        "origin": "u",
+        "columns": [
+          "task_id",
+          "platform"
+        ]
+      },
+      "ix_chat_threads_task_id": {
+        "unique": false,
+        "origin": "c",
+        "columns": [
+          "task_id"
+        ]
+      }
+    },
+    "foreignKeys": [
+      [
+        "tasks",
+        "task_id",
+        "id"
+      ]
+    ]
+  },
+  "deleted_run_spend": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "name": "jira_key",
+        "type": "VARCHAR(64)",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "run_id",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "charged_at",
+        "type": "DATETIME",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "billing_mode",
+        "type": "VARCHAR(16)",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "cost_usd",
+        "type": "FLOAT",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      }
+    ],
+    "indexes": {
+      "ix_deleted_run_spend_charged_at": {
+        "unique": false,
+        "origin": "c",
+        "columns": [
+          "charged_at"
+        ]
+      }
+    },
+    "foreignKeys": []
+  },
+  "implementation_work_items": {
+    "columns": [
+      {
+        "name": "uid",
+        "type": "VARCHAR(36)",
+        "notnull": true,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "name": "task_id",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "node_id",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "plan_key",
+        "type": "VARCHAR(64)",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "brief",
+        "type": "TEXT",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "owned_paths",
+        "type": "JSON",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "acceptance_criteria",
+        "type": "JSON",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "dependencies",
+        "type": "JSON",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "worktree_path",
+        "type": "TEXT",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "branch_name",
+        "type": "TEXT",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "base_sha",
+        "type": "VARCHAR(64)",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "prepared",
+        "type": "BOOLEAN",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      }
+    ],
+    "indexes": {
+      "<pk:uid>": {
+        "unique": true,
+        "origin": "pk",
+        "columns": [
+          "uid"
+        ]
+      },
+      "<u:node_id>": {
+        "unique": true,
+        "origin": "u",
+        "columns": [
+          "node_id"
+        ]
+      },
+      "ix_implementation_work_items_task_id": {
+        "unique": false,
+        "origin": "c",
+        "columns": [
+          "task_id"
+        ]
+      }
+    },
+    "foreignKeys": [
+      [
+        "tasks",
+        "task_id",
+        "id"
+      ],
+      [
+        "workflow_nodes",
+        "node_id",
+        "id"
+      ]
+    ]
+  },
+  "node_runs": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "name": "task_id",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "node_id",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "run_number",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "iteration",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "state",
+        "type": "VARCHAR(32)",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "harness",
+        "type": "VARCHAR(64)",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "model",
+        "type": "VARCHAR(128)",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "reasoning",
+        "type": "VARCHAR(32)",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "run_dir",
+        "type": "TEXT",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "prompt_path",
+        "type": "TEXT",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "result_path",
+        "type": "TEXT",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "expected_sha",
+        "type": "VARCHAR(64)",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "result",
+        "type": "JSON",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "exit_code",
+        "type": "INTEGER",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "error",
+        "type": "TEXT",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "started_at",
+        "type": "DATETIME",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "completed_at",
+        "type": "DATETIME",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      }
+    ],
+    "indexes": {
+      "ix_node_runs_node_id": {
+        "unique": false,
+        "origin": "c",
+        "columns": [
+          "node_id"
+        ]
+      },
+      "ix_node_runs_task_id": {
+        "unique": false,
+        "origin": "c",
+        "columns": [
+          "task_id"
+        ]
+      }
+    },
+    "foreignKeys": [
+      [
+        "tasks",
+        "task_id",
+        "id"
+      ],
+      [
+        "workflow_nodes",
+        "node_id",
+        "id"
+      ]
+    ]
+  },
+  "process_leases": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "VARCHAR(36)",
+        "notnull": true,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "name": "session_id",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "launch_run_id",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      }
+    ],
+    "indexes": {
+      "<pk:id>": {
+        "unique": true,
+        "origin": "pk",
+        "columns": [
+          "id"
+        ]
+      },
+      "<u:launch_run_id>": {
+        "unique": true,
+        "origin": "u",
+        "columns": [
+          "launch_run_id"
+        ]
+      },
+      "<u:session_id>": {
+        "unique": true,
+        "origin": "u",
+        "columns": [
+          "session_id"
+        ]
+      }
+    },
+    "foreignKeys": [
+      [
+        "agent_sessions",
+        "session_id",
+        "id"
+      ],
+      [
+        "node_runs",
+        "launch_run_id",
+        "id"
+      ]
+    ]
+  },
+  "projects": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "name": "slug",
+        "type": "VARCHAR(64)",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "name",
+        "type": "VARCHAR(80)",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "color",
+        "type": "VARCHAR(16)",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "description",
+        "type": "TEXT",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "default_repository_path",
+        "type": "TEXT",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "default_project_relative_path",
+        "type": "TEXT",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "default_base_branch",
+        "type": "VARCHAR(255)",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "agent_overrides",
+        "type": "JSON",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "archived_at",
+        "type": "DATETIME",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "created_at",
+        "type": "DATETIME",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "updated_at",
+        "type": "DATETIME",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      }
+    ],
+    "indexes": {
+      "<u:name>": {
+        "unique": true,
+        "origin": "u",
+        "columns": [
+          "name"
+        ]
+      },
+      "ix_projects_slug": {
+        "unique": true,
+        "origin": "c",
+        "columns": [
+          "slug"
+        ]
+      }
+    },
+    "foreignKeys": []
+  },
+  "requirements_approvals": {
+    "columns": [
+      {
+        "name": "uid",
+        "type": "VARCHAR(36)",
+        "notnull": true,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "name": "task_id",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "digest",
+        "type": "VARCHAR(64)",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "documents",
+        "type": "JSON",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "approved_at",
+        "type": "DATETIME",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      }
+    ],
+    "indexes": {
+      "<pk:uid>": {
+        "unique": true,
+        "origin": "pk",
+        "columns": [
+          "uid"
+        ]
+      },
+      "<u:task_id>": {
+        "unique": true,
+        "origin": "u",
+        "columns": [
+          "task_id"
+        ]
+      }
+    },
+    "foreignKeys": [
+      [
+        "tasks",
+        "task_id",
+        "id"
+      ]
+    ]
+  },
+  "review_findings": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "name": "task_id",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "node_run_id",
+        "type": "INTEGER",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "finding_id",
+        "type": "VARCHAR(32)",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "type",
+        "type": "VARCHAR(32)",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "iteration",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "reviewed_sha",
+        "type": "VARCHAR(64)",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "severity",
+        "type": "VARCHAR(16)",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "blocking",
+        "type": "BOOLEAN",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "file",
+        "type": "TEXT",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "line",
+        "type": "INTEGER",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "title",
+        "type": "TEXT",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "description",
+        "type": "TEXT",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "recommendation",
+        "type": "TEXT",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "status",
+        "type": "VARCHAR(16)",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "prior_finding_id",
+        "type": "INTEGER",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "occurrence",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "resolution",
+        "type": "TEXT",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "response",
+        "type": "VARCHAR(16)",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "response_note",
+        "type": "TEXT",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "created_at",
+        "type": "DATETIME",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "resolved_at",
+        "type": "DATETIME",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      }
+    ],
+    "indexes": {
+      "ix_review_findings_task_id": {
+        "unique": false,
+        "origin": "c",
+        "columns": [
+          "task_id"
+        ]
+      }
+    },
+    "foreignKeys": [
+      [
+        "tasks",
+        "task_id",
+        "id"
+      ]
+    ]
+  },
+  "run_evidence": {
+    "columns": [
+      {
+        "name": "uid",
+        "type": "VARCHAR(36)",
+        "notnull": true,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "name": "run_id",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "requirements_digest",
+        "type": "VARCHAR(64)",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "verification",
+        "type": "JSON",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "usage",
+        "type": "JSON",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "confirmed_model",
+        "type": "VARCHAR(128)",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "billing_mode",
+        "type": "VARCHAR(16)",
+        "notnull": true,
+        "default": "'unknown'",
+        "pk": 0
+      }
+    ],
+    "indexes": {
+      "<pk:uid>": {
+        "unique": true,
+        "origin": "pk",
+        "columns": [
+          "uid"
+        ]
+      },
+      "<u:run_id>": {
+        "unique": true,
+        "origin": "u",
+        "columns": [
+          "run_id"
+        ]
+      }
+    },
+    "foreignKeys": [
+      [
+        "node_runs",
+        "run_id",
+        "id"
+      ]
+    ]
+  },
+  "run_heartbeats": {
+    "columns": [
+      {
+        "name": "uid",
+        "type": "VARCHAR(36)",
+        "notnull": true,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "name": "run_id",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "received_at",
+        "type": "DATETIME",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "phase",
+        "type": "VARCHAR(32)",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      }
+    ],
+    "indexes": {
+      "<pk:uid>": {
+        "unique": true,
+        "origin": "pk",
+        "columns": [
+          "uid"
+        ]
+      },
+      "<u:run_id>": {
+        "unique": true,
+        "origin": "u",
+        "columns": [
+          "run_id"
+        ]
+      }
+    },
+    "foreignKeys": [
+      [
+        "node_runs",
+        "run_id",
+        "id"
+      ]
+    ]
+  },
+  "task_artifacts": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "name": "task_id",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "node_run_id",
+        "type": "INTEGER",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "kind",
+        "type": "VARCHAR(64)",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "path",
+        "type": "TEXT",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "created_at",
+        "type": "DATETIME",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      }
+    ],
+    "indexes": {
+      "ix_task_artifacts_task_id": {
+        "unique": false,
+        "origin": "c",
+        "columns": [
+          "task_id"
+        ]
+      }
+    },
+    "foreignKeys": [
+      [
+        "tasks",
+        "task_id",
+        "id"
+      ]
+    ]
+  },
+  "tasks": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "name": "jira_key",
+        "type": "VARCHAR(64)",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "api_budget_usd",
+        "type": "FLOAT",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "jira_title",
+        "type": "TEXT",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "repository_path",
+        "type": "TEXT",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "repository_root",
+        "type": "TEXT",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "project_relative_path",
+        "type": "TEXT",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "base_branch",
+        "type": "VARCHAR(255)",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "branch_name",
+        "type": "VARCHAR(255)",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "worktree_path",
+        "type": "TEXT",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "zellij_session_name",
+        "type": "VARCHAR(255)",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "task_dir",
+        "type": "TEXT",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "additional_context",
+        "type": "TEXT",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "status",
+        "type": "VARCHAR(32)",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "status_message",
+        "type": "TEXT",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "review_iteration",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "max_review_iterations",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "max_requirements_revisions",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "current_sha",
+        "type": "VARCHAR(64)",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "pr_url",
+        "type": "TEXT",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "pr_created_at",
+        "type": "DATETIME",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "merged_at",
+        "type": "DATETIME",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "pr_sync_paused",
+        "type": "BOOLEAN",
+        "notnull": true,
+        "default": "'0'",
+        "pk": 0
+      },
+      {
+        "name": "merged_head_sha",
+        "type": "VARCHAR(64)",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "pr_base_branch",
+        "type": "VARCHAR(255)",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "archived_at",
+        "type": "DATETIME",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "project_id",
+        "type": "INTEGER",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "agent_overrides",
+        "type": "JSON",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "created_at",
+        "type": "DATETIME",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "updated_at",
+        "type": "DATETIME",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      }
+    ],
+    "indexes": {
+      "ix_tasks_jira_key": {
+        "unique": true,
+        "origin": "c",
+        "columns": [
+          "jira_key"
+        ]
+      },
+      "ix_tasks_project_id": {
+        "unique": false,
+        "origin": "c",
+        "columns": [
+          "project_id"
+        ]
+      }
+    },
+    "foreignKeys": [
+      [
+        "projects",
+        "project_id",
+        "id"
+      ]
+    ]
+  },
+  "workflow_events": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "name": "task_id",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "timestamp",
+        "type": "DATETIME",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "level",
+        "type": "VARCHAR(16)",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "node_key",
+        "type": "VARCHAR(64)",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "message",
+        "type": "TEXT",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "data",
+        "type": "JSON",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      }
+    ],
+    "indexes": {
+      "ix_workflow_events_task_id": {
+        "unique": false,
+        "origin": "c",
+        "columns": [
+          "task_id"
+        ]
+      }
+    },
+    "foreignKeys": [
+      [
+        "tasks",
+        "task_id",
+        "id"
+      ]
+    ]
+  },
+  "workflow_nodes": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 1
+      },
+      {
+        "name": "task_id",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "key",
+        "type": "VARCHAR(64)",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "kind",
+        "type": "VARCHAR(32)",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "label",
+        "type": "VARCHAR(128)",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "role",
+        "type": "VARCHAR(64)",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "state",
+        "type": "VARCHAR(32)",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "execution_mode",
+        "type": "VARCHAR(32)",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "iteration",
+        "type": "INTEGER",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "checkpoint_sha",
+        "type": "VARCHAR(64)",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "message",
+        "type": "TEXT",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "error",
+        "type": "TEXT",
+        "notnull": false,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "config_override",
+        "type": "JSON",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      },
+      {
+        "name": "updated_at",
+        "type": "DATETIME",
+        "notnull": true,
+        "default": null,
+        "pk": 0
+      }
+    ],
+    "indexes": {
+      "ix_workflow_nodes_task_id": {
+        "unique": false,
+        "origin": "c",
+        "columns": [
+          "task_id"
+        ]
+      }
+    },
+    "foreignKeys": [
+      [
+        "tasks",
+        "task_id",
+        "id"
+      ]
+    ]
+  }
+}

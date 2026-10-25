@@ -1,0 +1,20 @@
+{
+  "(task)": [
+    "info: Task created {\"baseBranch\": \"main\", \"repository\": \"<REPO>\"}",
+    "info: Worktree created: <TMP>\\worktrees\\<KEY> on branch agent/<KEY>",
+    "info: Zellij session created: agentflow-<KEY>"
+  ],
+  "architect": [
+    "info: Architect \u2192 RUNNING: Launching agent",
+    "info: Architect started: stub in zellij tab 'Architect' (cwd <TMP>\\worktrees\\<KEY>\\src) {\"harness\": \"stub\", \"requestedModel\": null}",
+    "info: Architect \u2192 RUNNING: Run #1 (stub)",
+    "info: Architect \u2192 WAITING_FOR_USER: Input required",
+    "warning: Architect asked: Stub question: should this apply to all tenants?",
+    "info: Architect \u2192 RUNNING: All replies sent; agent resumed",
+    "info: Human replied to question <UID>",
+    "info: Architect \u2192 COMPLETED: Stub discovery complete"
+  ],
+  "requirements_gate": [
+    "info: Requirements Approval \u2192 WAITING_FOR_APPROVAL: Review requirements and approve"
+  ]
+}

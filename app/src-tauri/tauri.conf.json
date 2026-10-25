@@ -1,0 +1,36 @@
+{
+  "productName": "AgentFlow",
+  "version": "1.1.6",
+  "identifier": "dev.agentflow.desktop",
+  "build": {
+    "frontendDist": "../../frontend/dist"
+  },
+  "app": {
+    "windows": [],
+    "security": {
+      "capabilities": []
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "icon": ["icons/icon.ico"],
+    "publisher": "AgentFlow",
+    "shortDescription": "Local coding workflow desktop",
+    "windows": {
+      "allowDowngrades": false,
+      "webviewInstallMode": { "type": "embedBootstrapper" },
+      "nsis": {
+        "installMode": "currentUser",
+        "installerHooks": "installer-hooks.nsh",
+        "installerIcon": "icons/icon.ico",
+        "languages": ["English"],
+        "startMenuFolder": "AgentFlow"
+      }
+    },
+    "resources": {
+      "../../frontend/dist/": "ui/",
+      "../target/release/flowctl.exe": "flowctl.exe"
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "jiraKey": "WS-1",
+  "branch": "agent/WS-1",
+  "cr\u00e9\u00e9": "\u00fcn\u00efcode",
+  "nested": {
+    "n": [
+      1,
+      2.5,
+      null,
+      true
+    ]
+  }
+}

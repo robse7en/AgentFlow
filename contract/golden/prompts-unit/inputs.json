@@ -1,0 +1,265 @@
+{
+  "manifest": [
+    {
+      "id": "1",
+      "file": "1-a.png",
+      "status": "present",
+      "firstSeenGeneration": 1,
+      "referencedIn": [
+        "description"
+      ]
+    },
+    {
+      "id": "3",
+      "file": "3-c.png",
+      "status": "present",
+      "firstSeenGeneration": 3,
+      "referencedIn": [
+        "comment:501"
+      ]
+    },
+    {
+      "id": "7",
+      "file": "7-repro.mp4",
+      "status": "present",
+      "firstSeenGeneration": 1,
+      "referencedIn": [],
+      "frames": [
+        "frame-01-t00m00.0s.png",
+        "frame-02-t00m04.0s.png"
+      ]
+    },
+    {
+      "id": "9",
+      "file": "9-broken.mov",
+      "status": "present",
+      "firstSeenGeneration": 1,
+      "referencedIn": [
+        "description",
+        "comment:7"
+      ],
+      "framesError": "ffmpeg exited with code 1"
+    },
+    {
+      "id": "8",
+      "file": "8-huge.mov",
+      "filename": "huge.mov",
+      "status": "skipped",
+      "firstSeenGeneration": 1,
+      "reason": "50.0 MB is over maxAttachmentBytes (20.0 MB)"
+    },
+    {
+      "id": "2",
+      "file": "2-old.png",
+      "status": "removed",
+      "firstSeenGeneration": 1,
+      "removedGeneration": 3
+    }
+  ],
+  "layouts": {
+    "none": null,
+    "legacy": "legacy",
+    "manifest": {
+      "generation": 3,
+      "lastPrompted": 2,
+      "entries": [
+        {
+          "id": "1",
+          "file": "1-a.png",
+          "status": "present",
+          "firstSeenGeneration": 1,
+          "referencedIn": [
+            "description"
+          ]
+        },
+        {
+          "id": "3",
+          "file": "3-c.png",
+          "status": "present",
+          "firstSeenGeneration": 3,
+          "referencedIn": [
+            "comment:501"
+          ]
+        },
+        {
+          "id": "7",
+          "file": "7-repro.mp4",
+          "status": "present",
+          "firstSeenGeneration": 1,
+          "referencedIn": [],
+          "frames": [
+            "frame-01-t00m00.0s.png",
+            "frame-02-t00m04.0s.png"
+          ]
+        },
+        {
+          "id": "9",
+          "file": "9-broken.mov",
+          "status": "present",
+          "firstSeenGeneration": 1,
+          "referencedIn": [
+            "description",
+            "comment:7"
+          ],
+          "framesError": "ffmpeg exited with code 1"
+        },
+        {
+          "id": "8",
+          "file": "8-huge.mov",
+          "filename": "huge.mov",
+          "status": "skipped",
+          "firstSeenGeneration": 1,
+          "reason": "50.0 MB is over maxAttachmentBytes (20.0 MB)"
+        },
+        {
+          "id": "2",
+          "file": "2-old.png",
+          "status": "removed",
+          "firstSeenGeneration": 1,
+          "removedGeneration": 3
+        }
+      ]
+    },
+    "first-run": {
+      "generation": 2,
+      "lastPrompted": null,
+      "entries": [
+        {
+          "id": "1",
+          "file": "1-a.png",
+          "status": "present",
+          "firstSeenGeneration": 1,
+          "referencedIn": [
+            "description"
+          ]
+        },
+        {
+          "id": "3",
+          "file": "3-c.png",
+          "status": "present",
+          "firstSeenGeneration": 3,
+          "referencedIn": [
+            "comment:501"
+          ]
+        }
+      ]
+    },
+    "unchanged": {
+      "generation": 3,
+      "lastPrompted": 3,
+      "entries": [
+        {
+          "id": "1",
+          "file": "1-a.png",
+          "status": "present",
+          "firstSeenGeneration": 1,
+          "referencedIn": [
+            "description"
+          ]
+        },
+        {
+          "id": "3",
+          "file": "3-c.png",
+          "status": "present",
+          "firstSeenGeneration": 3,
+          "referencedIn": [
+            "comment:501"
+          ]
+        },
+        {
+          "id": "7",
+          "file": "7-repro.mp4",
+          "status": "present",
+          "firstSeenGeneration": 1,
+          "referencedIn": [],
+          "frames": [
+            "frame-01-t00m00.0s.png",
+            "frame-02-t00m04.0s.png"
+          ]
+        },
+        {
+          "id": "9",
+          "file": "9-broken.mov",
+          "status": "present",
+          "firstSeenGeneration": 1,
+          "referencedIn": [
+            "description",
+            "comment:7"
+          ],
+          "framesError": "ffmpeg exited with code 1"
+        },
+        {
+          "id": "8",
+          "file": "8-huge.mov",
+          "filename": "huge.mov",
+          "status": "skipped",
+          "firstSeenGeneration": 1,
+          "reason": "50.0 MB is over maxAttachmentBytes (20.0 MB)"
+        },
+        {
+          "id": "2",
+          "file": "2-old.png",
+          "status": "removed",
+          "firstSeenGeneration": 1,
+          "removedGeneration": 3
+        }
+      ]
+    }
+  },
+  "verifications": {
+    "none": null,
+    "empty": {
+      "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "commands": [],
+      "passed": false
+    },
+    "error": {
+      "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "error": "TimeoutError",
+      "commands": []
+    },
+    "passed": {
+      "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "passed": true,
+      "commands": [
+        {
+          "command": [
+            "pytest",
+            "-q"
+          ],
+          "exitCode": 0,
+          "output": "12 passed\n"
+        },
+        {
+          "command": [
+            "npm",
+            "test"
+          ],
+          "exitCode": 0,
+          "output": ""
+        }
+      ]
+    },
+    "failed": {
+      "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "passed": false,
+      "commands": [
+        {
+          "command": [
+            "pytest",
+            "-q"
+          ],
+          "exitCode": 1,
+          "output": "line 0 with ``` fences\r\nline 1 with ``` fences\r\nline 2 with ``` fences\r\nline 3 with ``` fences\r\nline 4 with ``` fences\r\nline 5 with ``` fences\r\nline 6 with ``` fences\r\nline 7 with ``` fences\r\nline 8 with ``` fences\r\nline 9 with ``` fences\r\nline 10 with ``` fences\r\nline 11 with ``` fences\r\nline 12 with ``` fences\r\nline 13 with ``` fences\r\nline 14 with ``` fences\r\nline 15 with ``` fences\r\nline 16 with ``` fences\r\nline 17 with ``` fences\r\nline 18 with ``` fences\r\nline 19 with ``` fences\r\nline 20 with ``` fences\r\nline 21 with ``` fences\r\nline 22 with ``` fences\r\nline 23 with ``` fences\r\nline 24 with ``` fences\r\nline 25 with ``` fences\r\nline 26 with ``` fences\r\nline 27 with ``` fences\r\nline 28 with ``` fences\r\nline 29 with ``` fences\r\nline 30 with ``` fences\r\nline 31 with ``` fences\r\nline 32 with ``` fences\r\nline 33 with ``` fences\r\nline 34 with ``` fences\r\nline 35 with ``` fences\r\nline 36 with ``` fences\r\nline 37 with ``` fences\r\nline 38 with ``` fences\r\nline 39 with ``` fences\r\nline 40 with ``` fences\r\nline 41 with ``` fences\r\nline 42 with ``` fences\r\nline 43 with ``` fences\r\nline 44 with ``` fences\r\nline 45 with ``` fences\r\nline 46 with ``` fences\r\nline 47 with ``` fences\r\nline 48 with ``` fences\r\nline 49 with ``` fences\r\nline 50 with ``` fences\r\nline 51 with ``` fences\r\nline 52 with ``` fences\r\nline 53 with ``` fences\r\nline 54 with ``` fences\r\nline 55 with ``` fences\r\nline 56 with ``` fences\r\nline 57 with ``` fences\r\nline 58 with ``` fences\r\nline 59 with ``` fences\r\nline 60 with ``` fences\r\nline 61 with ``` fences\r\nline 62 with ``` fences\r\nline 63 with ``` fences\r\nline 64 with ``` fences\r\nline 65 with ``` fences\r\nline 66 with ``` fences\r\nline 67 with ``` fences\r\nline 68 with ``` fences\r\nline 69 with ``` fences\r\nline 70 with ``` fences\r\nline 71 with ``` fences\r\nline 72 with ``` fences\r\nline 73 with ``` fences\r\nline 74 with ``` fences\r\nline 75 with ``` fences\r\nline 76 with ``` fences\r\nline 77 with ``` fences\r\nline 78 with ``` fences\r\nline 79 with ``` fences\r\nline 80 with ``` fences\r\nline 81 with ``` fences\r\nline 82 with ``` fences\r\nline 83 with ``` fences\r\nline 84 with ``` fences\r\nline 85 with ``` fences\r\nline 86 with ``` fences\r\nline 87 with ``` fences\r\nline 88 with ``` fences\r\nline 89 with ``` fences\r\nline 90 with ``` fences\r\nline 91 with ``` fences\r\nline 92 with ``` fences\r\nline 93 with ``` fences\r\nline 94 with ``` fences\r\nline 95 with ``` fences\r\nline 96 with ``` fences\r\nline 97 with ``` fences\r\nline 98 with ``` fences\r\nline 99 with ``` fences\r\nline 100 with ``` fences\r\nline 101 with ``` fences\r\nline 102 with ``` fences\r\nline 103 with ``` fences\r\nline 104 with ``` fences\r\nline 105 with ``` fences\r\nline 106 with ``` fences\r\nline 107 with ``` fences\r\nline 108 with ``` fences\r\nline 109 with ``` fences\r\nline 110 with ``` fences\r\nline 111 with ``` fences\r\nline 112 with ``` fences\r\nline 113 with ``` fences\r\nline 114 with ``` fences\r\nline 115 with ``` fences\r\nline 116 with ``` fences\r\nline 117 with ``` fences\r\nline 118 with ``` fences\r\nline 119 with ``` fences\r\nline 120 with ``` fences\r\nline 121 with ``` fences\r\nline 122 with ``` fences\r\nline 123 with ``` fences\r\nline 124 with ``` fences\r\nline 125 with ``` fences\r\nline 126 with ``` fences\r\nline 127 with ``` fences\r\nline 128 with ``` fences\r\nline 129 with ``` fences\r\nline 130 with ``` fences\r\nline 131 with ``` fences\r\nline 132 with ``` fences\r\nline 133 with ``` fences\r\nline 134 with ``` fences\r\nline 135 with ``` fences\r\nline 136 with ``` fences\r\nline 137 with ``` fences\r\nline 138 with ``` fences\r\nline 139 with ``` fences\r\nline 140 with ``` fences\r\nline 141 with ``` fences\r\nline 142 with ``` fences\r\nline 143 with ``` fences\r\nline 144 with ``` fences\r\nline 145 with ``` fences\r\nline 146 with ``` fences\r\nline 147 with ``` fences\r\nline 148 with ``` fences\r\nline 149 with ``` fences\r\nline 150 with ``` fences\r\nline 151 with ``` fences\r\nline 152 with ``` fences\r\nline 153 with ``` fences\r\nline 154 with ``` fences\r\nline 155 with ``` fences\r\nline 156 with ``` fences\r\nline 157 with ``` fences\r\nline 158 with ``` fences\r\nline 159 with ``` fences\r\nline 160 with ``` fences\r\nline 161 with ``` fences\r\nline 162 with ``` fences\r\nline 163 with ``` fences\r\nline 164 with ``` fences\r\nline 165 with ``` fences\r\nline 166 with ``` fences\r\nline 167 with ``` fences\r\nline 168 with ``` fences\r\nline 169 with ``` fences\r\nline 170 with ``` fences\r\nline 171 with ``` fences\r\nline 172 with ``` fences\r\nline 173 with ``` fences\r\nline 174 with ``` fences\r\nline 175 with ``` fences\r\nline 176 with ``` fences\r\nline 177 with ``` fences\r\nline 178 with ``` fences\r\nline 179 with ``` fences\r\nline 180 with ``` fences\r\nline 181 with ``` fences\r\nline 182 with ``` fences\r\nline 183 with ``` fences\r\nline 184 with ``` fences\r\nline 185 with ``` fences\r\nline 186 with ``` fences\r\nline 187 with ``` fences\r\nline 188 with ``` fences\r\nline 189 with ``` fences\r\nline 190 with ``` fences\r\nline 191 with ``` fences\r\nline 192 with ``` fences\r\nline 193 with ``` fences\r\nline 194 with ``` fences\r\nline 195 with ``` fences\r\nline 196 with ``` fences\r\nline 197 with ``` fences\r\nline 198 with ``` fences\r\nline 199 with ``` fences\r\n== 3 failed, 12 passed =="
+        },
+        {
+          "command": [
+            "lint"
+          ],
+          "exitCode": null,
+          "output": "  ````weird````  \n"
+        }
+      ]
+    }
+  }
+}

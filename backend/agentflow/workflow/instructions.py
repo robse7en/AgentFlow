@@ -224,11 +224,12 @@ def persist_snapshot(task_dir: Path, snapshot: dict, *, initial: bool) -> dict:
     return snapshot
 
 
-def compose(builtin: str, snapshot: dict, role: str, run_id: int) -> str:
-    # Rewrite only generated examples. Custom Markdown is never templated or executed.
+def compose(builtin: str, snapshot: dict, role: str, run_id: int, appendix: str = '') -> str:
+    # Rewrite only generated examples. Custom Markdown is never templated or executed, and neither is
+    # `appendix`: it follows the built-in briefing verbatim (a retry's record of agent-written text).
     for command in ('question', 'running', 'complete', 'finding', 'fail', 'status'):
         builtin = builtin.replace(f'flowctl {command}', f'flowctl {command} --run {run_id}')
-    builtin += RUN_NOTICE
+    builtin += appendix + RUN_NOTICE
     content = snapshot['files'][role]['content']
     return builtin + (NOTICE + content if content else '')
 

@@ -138,6 +138,27 @@ def _iso(value: datetime | None) -> str | None:
     return value.isoformat()
 
 
+def _attempt_time(value: datetime | None) -> str | None:
+    """A run's timestamp as a retry briefing shows it (stored times are UTC)."""
+    if value is None:
+        return None
+    if value.tzinfo is not None:
+        value = value.astimezone(timezone.utc)
+    return f"{value:%Y-%m-%d %H:%M} UTC"
+
+
+def _recorded_start_sha(run_dir: str | None) -> str | None:
+    """The HEAD an implementer run recorded at launch (its config.json `startSha`); None when it
+    recorded none (runs launched before AgentFlow recorded it) or the file is unreadable."""
+    if not run_dir:
+        return None
+    try:
+        value = json.loads(Path(run_dir, "config.json").read_text(encoding="utf-8")).get("startSha")
+    except (OSError, ValueError, AttributeError):
+        return None
+    return value if isinstance(value, str) and value else None
+
+
 class WorkflowEngine:
     def __init__(
         self,
@@ -2746,6 +2767,17 @@ class WorkflowEngine:
 
         previous_runs = session.scalars(select(NodeRun).where(NodeRun.node_id == node.id)).all()
         run_number = len(previous_runs) + 1
+        # An implementer's HEAD at launch goes into the run's config.json, so a later retry can list
+        # what an unfinished attempt committed. Best-effort: an unreadable worktree never blocks a launch.
+        worktree = Path(item.worktree_path if item else task.worktree_path) if role == Role.IMPLEMENTER else None
+        head_now = None
+        if worktree is not None:
+            try:
+                head_now = await self.git.head_sha(worktree)
+            except (GitError, ProcessError, OSError):
+                head_now = None
+        attempt = await self._previous_attempt(session, task, role, previous_runs, worktree, head_now,
+                                               item.base_sha if item else None)
         workspace = self.workspace(task)
         # Run directories are per role so the architect's runs (discovery + final) live together.
         role_runs = session.scalars(select(NodeRun).join(WorkflowNode).where(NodeRun.task_id == task.id, WorkflowNode.role == node.role)).all()
@@ -2767,11 +2799,13 @@ class WorkflowEngine:
         session.commit()
 
         prompt_text = self._build_prompt(session, task, node, run, run_dir)
+        # Composed untouched: it quotes agent-written text, which must not get flowctl run ids inserted.
+        attempt_text = "\n" + prompts.previous_attempt(attempt) if attempt is not None else ""
         # Which Jira sync this Architect is shown; recorded only once it has actually launched,
         # so the next prompt's "new since your last run" is measured from what it really saw.
         jira_generation = (jira_manifest_generation(workspace.context_dir)
                            if node.key in (wf.ARCHITECT, wf.FINAL_ARCHITECT) else None)
-        prompt_text = instructions.compose(prompt_text, instruction_snapshot, role, run.id)
+        prompt_text = instructions.compose(prompt_text, instruction_snapshot, role, run.id, appendix=attempt_text)
         prompt_path = run_dir / "prompt.md"
         try:
             if instruction_snapshot['files'][role]['content']:
@@ -2786,7 +2820,8 @@ class WorkflowEngine:
             raise WorkflowError(f'Could not persist agent briefing: {exc}', 409) from exc
         run.prompt_path = str(prompt_path)
         TaskWorkspace.write_json(run_dir / "config.json", {"harness": harness_key, "model": cfg["model"], "reasoning": cfg["reasoning"],
-                                                          "node": node.key, "role": role, "iteration": task.review_iteration, "expectedSha": node.checkpoint_sha})
+                                                          "node": node.key, "role": role, "iteration": task.review_iteration, "expectedSha": node.checkpoint_sha,
+                                                          "startSha": head_now})
         session.add(TaskArtifact(task_id=task.id, node_run_id=run.id, kind=f"{node.key}-prompt", path=str(prompt_path)))
 
         # The run id is typed too: a resumed conversation that won't (or can't) read the new
@@ -2990,6 +3025,55 @@ class WorkflowEngine:
             script.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
             script.chmod(0o700)
         return script
+
+    async def _previous_attempt(self, session: Session, task: Task, role: str, previous_runs: list[NodeRun],
+                                worktree: Path | None, head: str | None, base_sha: str | None) -> dict[str, Any] | None:
+        """The unfinished attempts at this stage in the current review round (the node's trailing FAILED
+        runs) for a retry's briefing (prompts.previous_attempt); None when the latest earlier run did not
+        fail. `worktree` is given for implementers only: their committed and uncommitted work is listed,
+        measured from where the first unfinished attempt started (`base_sha` when it recorded nothing)."""
+        unfinished = []
+        for run in sorted(previous_runs, key=lambda r: r.id, reverse=True):
+            if run.state != NodeState.FAILED or run.iteration != task.review_iteration:
+                break
+            unfinished.append(run)
+        if not unfinished:
+            return None
+        latest, first = unfinished[0], unfinished[-1]
+        numbers = {run.id: run.run_number for run in unfinished}
+        launched = latest.exit_code is not None or session.scalar(select(AgentSession.id).where(
+            AgentSession.current_run_id == latest.id, AgentSession.zellij_tab_id.is_not(None))) is not None
+        heartbeat = session.scalar(select(RunHeartbeat).where(RunHeartbeat.run_id == latest.id))
+        questions = session.scalars(select(AgentQuestion).where(
+            AgentQuestion.node_run_id.in_(list(numbers)), AgentQuestion.answered.is_(True))
+            .order_by(AgentQuestion.id)).all()
+        attempt: dict[str, Any] = {
+            "unfinishedAttempts": len(unfinished), "runNumber": latest.run_number,
+            "harness": latest.harness, "model": latest.model, "startedAt": _attempt_time(latest.started_at),
+            "endedAt": _attempt_time(latest.completed_at), "launched": launched,
+            "error": latest.error, "exitCode": latest.exit_code,
+            "heartbeat": {"phase": heartbeat.phase, "receivedAt": _attempt_time(heartbeat.received_at)} if heartbeat else None,
+            "role": str(role),
+            "answers": [{"runNumber": numbers[q.node_run_id], "question": q.message, "answer": q.answer or ""}
+                        for q in questions[-10:]],
+            "worktree": None,
+        }
+        if worktree is not None:
+            # Each listing that git cannot produce is None and reported on its own; neither blocks the launch.
+            start = _recorded_start_sha(first.run_dir) or base_sha
+            committed: list[str] | None = []
+            if head is not None and start and start != head:
+                try:
+                    committed = await self.git.changed_paths(str(worktree), start, head)
+                except (GitError, ProcessError, OSError):
+                    committed = None
+            try:
+                uncommitted: list[str] | None = await self.git.dirty_paths(worktree)
+            except (GitError, ProcessError, OSError):
+                uncommitted = None
+            attempt["worktree"] = {"path": str(worktree), "startSha": start, "headSha": head,
+                                   "committed": committed, "uncommitted": uncommitted}
+        return attempt
 
     def _build_prompt(self, session: Session, task: Task, node: WorkflowNode, run: NodeRun, run_dir: Path) -> str:
         workspace = self.workspace(task)

@@ -272,12 +272,21 @@ fn persist_snapshot(task_dir: &Path, snapshot: Snapshot, initial: bool) -> Resul
     Ok(snapshot)
 }
 
-pub fn compose(builtin: &str, snapshot: &Snapshot, role: &str, run_id: i64) -> Result<String, WorkflowError> {
+/// Rewrites only generated examples. Custom Markdown is never templated or executed, and neither is
+/// `appendix`: it follows the built-in briefing verbatim (a retry's record of agent-written text).
+pub fn compose(
+    builtin: &str,
+    snapshot: &Snapshot,
+    role: &str,
+    run_id: i64,
+    appendix: &str,
+) -> Result<String, WorkflowError> {
     let source = snapshot.files.get(role).ok_or_else(|| failure("Unsupported instruction role"))?;
     let mut briefing = builtin.to_owned();
     for command in ["question", "running", "complete", "finding", "fail", "status"] {
         briefing = briefing.replace(&format!("flowctl {command}"), &format!("flowctl {command} --run {run_id}"));
     }
+    briefing += appendix;
     briefing += RUN_NOTICE;
     if let Some(content) = source.content.as_deref().filter(|c| !c.is_empty()) {
         briefing += NOTICE;

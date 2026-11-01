@@ -99,6 +99,7 @@ fn render(function: &str, ctx: &PromptContext, args: &Value, verifications: &Val
             prompts::worker(ctx, &item, findings("dependency_results").unwrap())
         }
         "integration" => prompts::integration(ctx, findings("workers").unwrap(), text("summary")),
+        "previous_attempt" => prompts::previous_attempt(&args["attempt"]),
         other => panic!("no prompt function {other}"),
     }
 }

@@ -274,6 +274,34 @@ async fn test_terminals_questions_and_retry_are_worker_specific() {
 }
 
 #[tokio::test]
+async fn test_worker_retry_briefing_carries_the_failed_attempt() {
+    let h = parallel().await;
+    let first = submit(&h, plan(4)).await[0].clone();
+    let run_id = first["lastRun"]["id"].as_i64();
+    h.engine.agent_question("TEST-1", "implementer", run_id, "Keep the old route?", &[]).await.unwrap();
+    let uid = h.engine.snapshot("TEST-1").unwrap()["questions"][0]["uid"].as_str().unwrap().to_string();
+    h.engine.answer_question("TEST-1", &uid, "Keep it", None).await.unwrap();
+    h.engine.agent_fail("TEST-1", "implementer", run_id, "Out of context").await.unwrap();
+    let head = "d".repeat(40);
+    h.git.returns("head_sha", Outcome::Ok(json!(head)));
+    h.git.returns("changed_paths", Outcome::Ok(json!(["src/part-0/api.py"])));
+    h.git.returns("dirty_paths", Outcome::Ok(json!(["?? src/part-0/draft.py"])));
+    let key = first["key"].as_str().unwrap();
+    let snap = h.engine.run_node("TEST-1", key, RunNodeRequest::default(), false).await.unwrap();
+    let retry = snap["nodes"].as_array().unwrap().iter().find(|n| n["key"] == key).unwrap();
+    let prompt = std::fs::read_to_string(retry["lastRun"]["promptPath"].as_str().unwrap()).unwrap();
+    let section = prompt.split("## Previous attempt at this stage").nth(1).unwrap();
+    assert!(
+        section.contains("Out of context") && section.contains("Keep the old route?") && section.contains("Keep it")
+    );
+    assert!(section.contains(&format!("HEAD moved from `{}`", "a".repeat(40))), "{section}");
+    assert!(section.contains("src/part-0/api.py") && section.contains("?? src/part-0/draft.py"));
+    let worktree = first["worker"]["worktreePath"].as_str().unwrap().to_string();
+    let committed: Vec<_> = h.git.calls_of("changed_paths").into_iter().filter(|c| c[0] == worktree).collect();
+    assert_eq!(committed, vec![vec![worktree, "a".repeat(40), head]]);
+}
+
+#[tokio::test]
 async fn test_launch_failure_is_durable_and_recovery_finds_guid_tab() {
     let h = parallel().await;
     h.terminals.fail("new_tab", "fixture failure");

@@ -8,6 +8,13 @@ tested. The frontend and Python package versions are independent of desktop vers
 Each version has a local annotated `v<version>` Git tag at the source checkpoint
 shown below. Tags must be pushed separately to share them with other checkouts.
 
+## Unreleased
+
+- A retried stage's briefing now says what the failed attempts did: how the latest ended, its last
+  heartbeat, the human's answers to its questions and, for implementers and workers, the files
+  committed and left uncommitted since the first failed attempt started. The new conversation
+  continues from that work instead of starting over. See [Retry briefings](README.md#retry-briefings).
+
 ## 1.1.7 - 2026-11-01
 
 Source: the version commit tagged `v1.1.7` on `main`.

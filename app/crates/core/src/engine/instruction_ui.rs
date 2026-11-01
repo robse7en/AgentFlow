@@ -136,7 +136,7 @@ impl Engine {
                     .count();
                 let run_dir = task_workspace.runs_dir.join(role_enum.run_dir()).join(format!("{:02}", count + 1));
                 let builtin = self.build_prompt(&state, index, 0, &run_dir)?;
-                Some(instructions::compose(&builtin, effective, role, 0)?)
+                Some(instructions::compose(&builtin, effective, role, 0, "")?)
             }
             None => None,
         };

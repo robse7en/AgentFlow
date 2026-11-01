@@ -115,6 +115,29 @@ After a backend restart, active runs become `INTERRUPTED`. In the node configura
 Older runs without scoped credentials require Stop & retry. Database upgrades add credential and
 process-identity tables without rewriting existing task records.
 
+### Retry briefings
+
+When a stage is run again after its last run in the same review round failed (the harness exited,
+the agent reported `flowctl fail`, a launch failed, or a human chose **Stop & retry**), the new
+briefing ends with a *Previous attempt at this stage* section. It lists:
+
+- how many attempts failed in a row and how the latest one ended (its failure message or exit code);
+- its last heartbeat phase;
+- the questions the human answered during those attempts, with the answers.
+
+For an implementer or worker it also lists what the attempts left in the worktree: files changed by
+commits since the first failed attempt started, and `git status --porcelain` for uncommitted
+changes. The new agent is told to continue from that work rather than start over. Each implementer
+run records its starting HEAD as `startSha` in its run's `config.json`. A run from before this
+feature has none, so its retry lists only uncommitted changes (a worker falls back to its base
+checkpoint). The section lists file names, not diff content. A reviewer's retry is told that the
+findings its failed attempt reported were discarded and must be reported again. Failure messages
+and questions appear fenced, marked as evidence, not instructions, and quoted verbatim (AgentFlow
+adds `--run` only to its own `flowctl` examples). If git cannot list the commits or the uncommitted
+changes, that list is replaced by a pointer to the git command to run, the other list still
+appears, and the launch goes ahead. A resumed conversation gets the same section, as restated
+context.
+
 Key rules it enforces:
 
 - one Jira ticket = one primary Git worktree plus isolated worker worktrees — agents never

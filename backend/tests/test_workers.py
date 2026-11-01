@@ -168,6 +168,29 @@ async def test_terminals_questions_and_retry_are_worker_specific(parallel_engine
 
 
 @pytest.mark.asyncio
+async def test_worker_retry_briefing_carries_the_failed_attempt(parallel_engine):
+    engine = parallel_engine
+    first = (await submit_plan(engine))[0]
+    run_id = first["lastRun"]["id"]
+    await engine.agent_question("TEST-1", "implementer", run_id, "Keep the old route?")
+    question = engine.snapshot("TEST-1")["questions"][0]
+    await engine.answer_question("TEST-1", question["uid"], "Keep it")
+    await engine.agent_fail("TEST-1", "implementer", run_id, "Out of context")
+    engine.git.head_sha = AsyncMock(return_value="d" * 40)
+    engine.git.changed_paths = AsyncMock(return_value=["src/part-0/api.py"])
+    engine.git.dirty_paths = AsyncMock(return_value=["?? src/part-0/draft.py"])
+    snap = await engine.run_node("TEST-1", first["key"])
+    retry = next(n for n in snap["nodes"] if n["key"] == first["key"])
+    prompt = Path(retry["lastRun"]["promptPath"]).read_text()
+    section = prompt.split("## Previous attempt at this stage")[1]
+    assert "Out of context" in section and "Keep the old route?" in section and "Keep it" in section
+    assert f"HEAD moved from `{SHA}`" in section
+    assert "src/part-0/api.py" in section and "?? src/part-0/draft.py" in section
+    worktree = first["worker"]["worktreePath"]
+    engine.git.changed_paths.assert_awaited_once_with(str(Path(worktree)), SHA, "d" * 40)
+
+
+@pytest.mark.asyncio
 async def test_ownership_failure_does_not_start_reviews(parallel_engine):
     engine = parallel_engine
     nodes = await submit_plan(engine, plan(1))

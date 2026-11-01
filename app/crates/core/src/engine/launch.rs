@@ -8,9 +8,11 @@
 //! Worker runs use their own worktrees and inherited settings; Architect launches refresh Jira
 //! context before acquiring the global launch lock.
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use indexmap::IndexMap;
+use rusqlite::OptionalExtension;
 use serde::Deserialize;
 use serde_json::{Map, Value, json};
 
@@ -27,8 +29,8 @@ use crate::api::auth::{digest, token_urlsafe};
 use crate::config::BillingMode;
 use crate::db::table::{self, Tracked};
 use crate::db::{
-    AgentAccessRow, AgentSessionRow, DbTime, Json, NodeRunRow, ProcessLeaseRow, RequirementsApprovalRow,
-    RunEvidenceRow, TaskArtifactRow, new_uid,
+    AgentAccessRow, AgentQuestionRow, AgentSessionRow, DbTime, Json, NodeRunRow, ProcessLeaseRow,
+    RequirementsApprovalRow, RunEvidenceRow, TaskArtifactRow, new_uid,
 };
 use crate::harness::{HarnessAdapter, LaunchSpec, as_posix};
 use crate::jira;
@@ -69,6 +71,19 @@ fn terminal_conflict(error: TerminalError) -> WorkflowError {
 
 fn io_error(error: std::io::Error) -> WorkflowError {
     WorkflowError::new(format!("Could not write the run files: {error}"), 500)
+}
+
+/// A run's timestamp as a retry briefing shows it (stored times are UTC).
+fn attempt_time(value: Option<&DbTime>) -> Option<String> {
+    value.map(|time| time.0.format("%Y-%m-%d %H:%M UTC").to_string())
+}
+
+/// The HEAD an implementer run recorded at launch (its config.json `startSha`); None when it
+/// recorded none (runs launched before AgentFlow recorded it) or the file is unreadable.
+fn recorded_start_sha(run_dir: Option<&str>) -> Option<String> {
+    let text = std::fs::read_to_string(Path::new(run_dir.filter(|d| !d.is_empty())?).join("config.json")).ok()?;
+    let config: Value = serde_json::from_str(&text).ok()?;
+    config.get("startSha").and_then(Value::as_str).filter(|sha| !sha.is_empty()).map(String::from)
 }
 
 /// Python's `str.strip()` truthiness for a reason.
@@ -438,6 +453,30 @@ impl Engine {
 
         let node_id = state.nodes[index].id;
         let run_number = state.runs.iter().filter(|r| r.node_id == node_id).count() + 1;
+        // An implementer's HEAD at launch goes into the run's config.json, so a later retry can list
+        // what an unfinished attempt committed. Best-effort: an unreadable worktree never blocks a launch.
+        let (worktree, base_sha) = match role {
+            Role::Implementer if node_key.starts_with("worker_") => {
+                let item = self.worker_item(state, index)?;
+                (Some(PathBuf::from(&item.worktree_path)), Some(item.base_sha))
+            }
+            Role::Implementer => (Some(PathBuf::from(&state.task.worktree_path)), None),
+            _ => (None, None),
+        };
+        let head_now = match &worktree {
+            Some(path) => self.git.head_sha(path).await.ok(),
+            None => None,
+        };
+        let attempt = self
+            .previous_attempt(
+                state,
+                node_id,
+                role.as_str(),
+                worktree.as_deref(),
+                head_now.as_deref(),
+                base_sha.as_deref(),
+            )
+            .await?;
         let role_node_ids: Vec<i64> =
             state.nodes.iter().filter(|n| n.role.as_deref() == Some(role.as_str())).map(|n| n.id).collect();
         let role_runs = state.runs.iter().filter(|r| role_node_ids.contains(&r.node_id)).count();
@@ -502,13 +541,16 @@ impl Engine {
         let run_id = state.runs[run_index].id;
 
         let mut prompt_text = self.build_prompt(state, index, run_id, &run_dir)?;
+        // Composed untouched: it quotes agent-written text, which must not get flowctl run ids inserted.
+        let attempt_text = attempt.as_ref().map(|a| format!("\n{}", prompts::previous_attempt(a))).unwrap_or_default();
         // Which Jira sync this Architect is shown; recorded only once it has actually launched, so
         // the next prompt's "new since your last run" is measured from what it really saw.
         let jira_generation = [spec::ARCHITECT, spec::FINAL_ARCHITECT]
             .contains(&node_key.as_str())
             .then(|| jira::manifest_generation(&task_workspace.context_dir))
             .flatten();
-        prompt_text = crate::instructions::compose(&prompt_text, &instruction_snapshot, role.as_str(), run_id)?;
+        prompt_text =
+            crate::instructions::compose(&prompt_text, &instruction_snapshot, role.as_str(), run_id, &attempt_text)?;
         let prompt_path = run_dir.join("prompt.md");
         let persisted = (|| -> Result<(), WorkflowError> {
             if instruction_snapshot.files[role.as_str()].content.as_deref().is_some_and(|c| !c.is_empty()) {
@@ -533,7 +575,8 @@ impl Engine {
         files::write_json(
             &run_dir.join("config.json"),
             &json!({"harness": harness_key, "model": model, "reasoning": reasoning, "node": node_key,
-                    "role": role.as_str(), "iteration": state.task.review_iteration, "expectedSha": expected_sha}),
+                    "role": role.as_str(), "iteration": state.task.review_iteration, "expectedSha": expected_sha,
+                    "startSha": head_now}),
         )
         .map_err(io_error)?;
         let mut artifact = TaskArtifactRow {
@@ -781,6 +824,75 @@ impl Engine {
             Some(pane_id) => self.terminals.pane_state(session, &pane_id).await,
             None => Ok(None),
         }
+    }
+
+    /// The unfinished attempts at this stage in the current review round (the node's trailing
+    /// FAILED runs) for a retry's briefing (`prompts::previous_attempt`); None when the latest
+    /// earlier run did not fail. `worktree` is given for implementers only: their committed and
+    /// uncommitted work is listed, measured from where the first unfinished attempt started
+    /// (`base_sha` when it recorded nothing).
+    async fn previous_attempt(
+        &self,
+        state: &TaskState,
+        node_id: i64,
+        role: &str,
+        worktree: Option<&Path>,
+        head: Option<&str>,
+        base_sha: Option<&str>,
+    ) -> Result<Option<Value>, WorkflowError> {
+        let unfinished: Vec<&NodeRunRow> = state
+            .runs
+            .iter()
+            .rev()
+            .filter(|r| r.node_id == node_id)
+            .take_while(|r| r.state == NodeState::Failed.as_str() && r.iteration == state.task.review_iteration)
+            .map(|r| &r.row)
+            .collect();
+        let (Some(latest), Some(first)) = (unfinished.first(), unfinished.last()) else { return Ok(None) };
+        let numbers: HashMap<i64, i64> = unfinished.iter().map(|r| (r.id, r.run_number)).collect();
+        let launched = latest.exit_code.is_some()
+            || state.agents.iter().any(|a| a.current_run_id == Some(latest.id) && a.zellij_tab_id.is_some());
+        let (heartbeat, questions) = self.db.session(|tx| -> rusqlite::Result<_> {
+            let heartbeat = tx
+                .query_row("SELECT received_at, phase FROM run_heartbeats WHERE run_id = ?1", [latest.id], |row| {
+                    Ok((row.get::<_, DbTime>(0)?, row.get::<_, String>(1)?))
+                })
+                .optional()?;
+            let questions: Vec<AgentQuestionRow> =
+                table::select(tx, "WHERE task_id = ?1 AND answered = 1 ORDER BY id", [state.task.id])?;
+            Ok((heartbeat, questions))
+        })?;
+        let questions: Vec<AgentQuestionRow> =
+            questions.into_iter().filter(|q| q.node_run_id.is_some_and(|id| numbers.contains_key(&id))).collect();
+        let answers: Vec<Value> = questions[questions.len().saturating_sub(10)..]
+            .iter()
+            .map(|q| {
+                json!({"runNumber": q.node_run_id.map(|id| numbers[&id]), "question": q.message,
+                       "answer": q.answer.clone().unwrap_or_default()})
+            })
+            .collect();
+        let mut attempt = json!({
+            "unfinishedAttempts": unfinished.len(), "runNumber": latest.run_number,
+            "harness": latest.harness, "model": latest.model, "startedAt": attempt_time(Some(&latest.started_at)),
+            "endedAt": attempt_time(latest.completed_at.as_ref()), "launched": launched,
+            "error": latest.error, "exitCode": latest.exit_code,
+            "heartbeat": heartbeat.map(|(at, phase)| json!({"phase": phase, "receivedAt": attempt_time(Some(&at))})),
+            "role": role, "answers": answers, "worktree": null,
+        });
+        if let Some(path) = worktree {
+            // Each listing that git cannot produce is null and reported on its own; neither blocks the launch.
+            let start = recorded_start_sha(first.run_dir.as_deref()).or_else(|| base_sha.map(String::from));
+            let committed = match (start.as_deref(), head) {
+                (Some(start), Some(head)) if !start.is_empty() && start != head => {
+                    self.git.changed_paths(path, start, head).await.ok()
+                }
+                _ => Some(Vec::new()),
+            };
+            let uncommitted = self.git.dirty_paths(path, false).await.ok();
+            attempt["worktree"] = json!({"path": py_str(path), "startSha": start, "headSha": head,
+                                         "committed": committed, "uncommitted": uncommitted});
+        }
+        Ok(Some(attempt))
     }
 
     pub(super) fn build_prompt(

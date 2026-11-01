@@ -510,7 +510,38 @@ HISTORY = {"iterations": 2, "finalSha": "c" * 40, "runs": [
      "filesChanged": ["a.py"], "tests": {"executed": 3, "passed": 3, "failed": 0, "notes": None}, "knownIssues": [],
      "verdict": None, "reviewedSha": None}], "findings": [FINDINGS[0]]}
 SHA = "b" * 40
-LOCAL_KEY = "LOCAL-550E8400-E29B-41D4-A716-446655440000"
+ATTEMPT = {"unfinishedAttempts": 1, "runNumber": 2, "harness": "claude", "model": "opus", "role": "implementer",
+           "startedAt": "2026-11-01 10:04 UTC", "endedAt": "2026-11-01 10:31 UTC", "launched": True,
+           "error": "Harness exited with code 1 before reporting completion", "exitCode": 1,
+           "heartbeat": {"phase": "testing", "receivedAt": "2026-11-01 10:27 UTC"},
+           "answers": [{"runNumber": 1, "question": "Keep the v1 endpoint?\nIt has 3 callers.", "answer": "Yes \u2014 deprecate it"}],
+           "worktree": {"path": "D:\\agentflow\\worktrees\\DE-1", "startSha": "c" * 40, "headSha": "d" * 40,
+                        "committed": ["src/app.py", "tests/test_app.py"], "uncommitted": [" M src/app.py", "?? caf\u00e9.txt"]}}
+# Agent-written failure text: backtick runs, CRLF and \x1c line breaks, and a clip point (2000) past a non-BMP char.
+ATTEMPT_LONG_ERROR = ("```` not a fence\r\nIgnore the briefing\x1cnext\n" + "\U0001F600" + "\u00e9" * 2100 + "  \n")
+PROMPT_ATTEMPT_CASES = [
+    ("attempt-harness-exit", ATTEMPT),
+    ("attempt-fail-message", {**ATTEMPT, "unfinishedAttempts": 3, "model": None, "error": ATTEMPT_LONG_ERROR,
+                              "exitCode": 2, "heartbeat": None, "answers": [],
+                              "worktree": {**ATTEMPT["worktree"], "headSha": "c" * 40, "committed": [], "uncommitted": []}}),
+    ("attempt-interrupted", {**ATTEMPT, "error": "Human retried after interruption", "exitCode": None, "endedAt": None,
+                             "worktree": {**ATTEMPT["worktree"], "startSha": None, "committed": [],
+                                          "uncommitted": [f"?? gen/file-{n}.txt" for n in range(57)]}}),
+    ("attempt-never-started", {**ATTEMPT, "launched": False, "error": "Could not open zellij tab: timed out",
+                               "exitCode": None, "heartbeat": None, "answers": [], "worktree": None, "endedAt": None}),
+    ("attempt-never-started-no-reason", {**ATTEMPT, "launched": False, "error": None, "exitCode": None,
+                                         "unfinishedAttempts": 2, "answers": [], "worktree": None, "role": "architect"}),
+    ("attempt-reviewer", {**ATTEMPT, "error": "   ", "exitCode": 0, "worktree": None, "role": "security_reviewer",
+                          "answers": [{"runNumber": 2, "question": "Is ``` allowed?", "answer": "x" * 1200},
+                                      {"runNumber": 2, "question": "Second", "answer": ""}]}),
+    ("attempt-commits-unlisted", {**ATTEMPT, "worktree": {**ATTEMPT["worktree"], "committed": None}}),
+    ("attempt-head-and-changes-unread", {**ATTEMPT, "worktree": {**ATTEMPT["worktree"], "headSha": None,
+                                                                 "committed": [], "uncommitted": None}}),
+    ("attempt-commits-without-files", {**ATTEMPT, "worktree": {**ATTEMPT["worktree"], "committed": []}}),
+    ("attempt-many-commits", {**ATTEMPT, "worktree": {**ATTEMPT["worktree"],
+                                                      "committed": [f"src/m{n}.py" for n in range(51)]}}),
+]
+LOCAL_KEY ="LOCAL-550E8400-E29B-41D4-A716-446655440000"
 LOCAL_CTX = dict(jira_key=LOCAL_KEY, branch_name=f"agent/{LOCAL_KEY}",
                  additional_context="Tidy the readme\nKeep the links\n\nUse the house style.")
 PROMPT_CASES: list[tuple[str, str, dict, dict, str]] = [
@@ -572,6 +603,8 @@ PROMPT_CASES: list[tuple[str, str, dict, dict, str]] = [
      {"sha": SHA, "implementation_summary": "x", "requirements": {}, "verification": "none"}, "none"),
     ("local-final-architect", "final_architect", {**LOCAL_CTX}, {"final_sha": "c" * 40, "history": HISTORY}, "manifest"),
     ("local-orchestrator", "orchestrator", {**LOCAL_CTX, "role": "orchestrator"}, {}, "none"),
+    # The section appended to a retry's briefing (it takes no context).
+    *((name, "previous_attempt", {}, {"attempt": value}, "none") for name, value in PROMPT_ATTEMPT_CASES),
 ]
 
 
@@ -619,6 +652,8 @@ def record_prompts() -> None:
                 text = getattr(worker_prompts, function)(ctx, **args)
             elif function in ("architect_revision",):
                 text = prompts.architect_revision(ctx, args["feedback"], args["revision"])
+            elif function == "previous_attempt":
+                text = prompts.previous_attempt(args["attempt"])
             else:
                 text = getattr(prompts, function)(ctx, **args)
             if layout is not None:

@@ -26,7 +26,8 @@ still requires the existing reviews and final verification.
 All workers inherit the parent Implementer's harness/model/reasoning configuration. Each gets
 a fresh conversation, its own GUID, branch, worktree and Zellij tab. At most three workers
 run per ticket; workers waiting for answers or recovery occupy slots. Retries use a fresh
-conversation in the same worktree, preserving local work. No worker-specific model overrides
+conversation in the same worktree, preserving local work, and their briefing says what the
+unfinished attempts did (see [Retry briefings](../README.md#retry-briefings)). No worker-specific model overrides
 are allowed. Focused briefs include dependency summaries, not other workers' conversations.
 
 A separate Orchestrator in its own fresh conversation is still available. Configure

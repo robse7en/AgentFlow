@@ -29,7 +29,7 @@ fn optional_sources_exact_composition_and_role_separation() {
     let snapshot = guidance::capture(&task, root, "revision", false).unwrap();
     for role in guidance::ROLES {
         assert_eq!(
-            guidance::compose("flowctl complete\n", &snapshot, role, 42).unwrap(),
+            guidance::compose("flowctl complete\n", &snapshot, role, 42, "").unwrap(),
             format!("flowctl complete --run 42\n{}", guidance::RUN_NOTICE)
         );
     }
@@ -39,7 +39,7 @@ fn optional_sources_exact_composition_and_role_separation() {
     corrupted.files.get_mut("architect").unwrap().content = Some("tampered".into());
     assert!(guidance::validate_snapshot(&corrupted).is_err());
     for role in guidance::ROLES {
-        let text = guidance::compose("flowctl complete\n", &updated, role, 42).unwrap();
+        let text = guidance::compose("flowctl complete\n", &updated, role, 42, "").unwrap();
         assert!(text.ends_with(updated.files[role].content.as_deref().unwrap()));
         assert_eq!(text.matches("flowctl complete --run 42").count(), 1);
         assert_eq!(text.matches("Unique ").count(), 1);
@@ -297,7 +297,7 @@ fn two_local_adapter_stubs_read_the_same_file_on_launch_and_resume() {
     let root = dir.path();
     sources(root);
     let snapshot = guidance::capture(&root.join("task"), root, "revision", false).unwrap();
-    let briefing = guidance::compose("flowctl complete", &snapshot, "implementer", 73).unwrap();
+    let briefing = guidance::compose("flowctl complete", &snapshot, "implementer", 73, "").unwrap();
     let prompt = root.join("prompt.md");
     fs::write(&prompt, &briefing).unwrap();
     let stub = root.join("stub.ps1");

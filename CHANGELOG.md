@@ -31,7 +31,7 @@ Source: the version commit tagged `v1.1.7` on `main`.
 
 ## 1.1.6 - 2026-10-25
 
-Source: `eb763d5` (`v1.1.6`) on `main`.
+Source: `689773e` (`v1.1.6`) on `main`.
 
 - Let agents ask decision-tree questions with `flowctl question --file`: the agent's pick,
   consequence notes, a risk level, a context line, an agent's note with its source per

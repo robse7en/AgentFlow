@@ -256,6 +256,7 @@ async fn finished() -> Harness {
                     response_note: None,
                     created_at: DbTime::now(),
                     resolved_at: None,
+                    end_line: None,
                 },
             )?;
             table::insert(

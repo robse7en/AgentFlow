@@ -248,6 +248,7 @@ pub fn router_with_ui(app: Arc<App>, dist: Option<PathBuf>) -> Router {
         .route("/api/tasks/{jira_key}/delete", post(tasks::delete_task))
         .route("/api/tasks/{jira_key}/worktree/cleanup-preview", get(tasks::worktree_cleanup_preview))
         .route("/api/tasks/{jira_key}/worktree/cleanup", post(tasks::cleanup_worktree))
+        .route("/api/tasks/{jira_key}/findings/{finding_id}/code", get(tasks::finding_code))
         .route("/api/tasks/{jira_key}/nodes/{node_key}/run", post(tasks::run_node))
         .route("/api/tasks/{jira_key}/nodes/{node_key}/recover", post(tasks::recover_node))
         .route("/api/tasks/{jira_key}/nodes/{node_key}/config", put(tasks::set_node_config))

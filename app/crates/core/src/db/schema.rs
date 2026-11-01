@@ -193,6 +193,7 @@ pub const TABLES: &[(&str, &[&str])] = &[
 	response_note TEXT,
 	created_at DATETIME NOT NULL,
 	resolved_at DATETIME,
+	end_line INTEGER,
 	PRIMARY KEY (id),
 	FOREIGN KEY(task_id) REFERENCES tasks (id)
 )"#,

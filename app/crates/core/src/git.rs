@@ -754,6 +754,78 @@ impl GitService {
         Ok(result.ok().then(|| trimmed(&result).to_string()))
     }
 
+    /// The text of `path` at commit `sha`, or None when that commit has no such file. Read from the
+    /// object store, so it works after the task worktree is gone.
+    pub async fn file_at(&self, root: &Path, sha: &str, path: &str) -> Result<Option<String>> {
+        let spec = format!("{sha}:{path}");
+        let kind = self.git(&["cat-file", "-t", &spec], Some(root), SHORT).await?;
+        if !kind.ok() || trimmed(&kind) != "blob" {
+            return Ok(None);
+        }
+        let result = self.git(&["cat-file", "blob", &spec], Some(root), TIMEOUT).await?;
+        if !result.ok() {
+            return failed(format!("Cannot read {path} at {sha}: {}", said(&result)));
+        }
+        Ok(Some(result.stdout))
+    }
+
+    /// Where the branch at `sha` left `base_branch`: the merge base with the local branch and
+    /// origin's copy together, so the newer of the two counts. None when neither exists.
+    pub async fn fork_point(&self, root: &Path, sha: &str, base_branch: &str) -> Result<Option<String>> {
+        let mut refs = Vec::new();
+        for reference in [format!("refs/heads/{base_branch}"), format!("refs/remotes/origin/{base_branch}")] {
+            let commit = format!("{reference}^{{commit}}");
+            if self.git(&["rev-parse", "--verify", "--quiet", &commit], Some(root), SHORT).await?.ok() {
+                refs.push(reference);
+            }
+        }
+        if refs.is_empty() {
+            return Ok(None);
+        }
+        let mut args = vec!["merge-base", sha];
+        args.extend(refs.iter().map(String::as_str));
+        let result = self.git(&args, Some(root), SHORT).await?;
+        let Some(base) = result.ok().then(|| trimmed(&result).to_string()) else { return Ok(None) };
+        if base != sha {
+            return Ok(Some(base));
+        }
+        // Already merged, so `sha` is its own merge base. When a merge commit brought it in, the
+        // branch left the base where that merge's first parent meets it. That merge is the oldest
+        // descendant of `sha` on the base's first-parent line (git can't combine --first-parent and
+        // --ancestry-path for this: the path runs through the merge's second parent).
+        for reference in &refs {
+            let range = format!("{sha}..{reference}");
+            let line = self.git(&["rev-list", "--first-parent", &range], Some(root), TIMEOUT).await?;
+            let after = self.git(&["rev-list", "--ancestry-path", "--reverse", &range], Some(root), TIMEOUT).await?;
+            if !(line.ok() && after.ok()) {
+                continue;
+            }
+            let on_line: std::collections::HashSet<&str> = line.stdout.split_whitespace().collect();
+            let Some(merge) = after.stdout.split_whitespace().find(|commit| on_line.contains(commit)) else { continue };
+            let before = format!("{merge}^1");
+            let parents = self.git(&["rev-list", "--parents", "-n", "1", merge], Some(root), SHORT).await?;
+            if parents.stdout.split_whitespace().count() < 3 {
+                continue;
+            }
+            let fork = self.git(&["merge-base", &before, sha], Some(root), SHORT).await?;
+            if fork.ok() && trimmed(&fork) != sha {
+                return Ok(Some(trimmed(&fork).to_string()));
+            }
+        }
+        Ok(Some(base))
+    }
+
+    /// The unified diff (three lines of context) of `path` between two commits.
+    pub async fn file_diff(&self, root: &Path, from: &str, to: &str, path: &str) -> Result<String> {
+        let args =
+            ["diff", "--no-color", "--no-ext-diff", "--no-textconv", "--no-renames", "-U3", from, to, "--", path];
+        let result = self.git(&args, Some(root), TIMEOUT).await?;
+        if !result.ok() {
+            return failed(format!("Cannot compare {path}: {}", said(&result)));
+        }
+        Ok(result.stdout)
+    }
+
     /// Push `branch` to origin under the same name and track it there. Run from the task worktree,
     /// so any pre-push hook sees that checkout.
     pub async fn push_branch(&self, cwd: &Path, branch: &str) -> Result<()> {

@@ -43,6 +43,14 @@ class Database:
         self._upgrade_review_findings_lineage()
         self._upgrade_tasks_archived()
         self._upgrade_tasks_project()
+        self._upgrade_review_findings_end_line()
+
+    def _upgrade_review_findings_end_line(self) -> None:
+        """Add the last line of a multi-line finding to existing local databases."""
+        with self.engine.begin() as connection:
+            columns = {column["name"] for column in inspect(connection).get_columns("review_findings")}
+            if "end_line" not in columns:
+                connection.exec_driver_sql("ALTER TABLE review_findings ADD COLUMN end_line INTEGER")
 
     def _upgrade_tasks_project(self) -> None:
         """Add the project assignment to existing local databases (create_all made the projects table)."""

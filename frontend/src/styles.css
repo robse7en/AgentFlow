@@ -453,6 +453,55 @@ button.active { color: var(--accent-strong); background: var(--accent-soft); bor
 .finding .head { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
 .finding .loc { font-family: var(--mono); font-size: 12px; color: var(--muted); }
 .finding.resolved, .finding.accepted { opacity: 0.65; }
+.finding .code-toggle summary { margin-top: 0.35rem; cursor: pointer; font-size: 12.5px; color: var(--accent); }
+
+/* A finding's code, GitHub review style (FindingCode.vue). */
+.code-view { margin-top: 0.5rem; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; background: var(--code-bg); }
+.code-view .code-head { display: flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.5rem; background: var(--code-gutter); border-bottom: 1px solid var(--border); font-family: var(--mono); font-size: 12px; }
+.code-view .code-head .path { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.code-view .code-head .sha { color: var(--muted); white-space: nowrap; }
+.code-view .code-head .spacer { flex: 1; }
+.code-view .segmented { display: inline-flex; border: 1px solid var(--border); border-radius: var(--radius-pill); overflow: hidden; flex: none; }
+.code-view .segmented button { background: transparent; border: 0; border-radius: 0; padding: 0.1rem 0.5rem; font: 11.5px var(--font); color: var(--muted); }
+.code-view .segmented button.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.code-view .icon-btn { background: transparent; border: 0; padding: 0.1rem 0.3rem; color: var(--muted); font-size: 12px; flex: none; }
+.code-view .icon-btn:hover { color: var(--text); }
+.code-view .code-note { margin: 0; padding: 0.3rem 0.6rem; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--border); }
+.code-view .code-note.changed { color: var(--warn); }
+.code-view .code-scroll { overflow-x: auto; container-type: inline-size; }
+.code-lines { border-collapse: collapse; width: 100%; font-family: var(--mono); font-size: 12px; line-height: 1.55; }
+.code-lines td { padding: 0 0.5rem; vertical-align: top; }
+.code-lines td.src { white-space: pre; width: 100%; }
+.code-lines td.ln { width: 1%; text-align: right; color: var(--muted); background: var(--code-gutter); user-select: none; white-space: nowrap; }
+.code-lines td.mark { width: 1%; padding: 0 0.15rem; color: var(--muted); user-select: none; }
+.code-lines tr.add td { background: var(--code-add); }
+.code-lines tr.add td.ln { background: var(--code-add-gutter); }
+.code-lines tr.del td { background: var(--code-del); }
+.code-lines tr.del td.ln { background: var(--code-del-gutter); }
+.code-lines tr.flagged td { background: var(--code-flagged); }
+.code-lines tr.flagged td.ln { background: var(--code-flagged-gutter); color: var(--text); }
+.code-lines tr.flagged td.mark { color: var(--warn); }
+.code-lines tr.hunk td { background: var(--info-soft); color: var(--muted); padding: 0.15rem 0.5rem; white-space: pre; }
+.code-lines tr.expand td { padding: 0; background: var(--info-soft); }
+.code-lines tr.expand button { width: 100%; text-align: left; background: transparent; border: 0; border-radius: 0; padding: 0.1rem 0.5rem; font: 11.5px var(--mono); color: var(--accent); }
+.code-lines tr.expand button:hover { background: var(--accent-soft); }
+.code-lines tr.comment td { padding: 0.45rem 0.5rem; background: var(--panel); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); font-family: var(--font); }
+.code-view .bubble { border-left: 3px solid var(--muted); padding-left: 0.55rem; }
+/* The comment stays in view while long code lines scroll sideways under it. */
+.code-lines tr.comment .bubble { position: sticky; left: 0.5rem; max-width: calc(100cqw - 1.6rem); box-sizing: border-box; }
+.code-view .bubble.loose { margin: 0.45rem 0.5rem; }
+.code-view .bubble.critical, .code-view .bubble.high { border-left-color: var(--danger); }
+.code-view .bubble.medium { border-left-color: var(--warn); }
+/* highlight.js tokens, in the app's palette. */
+.code-lines .hljs-keyword, .code-lines .hljs-built_in, .code-lines .hljs-literal, .code-lines .hljs-selector-tag { color: var(--syntax-keyword); }
+.code-lines .hljs-string, .code-lines .hljs-regexp, .code-lines .hljs-symbol, .code-lines .hljs-template-variable { color: var(--syntax-string); }
+.code-lines .hljs-number, .code-lines .hljs-variable.constant_ { color: var(--syntax-number); }
+.code-lines .hljs-title, .code-lines .hljs-section, .code-lines .hljs-selector-id, .code-lines .hljs-selector-class { color: var(--syntax-title); }
+.code-lines .hljs-type, .code-lines .hljs-title.class_, .code-lines .hljs-attr, .code-lines .hljs-attribute { color: var(--syntax-type); }
+.code-lines .hljs-meta, .code-lines .hljs-tag, .code-lines .hljs-name, .code-lines .hljs-params { color: var(--syntax-meta); }
+.code-lines .hljs-comment, .code-lines .hljs-quote { color: var(--muted); font-style: italic; }
+.code-lines .hljs-addition { color: var(--ok); }
+.code-lines .hljs-deletion { color: var(--danger); }
 
 .picker { border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--panel); }
 .picker .crumb { padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border); display: flex; gap: 0.5rem; align-items: center; font-family: var(--mono); font-size: 12px; }

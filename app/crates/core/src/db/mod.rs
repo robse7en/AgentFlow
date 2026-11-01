@@ -77,6 +77,7 @@ impl Database {
         self.session(upgrade_review_findings_lineage)?;
         self.session(upgrade_tasks_archived)?;
         self.session(upgrade_tasks_project)?;
+        self.session(upgrade_review_findings_end_line)?;
         Ok(())
     }
 
@@ -204,6 +205,11 @@ fn upgrade_tasks_archived(tx: &Transaction) -> Result<()> {
 fn upgrade_tasks_project(tx: &Transaction) -> Result<()> {
     add_missing(tx, "tasks", &[("project_id", "INTEGER REFERENCES projects (id)")])?;
     tx.execute_batch("CREATE INDEX IF NOT EXISTS ix_tasks_project_id ON tasks (project_id)")?;
+    Ok(())
+}
+
+fn upgrade_review_findings_end_line(tx: &Transaction) -> Result<()> {
+    add_missing(tx, "review_findings", &[("end_line", "INTEGER")])?;
     Ok(())
 }
 

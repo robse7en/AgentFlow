@@ -1,8 +1,12 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, defineAsyncComponent, reactive } from 'vue'
 import type { Finding } from '@/api/types'
+import { location, shortSha } from '@/findingCode'
 
-const props = defineProps<{ findings: Finding[] }>()
+// Loaded with the first code it draws, so highlight.js stays out of the main bundle.
+const FindingCode = defineAsyncComponent(() => import('@/components/FindingCode.vue'))
+
+const props = defineProps<{ findings: Finding[]; taskKey: string }>()
 
 const grouped = computed(() => {
   const map = new Map<number, Finding[]>()
@@ -14,6 +18,16 @@ const grouped = computed(() => {
   return [...map.entries()].sort((a, b) => b[0] - a[0])
 })
 const blocking = (items: Finding[]) => items.filter((f) => f.blocking).length
+
+/** Findings whose code is drawn: they name a file and a line the reviewer looked at. */
+const hasCode = (f: Finding) => !!f.file && f.line != null && !!f.reviewedSha
+/** Closed findings keep their code folded until asked for (and only then load it). */
+const opened = reactive(new Set<number>())
+const codeShown = (f: Finding) => hasCode(f) && (f.status === 'open' || opened.has(f.dbId))
+function toggle(f: Finding, event: Event) {
+  if ((event.target as HTMLDetailsElement).open) opened.add(f.dbId)
+  else opened.delete(f.dbId)
+}
 </script>
 
 <template>
@@ -36,8 +50,14 @@ const blocking = (items: Finding[]) => items.filter((f) => f.blocking).length
           <span class="muted small">{{ f.type }}</span>
         </div>
         <div style="margin-top: 0.25rem"><b>{{ f.title }}</b></div>
-        <div v-if="f.file" class="loc">{{ f.file }}<span v-if="f.line">:{{ f.line }}</span></div>
-        <div v-if="f.description" class="small" style="margin-top: 0.25rem; white-space: pre-wrap">{{ f.description }}</div>
+        <div v-if="f.file && !codeShown(f)" class="loc">{{ location(f.file, f.line, f.endLine) }}</div>
+        <div v-if="f.description && !codeShown(f)" class="small" style="margin-top: 0.25rem; white-space: pre-wrap">{{ f.description }}</div>
+        <details v-if="hasCode(f) && f.status !== 'open'" class="code-toggle" @toggle="toggle(f, $event)">
+          <summary>Show code · reviewed @ {{ shortSha(f.reviewedSha) }}</summary>
+        </details>
+        <FindingCode v-if="codeShown(f)" :task-key="taskKey" :finding="f">
+          <div class="small" style="white-space: pre-wrap">{{ f.description || f.title }}</div>
+        </FindingCode>
         <div v-if="f.recommendation" class="small muted" style="margin-top: 0.25rem; white-space: pre-wrap">
           <b>Recommendation:</b> {{ f.recommendation }}
         </div>

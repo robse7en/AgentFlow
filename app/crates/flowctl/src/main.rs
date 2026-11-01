@@ -125,6 +125,9 @@ enum Command {
         file: Option<String>,
         #[arg(long)]
         line: Option<i64>,
+        /// Last line of a finding that spans several lines
+        #[arg(long)]
+        end_line: Option<i64>,
         #[arg(long)]
         title: String,
         #[arg(long)]
@@ -496,6 +499,7 @@ struct Finding {
     blocking: Option<bool>,
     file: Option<String>,
     line: Option<i64>,
+    end_line: Option<i64>,
     title: String,
     description: Option<String>,
     recommendation: Option<String>,
@@ -510,6 +514,7 @@ fn finding(target: Target, f: Finding) -> Result<()> {
         ("blocking", f.blocking.map(Value::from)),
         ("file", f.file.map(Value::from)),
         ("line", f.line.map(Value::from)),
+        ("endLine", f.end_line.map(Value::from)),
         ("title", Some(Value::from(f.title))),
         ("description", f.description.map(Value::from)),
         ("recommendation", f.recommendation.map(Value::from)),
@@ -561,6 +566,7 @@ fn main() -> ExitCode {
             no_blocking,
             file,
             line,
+            end_line,
             title,
             description,
             recommendation,
@@ -575,7 +581,7 @@ fn main() -> ExitCode {
             };
             finding(
                 Target::from(common),
-                Finding { id, severity, blocking, file, line, title, description, recommendation, prior_id },
+                Finding { id, severity, blocking, file, line, end_line, title, description, recommendation, prior_id },
             )
         }
         Command::Fail { common, message } => fail_run(Target::from(common), message),

@@ -77,6 +77,8 @@ impl Engine {
             let is_blocking = super::agents::finding_is_blocking(&finding);
             blocking += usize::from(is_blocking);
             let text = |key: &str| finding.get(key).and_then(Value::as_str).map(String::from);
+            let line = finding.get("line").and_then(Value::as_i64);
+            let end_line = finding.get("endLine").and_then(Value::as_i64).filter(|end| line.is_some_and(|l| *end > l));
             let row = ReviewFindingRow {
                 id: 0,
                 task_id: state.task.id,
@@ -88,7 +90,7 @@ impl Engine {
                 severity: text("severity").unwrap_or("medium".into()),
                 blocking: is_blocking,
                 file: text("file"),
-                line: finding.get("line").and_then(Value::as_i64),
+                line,
                 title: text("title")
                     .filter(|s| !s.is_empty())
                     .or_else(|| text("description").filter(|s| !s.is_empty()).map(|s| s.chars().take(80).collect()))
@@ -103,6 +105,7 @@ impl Engine {
                 response_note: None,
                 created_at: DbTime::now(),
                 resolved_at: None,
+                end_line,
             };
             new_rows.push(row);
             finding.insert("id".into(), json!(id));

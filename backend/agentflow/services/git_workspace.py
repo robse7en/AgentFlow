@@ -49,6 +49,11 @@ class BranchUnverified(GitError):
                                     "request; worktree cleanup stopped")
 
 
+def _said(result) -> str:
+    """stderr, else stdout, trimmed: what a failed git command said."""
+    return result.stderr.strip() if result.stderr else result.stdout.strip()
+
+
 class GitService:
     def __init__(self, command: str = "git") -> None:
         self.command = command
@@ -268,6 +273,62 @@ class GitService:
         if not result.ok:
             raise GitError(f"Cannot read HEAD in {cwd}: {result.stderr.strip()}")
         return result.stdout.strip()
+
+    async def file_at(self, root: str | Path, sha: str, path: str) -> str | None:
+        """The text of `path` at commit `sha`, or None when that commit has no such file. Read from
+        the object store, so it works after the task worktree is gone."""
+        spec = f"{sha}:{path}"
+        kind = await self._git("cat-file", "-t", spec, cwd=root, timeout=30.0)
+        if not kind.ok or kind.stdout.strip() != "blob":
+            return None
+        result = await self._git("cat-file", "blob", spec, cwd=root)
+        if not result.ok:
+            raise GitError(f"Cannot read {path} at {sha}: {_said(result)}")
+        return result.stdout
+
+    async def fork_point(self, root: str | Path, sha: str, base_branch: str) -> str | None:
+        """Where the branch at `sha` left `base_branch`: the merge base with the local branch and
+        origin's copy together, so the newer of the two counts. None when neither exists."""
+        refs = []
+        for reference in (f"refs/heads/{base_branch}", f"refs/remotes/origin/{base_branch}"):
+            if (await self._git("rev-parse", "--verify", "--quiet", f"{reference}^{{commit}}", cwd=root, timeout=30.0)).ok:
+                refs.append(reference)
+        if not refs:
+            return None
+        result = await self._git("merge-base", sha, *refs, cwd=root, timeout=30.0)
+        if not result.ok:
+            return None
+        base = result.stdout.strip()
+        if base != sha:
+            return base
+        # Already merged, so `sha` is its own merge base. When a merge commit brought it in, the
+        # branch left the base where that merge's first parent meets it. That merge is the oldest
+        # descendant of `sha` on the base's first-parent line (git can't combine --first-parent and
+        # --ancestry-path for this: the path runs through the merge's second parent).
+        for reference in refs:
+            line = await self._git("rev-list", "--first-parent", f"{sha}..{reference}", cwd=root)
+            after = await self._git("rev-list", "--ancestry-path", "--reverse", f"{sha}..{reference}", cwd=root)
+            if not (line.ok and after.ok):
+                continue
+            on_line = set(line.stdout.split())
+            merge = next((commit for commit in after.stdout.split() if commit in on_line), None)
+            if merge is None:
+                continue
+            parents = await self._git("rev-list", "--parents", "-n", "1", merge, cwd=root, timeout=30.0)
+            if len(parents.stdout.split()) < 3:
+                continue
+            fork = await self._git("merge-base", f"{merge}^1", sha, cwd=root, timeout=30.0)
+            if fork.ok and fork.stdout.strip() != sha:
+                return fork.stdout.strip()
+        return base
+
+    async def file_diff(self, root: str | Path, from_sha: str, to_sha: str, path: str) -> str:
+        """The unified diff (three lines of context) of `path` between two commits."""
+        result = await self._git("diff", "--no-color", "--no-ext-diff", "--no-textconv", "--no-renames", "-U3",
+                                 from_sha, to_sha, "--", path, cwd=root)
+        if not result.ok:
+            raise GitError(f"Cannot compare {path}: {_said(result)}")
+        return result.stdout
 
     async def verify_worker_worktree(self, root: str, path: Path, branch: str) -> None:
         if path.is_symlink() or path.resolve() != path.absolute():

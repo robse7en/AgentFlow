@@ -437,11 +437,14 @@ When done, submit this JSON shape to flowctl (see below):
 """
 
 
-_LEAN_FINDING_KEYS = ("id", "severity", "blocking", "file", "line", "title", "description", "recommendation", "occurrence")
+_LEAN_FINDING_KEYS = ("id", "severity", "blocking", "file", "line", "endLine", "title", "description", "recommendation",
+                      "occurrence")
 
 
 def lean_findings(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return [{k: f[k] for k in _LEAN_FINDING_KEYS if k in f} for f in findings]
+    # Most findings name a single line; an empty endLine would only be noise in the prompt.
+    return [{k: f[k] for k in _LEAN_FINDING_KEYS if k in f and not (k == "endLine" and f[k] is None)}
+            for f in findings]
 
 
 def implementer(ctx: PromptContext, *, findings: list[dict[str, Any]] | None, requirements: dict[str, str], previous_sha: str | None) -> str:
@@ -695,7 +698,8 @@ Report fewer, better findings:
 Number new findings `{id_prefix}-001`, `{id_prefix}-002`, ...; AgentFlow assigns the final ids so an id always
 means the same issue for the whole task. Severity is one of
 `info | low | medium | high | critical`. `blocking: true` means the task must not proceed until it is fixed.
-File paths are relative to the repository root; include line numbers where possible.
+File paths are relative to the repository root. Give the `line` of the issue, and `endLine` too when it
+spans several lines, so the human sees the exact code.
 
 Submit this JSON shape to flowctl (see below):
 
@@ -712,6 +716,7 @@ Submit this JSON shape to flowctl (see below):
       "blocking": true,
       "file": "src/Foo.cs",
       "line": 142,
+      "endLine": 145,
       "title": "Short title",
       "description": "What is wrong and why it matters",
       "recommendation": "How to fix it"

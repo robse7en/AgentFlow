@@ -581,8 +581,8 @@ fn session_display_status(session: &AgentSessionRow, runs: &HashMap<i64, &NodeRu
 pub fn finding_dict(f: &ReviewFindingRow) -> Value {
     json!({
         "id": f.finding_id, "dbId": f.id, "type": f.kind, "iteration": f.iteration, "reviewedSha": f.reviewed_sha,
-        "severity": f.severity, "blocking": f.blocking, "file": f.file, "line": f.line, "title": f.title,
-        "description": f.description, "recommendation": f.recommendation, "status": f.status,
+        "severity": f.severity, "blocking": f.blocking, "file": f.file, "line": f.line, "endLine": f.end_line,
+        "title": f.title, "description": f.description, "recommendation": f.recommendation, "status": f.status,
         "occurrence": f.occurrence, "resolution": f.resolution, "response": f.response, "responseNote": f.response_note,
         "createdAt": iso(Some(&f.created_at)), "resolvedAt": iso(f.resolved_at.as_ref()),
     })

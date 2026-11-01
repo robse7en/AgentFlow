@@ -221,8 +221,8 @@ def cmd_finding(args: argparse.Namespace) -> None:
     _require(args)
     finding = {
         "id": args.id, "severity": args.severity, "blocking": args.blocking, "file": args.file, "line": args.line,
-        "title": args.title, "description": args.description, "recommendation": args.recommendation,
-        "priorId": args.prior_id,
+        "endLine": args.end_line, "title": args.title, "description": args.description,
+        "recommendation": args.recommendation, "priorId": args.prior_id,
     }
     finding = {k: v for k, v in finding.items() if v is not None}
     response = _post(args, "finding", {"finding": finding})
@@ -286,6 +286,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--blocking", action=argparse.BooleanOptionalAction, default=None)
     p.add_argument("--file")
     p.add_argument("--line", type=int)
+    p.add_argument("--end-line", type=int, help="Last line of a finding that spans several lines")
     p.add_argument("--title", required=True)
     p.add_argument("--description")
     p.add_argument("--recommendation")

@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 
 from conftest import rust_flowctl
-from support import (ARCHITECT_RESULT, ROOT, agent_run, free_port, new_key, node, python_executable, reach_reviews,
+from support import (ARCHITECT_RESULT, ROOT, agent_run, free_port, git, new_key, node, python_executable, reach_reviews,
                      write_requirements)
 
 AGENT_VARS = ("AGENTFLOW_API", "AGENTFLOW_TASK", "AGENTFLOW_AGENT", "AGENTFLOW_RUN", "AGENTFLOW_CREDENTIAL_FILE")
@@ -262,7 +262,7 @@ def test_findings_recorded_incrementally_are_used_by_a_bare_completion(flowctl, 
     code, _ = reviewers
     env = code.env()
     result = flowctl("finding", "--id", "CODE-001", "--severity", "high", "--blocking", "--title", "Null check missing",
-                     "--file", "src/app.txt", "--line", "1", "--description", "Crashes on empty input.",
+                     "--file", "src/app.txt", "--line", "1", "--end-line", "2", "--description", "Crashes on empty input.",
                      "--recommendation", "Guard it.", env=env)
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == ("Finding recorded (1 pending for this run). Include them all in your final "
@@ -277,8 +277,34 @@ def test_findings_recorded_incrementally_are_used_by_a_bare_completion(flowctl, 
     assert sorted((f["title"], f["severity"], f["blocking"]) for f in findings) == [
         ("Naming", "low", False), ("Null check missing", "high", True)]
     [blocking] = [f for f in findings if f["blocking"]]
-    assert (blocking["file"], blocking["line"], blocking["description"], blocking["recommendation"]) == (
-        "src/app.txt", 1, "Crashes on empty input.", "Guard it.")
+    assert (blocking["file"], blocking["line"], blocking["endLine"], blocking["description"], blocking["recommendation"]) == (
+        "src/app.txt", 1, 2, "Crashes on empty input.", "Guard it.")
+
+
+def test_finding_code_shows_the_reviewed_file_and_the_task_change(flowctl, reviewers, human, repo):
+    code, _ = reviewers
+    env = code.env()
+    result = flowctl("finding", "--title", "Vague note", "--severity", "low", "--file", "./STUB_NOTES.md",
+                     "--line", "1", env=env)
+    assert result.returncode == 0, result.stderr
+    sha = human.task(code.key)["currentSha"]
+    result = flowctl("complete", "--summary", "One finding", "--sha", sha, "--verdict", "approved", env=env)
+    assert result.returncode == 0, result.stderr
+    [finding] = [f for f in human.task(code.key)["findings"] if f["type"] == "code-review"]
+    assert (finding["line"], finding["endLine"]) == (1, None)
+
+    base = git("rev-parse", "main", cwd=repo)
+    added = {"kind": "add", "old": None, "new": 1, "text": "contract change"}
+    assert human.ok("GET", f"/api/tasks/{code.key}/findings/{finding['dbId']}/code") == {
+        "file": "./STUB_NOTES.md", "line": 1, "endLine": None, "reviewedSha": sha,
+        "snapshot": {"sha": sha, "lines": ["contract change"]},
+        "diff": {"from": base, "to": sha, "hunks": [{"header": "@@ -0,0 +1 @@", "oldStart": 0, "oldCount": 0,
+                                                     "newStart": 1, "newCount": 1, "rows": [added]}]},
+        "now": {"sha": sha, "lines": ["contract change"], "line": 1, "endLine": None, "changed": False, "hunks": []},
+        "unavailable": {},
+    }
+    missing = human.get(f"/api/tasks/{code.key}/findings/999999/code")
+    assert (missing.status_code, missing.json()["detail"]) == (404, "Finding 999999 not found")
 
 
 def test_exited_reports_the_harness_exit(flowctl, reviewers, human):

@@ -63,6 +63,7 @@ from . import prompts, instructions
 from . import workers, worker_prompts
 from . import assurance
 from . import review_loop
+from . import finding_code
 from .screen_tracking import ScreenTracker
 from .usage import UsagePending, UsageReport, collect_usage, cost_kind as _cost_kind, prepare_baseline, run_usage
 from .attention import attention_items
@@ -1256,6 +1257,17 @@ class WorkflowEngine:
                                 "workerWorktreesRemoved": worker_removed, "workerWorktreeFailures": worker_failed})
         return await self._publish(jira_key)
 
+    async def finding_code(self, jira_key: str, finding_id: int) -> dict[str, Any]:
+        """The code a review finding points at (`GET /api/tasks/{key}/findings/{id}/code`)."""
+        with self.db.session() as session:
+            task = self._load_task(session, jira_key)
+            finding = session.scalar(
+                select(ReviewFinding).where(ReviewFinding.id == finding_id, ReviewFinding.task_id == task.id)
+            )
+            if finding is None:
+                raise NotFound(f"Finding {finding_id} not found")
+        return await finding_code.finding_code(self.git, task, finding)
+
     async def worktree_cleanup_preview(self, jira_key: str) -> dict[str, Any]:
         """Read-only preview of what a cleanup would discard/close, for the confirm dialog."""
         async with self._lock(jira_key):
@@ -2399,6 +2411,7 @@ class WorkflowEngine:
             row = ReviewFinding(
                 task_id=task.id, node_run_id=run.id, finding_id=fid, type=finding_type, iteration=task.review_iteration,
                 reviewed_sha=expected, severity=finding.severity, blocking=is_blocking, file=finding.file, line=finding.line,
+                end_line=finding.end_line if finding.line is not None and (finding.end_line or 0) > finding.line else None,
                 title=finding.title or (finding.description or "")[:80] or fid, description=finding.description,
                 recommendation=finding.recommendation, status="open", prior_finding_id=prior_finding_id, occurrence=occurrence,
             )
@@ -3074,8 +3087,8 @@ class WorkflowEngine:
     def _finding_dict(f: ReviewFinding) -> dict[str, Any]:
         return {
             "id": f.finding_id, "dbId": f.id, "type": f.type, "iteration": f.iteration, "reviewedSha": f.reviewed_sha,
-            "severity": f.severity, "blocking": f.blocking, "file": f.file, "line": f.line, "title": f.title,
-            "description": f.description, "recommendation": f.recommendation, "status": f.status,
+            "severity": f.severity, "blocking": f.blocking, "file": f.file, "line": f.line, "endLine": f.end_line,
+            "title": f.title, "description": f.description, "recommendation": f.recommendation, "status": f.status,
             "occurrence": f.occurrence, "resolution": f.resolution, "response": f.response, "responseNote": f.response_note,
             "createdAt": _iso(f.created_at), "resolvedAt": _iso(f.resolved_at),
         }

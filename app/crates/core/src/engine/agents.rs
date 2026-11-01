@@ -143,17 +143,22 @@ pub fn finding_dump(value: &Value) -> Result<Map<String, Value>, String> {
         },
         Some(_) => return Err("finding.blocking: must be a boolean".into()),
     };
-    let line = match data.get("line") {
-        None | Some(Value::Null) => None,
-        Some(Value::Bool(b)) => Some(i64::from(*b)),
-        Some(Value::Number(n)) => match (n.as_i64(), n.as_f64()) {
-            (Some(i), _) => Some(i),
-            (None, Some(f)) if f.fract() == 0.0 && f.abs() < 9.0e15 => Some(f as i64),
-            _ => return Err("finding.line: must be an integer".into()),
-        },
-        Some(Value::String(s)) => Some(s.trim().parse().map_err(|_| "finding.line: must be an integer".to_string())?),
-        Some(_) => return Err("finding.line: must be an integer".into()),
+    let integer = |keys: &[&str]| -> Result<Option<i64>, String> {
+        let invalid = || format!("finding.{}: must be an integer", keys[0]);
+        Ok(match keys.iter().find_map(|k| data.get(*k)) {
+            None | Some(Value::Null) => None,
+            Some(Value::Bool(b)) => Some(i64::from(*b)),
+            Some(Value::Number(n)) => match (n.as_i64(), n.as_f64()) {
+                (Some(i), _) => Some(i),
+                (None, Some(f)) if f.fract() == 0.0 && f.abs() < 9.0e15 => Some(f as i64),
+                _ => return Err(invalid()),
+            },
+            Some(Value::String(s)) => Some(s.trim().parse().map_err(|_| invalid())?),
+            Some(_) => return Err(invalid()),
+        })
     };
+    let line = integer(&["line"])?;
+    let end_line = integer(&["endLine", "end_line"])?;
     let mut out = Map::new();
     let mut put = |key: &str, value: Option<Value>| {
         if let Some(value) = value {
@@ -166,17 +171,20 @@ pub fn finding_dump(value: &Value) -> Result<Map<String, Value>, String> {
     put("blocking", blocking.map(Value::from));
     put("file", text(&["file"])?.map(Value::from));
     put("line", line.map(Value::from));
+    put("endLine", end_line.map(Value::from));
     put("title", Some(json!(text(&["title"])?.unwrap_or_default())));
     put("description", text(&["description"])?.map(Value::from));
     put("recommendation", text(&["recommendation"])?.map(Value::from));
     put("priorId", text(&["priorId", "prior_id"])?.map(Value::from));
-    const DECLARED: [&str; 11] = [
+    const DECLARED: [&str; 13] = [
         "id",
         "type",
         "severity",
         "blocking",
         "file",
         "line",
+        "endLine",
+        "end_line",
         "title",
         "description",
         "recommendation",
@@ -1221,5 +1229,8 @@ mod tests {
         let dumped = finding_dump(&json!({"title": "t", "severity": " Major ", "extra": 1, "line": "42"})).unwrap();
         assert_eq!(Value::Object(dumped), json!({"severity": "high", "line": 42, "title": "t", "extra": 1}));
         assert!(finding_dump(&json!({"severity": "huge"})).is_err());
+        let ranged = finding_dump(&json!({"title": "t", "line": 3, "end_line": "5"})).unwrap();
+        assert_eq!(Value::Object(ranged), json!({"severity": "medium", "line": 3, "endLine": 5, "title": "t"}));
+        assert_eq!(finding_dump(&json!({"endLine": "x"})).unwrap_err(), "finding.endLine: must be an integer");
     }
 }

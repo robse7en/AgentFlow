@@ -52,6 +52,9 @@ pub trait Git: Send + Sync {
     async fn branch_report(&self, root: &Path, branch: &str, base_branch: &str) -> Result<Value>;
     async fn delete_branch(&self, root: &Path, branch: &str) -> Result<bool>;
     async fn discard_worktree(&self, root: &Path, path: &Path) -> Result<Vec<String>>;
+    async fn file_at(&self, root: &Path, sha: &str, path: &str) -> Result<Option<String>>;
+    async fn fork_point(&self, root: &Path, sha: &str, base_branch: &str) -> Result<Option<String>>;
+    async fn file_diff(&self, root: &Path, from: &str, to: &str, path: &str) -> Result<String>;
 }
 
 #[async_trait::async_trait]
@@ -139,6 +142,15 @@ impl Git for GitService {
     }
     async fn discard_worktree(&self, root: &Path, path: &Path) -> Result<Vec<String>> {
         GitService::discard_worktree(self, root, path).await
+    }
+    async fn file_at(&self, root: &Path, sha: &str, path: &str) -> Result<Option<String>> {
+        GitService::file_at(self, root, sha, path).await
+    }
+    async fn fork_point(&self, root: &Path, sha: &str, base_branch: &str) -> Result<Option<String>> {
+        GitService::fork_point(self, root, sha, base_branch).await
+    }
+    async fn file_diff(&self, root: &Path, from: &str, to: &str, path: &str) -> Result<String> {
+        GitService::file_diff(self, root, from, to, path).await
     }
 }
 
@@ -311,5 +323,14 @@ impl Git for FakeGit {
     }
     async fn discard_worktree(&self, root: &Path, path: &Path) -> Result<Vec<String>> {
         self.answer("discard_worktree", &[&s(root), &s(path)])
+    }
+    async fn file_at(&self, root: &Path, sha: &str, path: &str) -> Result<Option<String>> {
+        self.answer("file_at", &[&s(root), sha, path])
+    }
+    async fn fork_point(&self, root: &Path, sha: &str, base_branch: &str) -> Result<Option<String>> {
+        self.answer("fork_point", &[&s(root), sha, base_branch])
+    }
+    async fn file_diff(&self, root: &Path, from: &str, to: &str, path: &str) -> Result<String> {
+        self.answer("file_diff", &[&s(root), from, to, path])
     }
 }

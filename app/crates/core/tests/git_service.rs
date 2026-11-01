@@ -922,3 +922,53 @@ async fn test_failed_push_names_the_branch_but_not_the_remote() {
     assert!(error.contains("Pushing AF-14449 to origin failed"), "{error}");
     assert!(!error.contains("hunter2") && !error.contains("127.0.0.1"), "{error}");
 }
+
+// ---------------------------------------------------------------------- finding code (test_finding_code.py)
+
+impl Fixture {
+    /// Commit `text` as file.txt and return the new HEAD.
+    fn commit(&self, text: &str, message: &str) -> String {
+        std::fs::write(self.repo.join("file.txt"), text).unwrap();
+        self.git(&["commit", "-qam", message]);
+        self.out(&["rev-parse", "HEAD"])
+    }
+}
+
+#[tokio::test]
+async fn test_file_at_reads_a_commit_and_misses_other_paths() {
+    let f = Fixture::new();
+    let text = f.service.file_at(&f.repo, &f.sha, "file.txt").await.unwrap();
+    assert_eq!(text.as_deref().map(str::trim_end), Some("preserved"));
+    assert_eq!(f.service.file_at(&f.repo, &f.sha, "missing.txt").await.unwrap(), None);
+    // A directory is not a file.
+    std::fs::create_dir(f.repo.join("dir")).unwrap();
+    std::fs::write(f.repo.join("dir").join("a"), "a\n").unwrap();
+    f.git(&["add", "-A"]);
+    let head = f.commit("preserved\n", "dir");
+    assert_eq!(f.service.file_at(&f.repo, &head, "dir").await.unwrap(), None);
+}
+
+#[tokio::test]
+async fn test_fork_point_finds_where_the_branch_left_its_base() {
+    let f = Fixture::new();
+    f.git(&["switch", "-qc", "task"]);
+    let reviewed = f.commit("preserved\nchanged\n", "task change");
+    let fixed = f.commit("preserved\nfixed\n", "fix");
+    assert_eq!(f.service.fork_point(&f.repo, &reviewed, "main").await.unwrap(), Some(f.sha.clone()));
+    assert_eq!(f.service.fork_point(&f.repo, &reviewed, "nope").await.unwrap(), None);
+    let diff = f.service.file_diff(&f.repo, &f.sha, &reviewed, "file.txt").await.unwrap();
+    assert!(diff.contains("@@ -1 +1,2 @@") && diff.contains("+changed"), "{diff}");
+
+    // Merged with a merge commit: the fork is still found through the merge's first parent.
+    f.git(&["switch", "-q", "main"]);
+    std::fs::write(f.repo.join("other.txt"), "main moves on\n").unwrap();
+    f.git(&["add", "other.txt"]);
+    f.git(&["commit", "-qm", "main moves on"]);
+    f.git(&["merge", "-q", "--no-ff", "-m", "merge task", "task"]);
+    assert_eq!(f.service.fork_point(&f.repo, &reviewed, "main").await.unwrap(), Some(f.sha.clone()));
+
+    // Fast-forwarded: nothing tells where the branch began, so the reviewed commit is its own base.
+    f.git(&["reset", "-q", "--hard", &f.sha]);
+    f.git(&["merge", "-q", "--ff-only", &fixed]);
+    assert_eq!(f.service.fork_point(&f.repo, &reviewed, "main").await.unwrap(), Some(reviewed));
+}

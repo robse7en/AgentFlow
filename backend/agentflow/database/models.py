@@ -239,6 +239,8 @@ class ReviewFinding(Base):
     response_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Declared last so a fresh table matches one upgraded with ALTER TABLE.
+    end_line: Mapped[int | None] = mapped_column(Integer, nullable=True)  # last line of a multi-line finding
 
     task: Mapped[Task] = relationship(back_populates="findings")
 

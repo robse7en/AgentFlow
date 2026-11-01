@@ -277,6 +277,11 @@ pub async fn worktree_cleanup_preview(State(app): State<Arc<App>>, Path(jira_key
     Ok(Json(app.engine.worktree_cleanup_preview(&jira_key).await?))
 }
 
+/// `GET /api/tasks/{key}/findings/{id}/code`: the code a review finding points at.
+pub async fn finding_code(State(app): State<Arc<App>>, Path((jira_key, finding_id)): Path<(String, i64)>) -> ApiResult {
+    Ok(Json(app.engine.finding_code(&jira_key, finding_id).await?))
+}
+
 #[derive(Deserialize)]
 pub struct WorktreeCleanup {
     #[serde(rename = "expectedSha")]

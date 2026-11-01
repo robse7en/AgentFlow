@@ -207,12 +207,12 @@ CREATE TABLE review_findings (
 	response VARCHAR(16), 
 	response_note TEXT, 
 	created_at DATETIME NOT NULL, 
-	resolved_at DATETIME, 
+	resolved_at DATETIME, end_line INTEGER, 
 	PRIMARY KEY (id), 
 	FOREIGN KEY(task_id) REFERENCES tasks (id)
 );
-INSERT INTO "review_findings" VALUES(1,1,3,'CODE-001','code-review',1,'fe1a3dbcc2e3ef0c998fb88d0476127bf8bdfaaa','medium',1,'STUB_NOTES.md',1,'Stub finding iteration 1','Canned finding','Fix it','resolved',NULL,1,'STUB_NOTES.md:1','fixed','Stub: appended a new line to STUB_NOTES.md','2026-10-01 22:50:33.756382','2026-10-01 22:50:41.656508');
-INSERT INTO "review_findings" VALUES(2,1,4,'SEC-001','security-review',1,'fe1a3dbcc2e3ef0c998fb88d0476127bf8bdfaaa','medium',1,'STUB_NOTES.md',1,'Stub finding iteration 1','Canned finding','Fix it','resolved',NULL,1,'STUB_NOTES.md:1','fixed','Stub: appended a new line to STUB_NOTES.md','2026-10-01 22:50:34.026028','2026-10-01 22:50:41.941844');
+INSERT INTO "review_findings" VALUES(1,1,3,'CODE-001','code-review',1,'fe1a3dbcc2e3ef0c998fb88d0476127bf8bdfaaa','medium',1,'STUB_NOTES.md',1,'Stub finding iteration 1','Canned finding','Fix it','resolved',NULL,1,'STUB_NOTES.md:1','fixed','Stub: appended a new line to STUB_NOTES.md','2026-10-01 22:50:33.756382','2026-10-01 22:50:41.656508',NULL);
+INSERT INTO "review_findings" VALUES(2,1,4,'SEC-001','security-review',1,'fe1a3dbcc2e3ef0c998fb88d0476127bf8bdfaaa','medium',1,'STUB_NOTES.md',1,'Stub finding iteration 1','Canned finding','Fix it','resolved',NULL,1,'STUB_NOTES.md:1','fixed','Stub: appended a new line to STUB_NOTES.md','2026-10-01 22:50:34.026028','2026-10-01 22:50:41.941844',NULL);
 CREATE TABLE run_evidence (
 	uid VARCHAR(36) NOT NULL, 
 	run_id INTEGER NOT NULL, 

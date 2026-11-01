@@ -121,6 +121,8 @@ export interface Finding {
   blocking: boolean
   file: string | null
   line: number | null
+  /** The last line of a finding that spans several lines (only set when after `line`). */
+  endLine: number | null
   title: string
   description: string | null
   recommendation: string | null
@@ -133,6 +135,39 @@ export interface Finding {
   responseNote: string | null
   createdAt: string
   resolvedAt: string | null
+}
+
+/** One line of a diff hunk, numbered on the side(s) it belongs to. */
+export interface DiffRow {
+  kind: 'context' | 'add' | 'del'
+  old: number | null
+  new: number | null
+  text: string
+}
+
+export interface DiffHunk {
+  header: string
+  oldStart: number
+  oldCount: number
+  newStart: number
+  newCount: number
+  rows: DiffRow[]
+}
+
+/** `GET /api/tasks/{key}/findings/{id}/code`: the code a review finding points at. */
+export interface FindingCode {
+  file: string | null
+  line: number | null
+  endLine: number | null
+  reviewedSha: string | null
+  /** The file at the reviewed commit. */
+  snapshot: { sha: string; lines: string[] } | null
+  /** The task's change to the file: where the branch left its base → the reviewed commit. */
+  diff: { from: string; to: string; hunks: DiffHunk[] } | null
+  /** The file at the task's current commit, the finding's lines mapped there, and what changed since the review. */
+  now: { sha: string; lines: string[]; line: number | null; endLine: number | null; changed: boolean; hunks: DiffHunk[] } | null
+  /** Why a view is null, by view. */
+  unavailable: Partial<Record<'snapshot' | 'diff' | 'now', string>>
 }
 
 export interface AgentSessionDto {

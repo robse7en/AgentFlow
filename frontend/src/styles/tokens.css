@@ -52,6 +52,21 @@
   --project-red: #c4372f;
   --project-pink: #b8407a;
   --project-slate: #5c6672;
+  /* Code excerpts under review findings (FindingCode.vue): flagged lines, diff rows, syntax. */
+  --code-bg: #fbfaf6;
+  --code-gutter: #f1eee5;
+  --code-flagged: #fff4c2;
+  --code-flagged-gutter: #f5e08a;
+  --code-add: #e6f6e6;
+  --code-add-gutter: #cdeccd;
+  --code-del: #fdecea;
+  --code-del-gutter: #f7d0cc;
+  --syntax-keyword: var(--project-purple);
+  --syntax-string: var(--project-teal);
+  --syntax-number: var(--project-orange);
+  --syntax-title: var(--project-blue);
+  --syntax-type: var(--project-pink);
+  --syntax-meta: var(--project-slate);
   --font: "Inter Variable", Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   /* Default elevation for floating panels (popovers, dropdowns). */
@@ -110,5 +125,13 @@
   --project-red: #ef6b63;
   --project-pink: #ec8cbc;
   --project-slate: #a3adb8;
+  --code-bg: #10100e;
+  --code-gutter: #181816;
+  --code-flagged: rgba(240, 176, 74, 0.13);
+  --code-flagged-gutter: rgba(240, 176, 74, 0.3);
+  --code-add: rgba(62, 201, 167, 0.1);
+  --code-add-gutter: rgba(62, 201, 167, 0.22);
+  --code-del: rgba(239, 107, 99, 0.1);
+  --code-del-gutter: rgba(239, 107, 99, 0.24);
   color-scheme: dark;
 }

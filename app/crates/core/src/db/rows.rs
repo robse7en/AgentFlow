@@ -243,6 +243,8 @@ row! {
         response_note: Option<String>,
         created_at: DbTime,
         resolved_at: Option<DbTime>,
+        /// The last line of a multi-line finding.
+        end_line: Option<i64>,
     }
 }
 

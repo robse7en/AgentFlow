@@ -28,6 +28,7 @@ class Finding(Contract):
     blocking: bool | None = None
     file: str | None = None
     line: int | None = None
+    end_line: int | None = Field(None, alias="endLine")  # last line of a multi-line finding
     title: str = ""
     description: str | None = None
     recommendation: str | None = None

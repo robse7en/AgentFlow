@@ -1126,6 +1126,13 @@
         "notnull": false,
         "default": null,
         "pk": 0
+      },
+      {
+        "name": "end_line",
+        "type": "INTEGER",
+        "notnull": false,
+        "default": null,
+        "pk": 0
       }
     ],
     "indexes": {

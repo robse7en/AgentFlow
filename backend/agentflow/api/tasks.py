@@ -106,6 +106,15 @@ async def worktree_cleanup_preview(jira_key: str, state: AppState = Depends(get_
         raise http_error(exc)
 
 
+@router.get("/{jira_key}/findings/{finding_id}/code")
+async def finding_code(jira_key: str, finding_id: int, state: AppState = Depends(get_state)):
+    """The code a review finding points at."""
+    try:
+        return await state.engine.finding_code(jira_key, finding_id)
+    except WorkflowError as exc:
+        raise http_error(exc)
+
+
 @router.post("/{jira_key}/worktree/cleanup")
 async def cleanup_worktree(jira_key: str, req: WorktreeCleanupRequest, state: AppState = Depends(get_state)):
     try:

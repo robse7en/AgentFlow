@@ -7,6 +7,7 @@ import type {
   DeleteTaskOptions,
   DeleteTaskPreview,
   DirectoryListing,
+  FindingCode,
   HarnessInfo,
   JiraSearchResult,
   OpenQuestionDto,
@@ -129,6 +130,8 @@ export const api = {
     post<{ jiraKey: string; deleted: boolean }>(`/api/tasks/${encodeURIComponent(key)}/delete`, options, operationId),
   worktreeCleanupPreview: (key: string) =>
     request<WorktreeCleanupPreview>(`/api/tasks/${encodeURIComponent(key)}/worktree/cleanup-preview`),
+  findingCode: (key: string, findingId: number) =>
+    request<FindingCode>(`/api/tasks/${encodeURIComponent(key)}/findings/${findingId}/code`),
   cleanupWorktree: (key: string, expectedSha: string, force = false, operationId?: string) =>
     post<TaskSnapshot>(`/api/tasks/${encodeURIComponent(key)}/worktree/cleanup`, { expectedSha, force }, operationId),
   retryWorktreeSetup: (key: string) =>

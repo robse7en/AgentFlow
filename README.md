@@ -558,6 +558,10 @@ cd frontend && npm run dev        # http://127.0.0.1:5173
    commits a checkpoint and records the SHA.
 6. **Run Code Review and Security Review** (both become READY; run them in any order — they execute in parallel and
    both receive the same SHA). Findings are normalised (`CODE-001`, `SEC-001`, severity, blocking) and persisted.
+   The Findings tab shows each finding's code the way GitHub shows a review comment: the flagged lines (`line` to
+   `endLine`) in the file as the reviewer saw it, read from the reviewed commit so it still works after cleanup. Switch to
+   *Diff* for the task's change to that file (or, for a closed finding, what changed since the review) or *Now* for the
+   same place in the task's latest commit. Resolved findings keep their code folded until opened.
 7. **Consolidation is automatic.** Blocking findings → the Implementer becomes READY again in fix mode with the
    consolidated package; run it, then the reviews again. No blocking findings → *Final Architect Verification* becomes READY.
 8. **Run Final Architect Verification.** A fresh process resumes the exact Architect conversation when supported, or reads a fresh briefing. It writes
@@ -649,7 +653,7 @@ flowctl question --file - <<'EOF'                # a decision tree (see "Agent q
 EOF
 flowctl running                                  # optional: AgentFlow resumes the agent after the last answer
 flowctl complete --file result.json              # structured completion (see prompt for the schema)
-flowctl finding --id CODE-001 --severity high --title "..." --file src/x.cs --line 12   # incremental findings
+flowctl finding --id CODE-001 --severity high --title "..." --file src/x.cs --line 12 --end-line 14   # incremental findings
 flowctl finding --prior-id CODE-001 --blocking --title "..."    # re-raise a previous-round blocker
 flowctl fail --message "Blocked because ..."
 ```

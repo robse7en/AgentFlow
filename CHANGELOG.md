@@ -8,7 +8,9 @@ tested. The frontend and Python package versions are independent of desktop vers
 Each version has a local annotated `v<version>` Git tag at the source checkpoint
 shown below. Tags must be pushed separately to share them with other checkouts.
 
-## Unreleased
+## 1.1.8 - 2026-11-02
+
+Source: the version commit tagged `v1.1.8` on `main`.
 
 - A retried stage's briefing now says what the failed attempts did: how the latest ended, its last
   heartbeat, the human's answers to its questions and, for implementers and workers, the files

@@ -8,9 +8,21 @@ tested. The frontend and Python package versions are independent of desktop vers
 Each version has a local annotated `v<version>` Git tag at the source checkpoint
 shown below. Tags must be pushed separately to share them with other checkouts.
 
+## 1.1.7 - 2026-11-01
+
+Source: the version commit tagged `v1.1.7` on `main`.
+
+- Show the code a review finding points at, the way GitHub shows a review comment: the flagged
+  lines in the file as the reviewer saw it, with the finding underneath. Switch to *Diff* for
+  the task's change to that file (for a closed finding, what changed since the review) or *Now*
+  for the same place in the task's latest commit. Code is read from the reviewed commit, so it
+  still shows after the worktree is cleaned up. Resolved findings keep it folded until opened.
+- Reviewers can flag a range: findings take an optional `endLine` (`flowctl finding
+  --end-line`), and the review prompt asks for it.
+
 ## 1.1.6 - 2026-10-25
 
-Source: the version commit tagged `v1.1.6` on `main`.
+Source: `eb763d5` (`v1.1.6`) on `main`.
 
 - Let agents ask decision-tree questions with `flowctl question --file`: the agent's pick,
   consequence notes, a risk level, a context line, an agent's note with its source per

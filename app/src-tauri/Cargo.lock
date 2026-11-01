@@ -44,7 +44,7 @@ dependencies = [
 
 [[package]]
 name = "agentflow-desktop"
-version = "1.1.6"
+version = "1.1.7"
 dependencies = [
  "agentflow-core",
  "axum",

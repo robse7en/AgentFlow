@@ -8,6 +8,15 @@ tested. The frontend and Python package versions are independent of desktop vers
 Each version has a local annotated `v<version>` Git tag at the source checkpoint
 shown below. Tags must be pushed separately to share them with other checkouts.
 
+## 1.1.9 - 2026-11-02
+
+Source: the version commit tagged `v1.1.9` on `main`.
+
+- The task list shows which tasks are actually running. Each row starts with a status icon and
+  shows the workflow as a nine-stage track instead of a percentage bar. Only a task whose agent is
+  working is blue and animated; a task waiting on you reads amber, a failed one red, and finished
+  tracks are muted so the running ones stand out.
+
 ## 1.1.8 - 2026-11-02
 
 Source: the version commit tagged `v1.1.8` on `main`.

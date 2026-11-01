@@ -1,6 +1,6 @@
 {
   "productName": "AgentFlow",
-  "version": "1.1.8",
+  "version": "1.1.9",
   "identifier": "dev.agentflow.desktop",
   "build": {
     "frontendDist": "../../frontend/dist"

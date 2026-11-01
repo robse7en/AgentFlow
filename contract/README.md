@@ -2,8 +2,7 @@
 
 Black-box tests that pin down what the AgentFlow backend does **as seen from outside**: the UI's
 HTTP API and `/api/ws`, the agent API that `flowctl` calls, `flowctl` itself, and the files an agent
-run reads and writes. The Python backend passes them today. The Rust rewrite (`app/`, see
-`docs/desktop-app-investigation.md`) has to pass the same tests before it replaces `backend/`.
+run reads and writes. The Python backend passes them today. The Rust rewrite (`app/`) has to pass the same tests before it replaces `backend/`.
 
 The black-box suite only starts processes, sends HTTP requests and reads files, so any
 implementation that honours the contract below can be tested. `test_chat_goldens.py` is a

@@ -1,5 +1,5 @@
 //! The task list and every snapshot built from a copy of a real database, written to a file for
-//! comparison with the Python backend's (see docs/desktop-app-investigation.md §7). Prints nothing
+//! comparison with the Python backend's. Prints nothing
 //! from the data. Ignored; run with
 //!
 //!     AGENTFLOW_REAL_CONFIG=<config.json> AGENTFLOW_SNAPSHOT_DB_COPY=<copy.db> AGENTFLOW_SNAPSHOT_OUT=<file>

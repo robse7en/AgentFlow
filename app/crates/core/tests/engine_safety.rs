@@ -1,5 +1,5 @@
 //! Engine safety checks, ported by name from backend/tests/test_workflow_safety.py as each engine
-//! slice lands (docs/desktop-app-investigation.md §7). Slice 2: cancelling and session views;
+//! slice lands. Slice 2: cancelling and session views;
 //! slice 3 (launching and agent signals) is in engine_agents.rs.
 
 mod engine_support;

@@ -94,7 +94,7 @@ impl ScreenState {
 /// Case-insensitive, multi-line regexes matched against the tail of a pane's rendered screen,
 /// checked in priority order blocked > working > idle, so a permission prompt rendered under a
 /// still-active spinner is reported as blocked, not working. AgentFlow's equivalent of herdr's
-/// screen manifests (docs/agent-state-tracking-plan.md).
+/// screen manifests.
 struct ScreenPatterns {
     blocked: RegexSet,
     working: RegexSet,

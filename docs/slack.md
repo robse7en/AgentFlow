@@ -20,8 +20,7 @@ What Slack may do is set by `allowActions`. By default it can only answer questi
 `"requestChanges"`, `"approveRequirements"`, `"cancel"` or `"markPr"` for the
 [other actions](#other-actions). Final approval, review overrides, retrying a failed stage,
 resuming a stopped review loop and worktree cleanup stay in the AgentFlow UI; links in Slack point
-there (`uiBaseUrl`). See
-[gateway-adapter-investigation.md](gateway-adapter-investigation.md) §11 for why.
+there (`uiBaseUrl`).
 
 ## What is posted
 

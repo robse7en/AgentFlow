@@ -68,7 +68,7 @@ class ClaudeAdapter(HarnessAdapter):
     #
     # The blocked patterns below were tuned against a real captured dialog (a
     # workspace-trust prompt AgentFlow itself didn't pre-clear, on an unattended
-    # scratch task, docs/agent-state-tracking-plan.md validation run):
+    # scratch task):
     #   "Quick safety check: Is this a project you created or one you trust? ..."
     #   "❯ No, exit" / "  Yes, I trust this folder" / "Enter to confirm · Esc to cancel"
     # "❯" is Claude Code's own cursor for a selectable option in these dialogs; it's

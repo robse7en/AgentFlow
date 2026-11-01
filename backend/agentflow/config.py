@@ -104,7 +104,7 @@ def copy_path_problem(path: str) -> str | None:
 
 class WorktreeSetup(_Model):
     """How fresh worktrees of one repository are prepared. Accepted here so both backends read the
-    same config.json; only the Rust core runs it (docs/orca-inspired-improvements.md §3)."""
+    same config.json; only the Rust core runs it."""
 
     copy_paths: list[str] = Field(default_factory=list, alias="copy")
     commands: list[list[str]] = Field(default_factory=list)

@@ -1,6 +1,6 @@
 //! A Windows Job Object that kills every process assigned to it when the job is dropped or the
-//! owning process exits, however it exits. For the embedded-terminal backend (see
-//! docs/desktop-app-investigation.md §2): agents started in a job cannot outlive the app.
+//! owning process exits, however it exits. For the embedded-terminal backend:
+//! agents started in a job cannot outlive the app.
 //!
 //! Not used by the zellij path, whose sessions deliberately outlive the backend.
 

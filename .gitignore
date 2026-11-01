@@ -42,3 +42,6 @@ deploy/update-server/releases/
 
 # Original design spec, kept locally only
 /AgentFlow — Local Human-Gated AI Engineering Workflow.md
+
+# Internal plans and investigations, kept out of the public repo
+/notes/

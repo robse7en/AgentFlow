@@ -2,7 +2,7 @@
 //! truth for task and node state. Everything that changes state goes through it; the UI routes
 //! and flowctl only call into it.
 //!
-//! Ported in slices (docs/desktop-app-investigation.md §7, "Engine port plan").
+//! Ported from `backend/agentflow/workflow` in slices.
 
 pub mod agents;
 pub mod approvals;

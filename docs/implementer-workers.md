@@ -1,8 +1,7 @@
 # Orchestrated implementation
 
 [Agent heartbeats](heartbeats.md) and a first version of repeatable worktree setup are
-implemented; inline diff feedback and the rest of the worker health proposals are recorded in
-[Orca-inspired improvements](orca-inspired-improvements.md).
+implemented; inline diff feedback and the rest of the worker health proposals are not built yet.
 
 Tasks created with the Parallel route run Architect discovery → human requirements approval → subtask planning
 → implementer workers → integration implementer → the existing reviews and final human gate.

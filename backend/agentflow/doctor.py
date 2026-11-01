@@ -1,7 +1,7 @@
 """`agentflow doctor`: read-only checks of everything AgentFlow needs to run.
 
 Nothing here changes anything: no config file or directory is created and no harness config is
-edited. The setup wizard runs the same checks (docs/installer-investigation.md §4.4). Only failed
+edited. The setup wizard runs the same checks. Only failed
 checks are required ones; warnings are about optional features or things AgentFlow cannot verify.
 """
 

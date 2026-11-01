@@ -1324,7 +1324,7 @@ class WorkflowEngine:
         }
 
     # ------------------------------------------------------------------------------
-    # deletion (docs/task-archive-delete-plan.md §5)
+    # deletion
     # ------------------------------------------------------------------------------
     def _deletable(self, session: Session, task: Task) -> None:
         if task.status not in FINISHED_STATUSES:

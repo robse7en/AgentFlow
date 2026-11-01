@@ -28,7 +28,7 @@ _SCREEN_TAIL_ROWS = 12
 class ScreenPatterns:
     """Regexes (case-insensitive) matched against the tail of a pane's rendered screen
     to classify what a harness's CLI is doing right now - AgentFlow's equivalent of
-    herdr's screen manifests (docs/agent-state-tracking-plan.md). Checked in priority
+    herdr's screen manifests. Checked in priority
     order blocked > working > idle, so a permission prompt rendered under a still-active
     spinner is reported as blocked, not working.
     """
@@ -180,7 +180,7 @@ class HarnessAdapter(ABC):
         Blank rows are dropped *before* taking the tail, not after: a short dialog or
         prompt near the top of a tall pane is followed by dozens of blank padding rows
         below it, and slicing the raw tail first would land entirely on that padding
-        (confirmed against a real Claude Code trust dialog - see agent-state-tracking-plan.md).
+        (confirmed against a real Claude Code trust dialog).
         """
         non_blank = [line for line in viewport if line.strip()]
         text = "\n".join(non_blank[-_SCREEN_TAIL_ROWS:])

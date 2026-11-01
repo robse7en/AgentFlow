@@ -1,6 +1,5 @@
 //! AgentFlow backend, ported from `backend/agentflow` module by module.
 //!
-//! The port order and the module map are in `docs/desktop-app-investigation.md` §4 and §7.
 //! Every module must keep the HTTP contract that `contract/` checks against the Python backend;
 //! modules the HTTP suite cannot reach yet are checked against Python-recorded goldens
 //! (`contract/record_python_goldens.py`) by this crate's tests.

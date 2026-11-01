@@ -202,7 +202,7 @@ class AgentSession(Base):
     zellij_pane_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
     harness_session_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     status: Mapped[str] = mapped_column(String(32), default="running")  # running | exited | stopped
-    # Live classification of the pane's rendered screen, from ScreenTracker (docs/agent-state-tracking-plan.md).
+    # Live classification of the pane's rendered screen, from ScreenTracker.
     # None until a subscribe stream has classified at least one frame; idle | working | blocked | unknown thereafter.
     screen_state: Mapped[str | None] = mapped_column(String(16), nullable=True)
     screen_state_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

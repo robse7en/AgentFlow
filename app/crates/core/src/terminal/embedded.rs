@@ -1,6 +1,6 @@
 //! Embedded terminals: every pane is a pseudoconsole (ConPTY on Windows) owned by the app.
 //!
-//! Replaces zellij as the default backend (docs/desktop-app-investigation.md §5). Each pane has:
+//! Replaces zellij as the default backend. Each pane has:
 //!
 //! - a headless screen model (`vt100`) the engine classifies and the read-only viewer shows,
 //! - a bounded buffer of raw output, replayed to a UI terminal (xterm.js) that attaches later,

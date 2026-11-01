@@ -1,5 +1,5 @@
-//! Prepares each fresh task or worker worktree from the repository's `workspace.worktreeSetup`
-//! (docs/orca-inspired-improvements.md §3): copy ignored local files from the checkout, run the
+//! Prepares each fresh task or worker worktree from the repository's `workspace.worktreeSetup`:
+//! copy ignored local files from the checkout, run the
 //! setup commands, then require a clean `git status`. Setup runs in the background, never under the
 //! task or launch lock, and every agent but the Architect waits for its worktree's setup.
 //!

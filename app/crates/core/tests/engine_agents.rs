@@ -1,5 +1,5 @@
 //! Launching agents and what they report back, ported by name from
-//! backend/tests/test_workflow_safety.py (engine port slice 3, docs/desktop-app-investigation.md §7).
+//! backend/tests/test_workflow_safety.py (engine port slice 3).
 
 mod engine_support;
 

@@ -61,7 +61,7 @@ const sessionBadgeClass = (activity: string): string => {
     return SESSION_BADGE_CLASSES.has(upper) ? upper : 'PENDING';
 };
 
-// Live classification of the pane's rendered screen (see docs/agent-state-tracking-plan.md),
+// Live classification of the pane's rendered screen,
 // reusing the closest existing badge colors rather than inventing a new palette.
 const SCREEN_STATE_BADGE_CLASSES: Record<string, string> = {
     working: 'RUNNING', blocked: 'WAITING_FOR_USER', idle: 'PENDING', unknown: 'SKIPPED',

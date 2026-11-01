@@ -1,5 +1,5 @@
 //! Archive, delete and cancel-from-post-ready, ported by name from
-//! backend/tests/test_task_archive_delete.py (docs/task-archive-delete-plan.md).
+//! backend/tests/test_task_archive_delete.py.
 
 mod engine_support;
 

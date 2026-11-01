@@ -63,5 +63,5 @@ The terminal drawer's **Open window** button → `POST /api/tasks/{key}/zellij/w
 - On Windows 11 with Windows Terminal set as the default terminal, `CREATE_NEW_CONSOLE` may be handed
   to Windows Terminal, which ignores `SW_HIDE`. This is untested. The fallback would be hosting the sizing client in
   a backend-owned ConPTY (`pywinpty`), which gives exact size control and has no console at all.
-- One hidden `cmd` + `zellij` client pair stays running per live task session. The shared-session plan
-  (`docs/zellij-shared-session-plan.md`) would reduce that to one.
+- One hidden `cmd` + `zellij` client pair stays running per live task session. Sharing one session
+  across tasks would reduce that to one.

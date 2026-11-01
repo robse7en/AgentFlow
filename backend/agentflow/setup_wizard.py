@@ -2,7 +2,7 @@
 
 Every prompt is prefilled from the existing file, and the wizard edits that file's raw JSON rather
 than dumping the whole model, so re-running it changes only what the user changes. The result is
-validated with Config before anything is written. See docs/installer-investigation.md §4.2.
+validated with Config before anything is written.
 
 After saving, it offers to add Atlassian's Jira MCP to each harness the roles use (§4.3), through the
 harness's own CLI, and to add the AgentFlow folder to each installed CLI's trusted folders; those are the

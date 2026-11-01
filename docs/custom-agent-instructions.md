@@ -156,6 +156,4 @@ Focused tests live in `backend/tests/test_instructions.py`, Rust `core/tests/ins
 the worker regression suites, `contract/test_instructions.py` (same checks on both backends),
 and `scripts/verify-instructions-ui.mjs`. The Python suite executes local stubs through real
 Claude and Copilot adapter launch/resume argv. Existing prompt goldens and workflow/flowctl
-contracts cover backward compatibility and engine-enforced controls. See
-[validation evidence](evidence/custom-agent-instructions-validation.md) for this implementation's
-commands, results and acceptance boundaries.
+contracts cover backward compatibility and engine-enforced controls.

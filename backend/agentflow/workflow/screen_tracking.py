@@ -1,5 +1,4 @@
-"""Background classification of each active agent's live terminal screen (spec:
-docs/agent-state-tracking-plan.md).
+"""Background classification of each active agent's live terminal screen.
 
 One long-lived `zellij subscribe` per active `AgentSession`, feeding each rendered
 frame through the harness adapter's `classify_screen`. State is written to

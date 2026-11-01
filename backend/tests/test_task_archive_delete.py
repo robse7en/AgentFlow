@@ -1,4 +1,4 @@
-"""Archive, delete and cancel-from-post-ready (docs/task-archive-delete-plan.md)."""
+"""Archive, delete and cancel-from-post-ready."""
 import shutil
 import subprocess
 import tempfile

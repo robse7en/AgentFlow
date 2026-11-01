@@ -1,4 +1,4 @@
-# AgentFlow desktop app: the Rust rewrite of backend/ (see docs/desktop-app-investigation.md).
+# AgentFlow desktop app: the Rust rewrite of backend/.
 # Checked against the Python backend by the black-box suite in contract/.
 [workspace]
 resolver = "3"

@@ -1,7 +1,7 @@
 """Installing missing tools for `agentflow setup`, only ever after the user says yes.
 
 Every command comes from the tool's own documentation, and each winget package was checked to download
-from the vendor's own releases (docs/installer-investigation.md §8, step 5). Installs run in the
+from the vendor's own releases. Installs run in the
 foreground so the package manager can prompt (sudo, UAC, licence terms). Where there is no dependable
 automated route (Node.js, gh and dnf's ffmpeg on Linux) the wizard gives the download page instead.
 """

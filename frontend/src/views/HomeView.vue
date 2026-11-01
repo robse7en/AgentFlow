@@ -13,7 +13,7 @@ import ActionMenu, { type MenuItem } from '@/components/ActionMenu.vue'
 import TaskRow from '@/components/TaskRow.vue'
 import ProjectFilter from '@/components/ProjectFilter.vue'
 import MoveToProject from '@/components/MoveToProject.vue'
-import { STATUS_LABELS, shortPath, taskProgress } from '@/taskPresentation'
+import { shortPath, taskProgress } from '@/taskPresentation'
 import { inProjectFilter } from '@/projects'
 import type { TaskSummary } from '@/api/types'
 
@@ -239,7 +239,6 @@ async function submitPrModal() {
               :style="{ '--i': index }"
               :task="t"
               :progress="taskProgress(t)"
-              :status-label="STATUS_LABELS[t.status] ?? t.status"
               :repository="shortPath(t.repositoryRoot)"
               :project="projectOf(t)"
               :jira-href="t.taskSource !== 'local' ? jiraUrl(t.jiraKey) : null"

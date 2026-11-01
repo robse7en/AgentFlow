@@ -1,25 +1,70 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Project, TaskSummary } from '@/api/types'
-import { leftoverWorktree, statusTone, type TaskProgress } from '@/taskPresentation'
+import { WORKFLOW_STAGES, leftoverWorktree, phaseLabel, rowState, type TaskProgress } from '@/taskPresentation'
+import { formatAge, parseTimestamp, useNow } from '@/now'
 import { projectColor } from '@/projects'
 
 const props = defineProps<{
   task: TaskSummary
   progress: TaskProgress
-  statusLabel: string
   repository: string
   jiraHref: string | null
   busyLabel?: string
   project?: Project | null
 }>()
 
-const tone = computed(() => statusTone(props.task.status))
+const state = computed(() => rowState(props.task))
 const leftover = computed(() => leftoverWorktree(props.task))
+const label = computed(() => phaseLabel(props.task))
+
+const stageCount = WORKFLOW_STAGES.length
+const segments = computed(() =>
+  WORKFLOW_STAGES.map((name, i) => ({
+    name,
+    cls: i < props.progress.index ? 'past' : i === props.progress.index ? 'current' : '',
+  })),
+)
+// "4 / 9" while the task is somewhere in the workflow; nothing once finished or when unknown.
+const step = computed(() => {
+  const { index } = props.progress
+  return index >= 0 && index < stageCount ? `${index + 1} / ${stageCount}` : null
+})
+
+// A running task's updatedAt doesn't move while its agent works, so it gets no age (it would
+// look stale); a waiting one shows how long it has been waiting on you.
+const now = useNow(() => state.value !== 'running')
+const age = (timestamp: string | null | undefined) => {
+  const ms = parseTimestamp(timestamp)
+  return ms === null ? null : formatAge(now.value - ms)
+}
+const when = computed(() => {
+  if (props.busyLabel) return props.busyLabel
+  if (state.value === 'running') return ''
+  if (state.value === 'waiting') {
+    const waited = age(props.task.attention?.[0]?.since)
+    return waited ? `waiting ${waited === 'just now' ? '<1m' : waited}` : ''
+  }
+  const updated = age(props.task.updatedAt)
+  return updated ? `updated ${updated === 'just now' ? updated : `${updated} ago`}` : ''
+})
 </script>
 
 <template>
   <article class="task-row" :class="{ archived: !!task.archivedAt }">
+    <!-- The state by shape and colour, so it reads without motion too. -->
+    <span class="glyph" :class="state" aria-hidden="true">
+      <template v-if="state === 'running'">
+        <svg class="ring" width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M22 2.5a19.5 19.5 0 0 1 19.5 19.5" /></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z" /></svg>
+      </template>
+      <svg v-else-if="state === 'waiting'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg>
+      <svg v-else-if="state === 'attention'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></svg>
+      <svg v-else-if="state === 'done'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>
+      <svg v-else-if="state === 'failed'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
+      <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 12h12" /></svg>
+    </span>
+
     <a v-if="jiraHref" class="key" :href="jiraHref" target="_blank" rel="noopener noreferrer" :aria-label="`Open ${task.jiraKey} in Jira (new window)`">
       {{ task.jiraKey }}
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9" /></svg>
@@ -48,13 +93,29 @@ const leftover = computed(() => leftoverWorktree(props.task))
       </div>
     </div>
 
-    <span class="stage">{{ progress.stage }}</span>
-    <div class="progress" role="progressbar" aria-label="Workflow progress" :aria-valuenow="progress.percent" aria-valuemin="0" aria-valuemax="100">
-      <span class="bar"><b :class="{ done: tone === 'done' }" :style="{ width: `${progress.percent}%` }" /></span>
-      <span class="percent">{{ progress.percent }}%</span>
+    <div class="track" :class="state">
+      <div class="track-head">
+        <span class="label" :title="label">{{ label }}</span>
+        <span v-if="step" class="step">{{ step }}</span>
+      </div>
+      <div
+        v-if="progress.index >= 0"
+        class="segs"
+        :style="{ '--stages': stageCount }"
+        role="progressbar"
+        aria-label="Workflow stage"
+        :aria-valuenow="progress.index"
+        aria-valuemin="0"
+        :aria-valuemax="stageCount"
+        :aria-valuetext="step ? `${label}, stage ${step.replace(' / ', ' of ')}` : label"
+      >
+        <i v-for="seg in segments" :key="seg.name" class="seg" :class="seg.cls" />
+      </div>
+      <!-- Outside Active, the summary carries no stage, so say why the task stopped instead. -->
+      <p v-else-if="task.statusMessage" class="message" :title="task.statusMessage">{{ task.statusMessage }}</p>
     </div>
 
-    <span class="status-pill" :class="tone"><i class="pulse-dot" />{{ statusLabel }}<span v-if="busyLabel" class="busy">{{ busyLabel }}</span></span>
+    <span class="when" :class="[state, { busy: !!busyLabel }]">{{ when }}</span>
 
     <div class="actions"><slot name="actions" /></div>
   </article>
@@ -74,6 +135,16 @@ const leftover = computed(() => leftoverWorktree(props.task))
    menu's z-index can't lift it above the rows after it; lift the whole row instead. */
 .task-row:has(.menu) { z-index: 3; }
 
+.glyph {
+  position: relative; flex: none; display: grid; place-items: center; width: 44px; height: 44px;
+  border-radius: 50%; background: var(--info-soft); color: var(--muted);
+}
+.glyph.running { background: var(--live-soft); color: var(--live); }
+.glyph.waiting, .glyph.attention { background: var(--warn-soft); color: var(--warn); }
+.glyph.done { background: var(--ok-soft); color: var(--ok); }
+.glyph.failed { background: var(--danger-soft); color: var(--danger); }
+.glyph .ring { position: absolute; inset: 0; animation: spin 1.1s linear infinite; }
+
 .key {
   position: relative; z-index: 2; display: inline-flex; align-items: center; gap: 0.4rem; min-height: 44px; padding: 0 0.85rem;
   border-radius: var(--radius-pill); background: var(--accent-soft); color: var(--accent-strong);
@@ -81,7 +152,7 @@ const leftover = computed(() => leftoverWorktree(props.task))
 }
 a.key:hover { background: var(--accent-border); transform: translateY(-2px); text-decoration: none; }
 
-.main { flex: 1 1 240px; min-width: 0; }
+.main { flex: 1 1 220px; min-width: 0; }
 /* The title link stretches over the whole row, so the row is one click target; controls that
    must stay independent (Jira chip, menu) sit above it. */
 .title { font-weight: 600; font-size: 1rem; letter-spacing: -0.01em; color: var(--text); }
@@ -98,24 +169,42 @@ a.key:hover { background: var(--accent-border); transform: translateY(-2px); tex
 /* The project name reads as a label, not a path. */
 .meta .project { font-family: var(--font); font-size: 12px; font-weight: 500; color: var(--text); }
 
-.stage { flex: 0 1 150px; min-width: 0; font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.progress { display: flex; align-items: center; gap: 0.6rem; flex: 0 1 170px; min-width: 120px; font-size: 12px; color: var(--muted); }
-.bar { flex: 1; min-width: 60px; height: 6px; border-radius: var(--radius-pill); background: var(--info-soft); overflow: hidden; }
-.bar b {
-  display: block; height: 100%; border-radius: inherit; transition: width 0.8s var(--spring);
-  background: linear-gradient(90deg, var(--accent), var(--btn-to), var(--accent)); background-size: 200% 100%; animation: shimmer 2.4s linear infinite;
+/* The workflow as one segment per stage: finished stages filled, the current one in the row's
+   state colour. Only a running stage moves. */
+.track { display: flex; flex-direction: column; gap: 0.45rem; flex: 0 1 300px; min-width: 200px; }
+.track-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.6rem; min-width: 0; }
+.label { min-width: 0; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.track.running .label { color: var(--live); }
+.track.waiting .label, .track.attention .label { color: var(--warn); }
+.track.done .label { color: var(--ok); }
+.track.failed .label { color: var(--danger); }
+.track.idle .label { color: var(--muted); }
+.step { flex: none; font: 11.5px var(--mono); color: var(--muted); }
+.segs { display: grid; grid-template-columns: repeat(var(--stages), minmax(0, 1fr)); gap: 3px; }
+.seg { height: 8px; border-radius: 3px; background: var(--info-soft); box-shadow: inset 0 0 0 1px var(--border); }
+.seg.past { background: color-mix(in srgb, var(--muted) 55%, transparent); box-shadow: none; }
+/* Finished work recedes: most rows are Merged, and a column of solid green tracks would outshout
+   the few rows that are running. */
+.track.done .seg.past { background: color-mix(in srgb, var(--ok) 30%, transparent); }
+.seg.current { background: var(--muted); box-shadow: none; }
+.track.running .seg.current {
+  background: linear-gradient(90deg, var(--live), var(--live-glow), var(--live)); background-size: 200% 100%;
+  animation: shimmer 1.8s linear infinite;
 }
-.bar b.done { background: var(--ok); animation: none; }
-.percent { width: 34px; text-align: right; font-family: var(--mono); }
+.track.waiting .seg.current, .track.attention .seg.current { background: var(--warn); }
+.track.failed .seg.current { background: var(--danger); }
+.message { margin: 0; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.status-pill { flex: 0 0 auto; min-width: 150px; }
-.busy { font-weight: 400; opacity: 0.8; }
+.when { flex: 0 0 120px; font: 11.5px var(--mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.when.waiting { color: var(--warn); }
+.when.busy { color: var(--text); font-family: var(--font); font-size: 12px; font-weight: 500; }
 /* Always reserves the menu's width so the columns line up whether or not a row has actions. */
 .actions { flex: none; width: 44px; }
 
 @keyframes row-in { from { opacity: 0; transform: translateX(-14px); } }
 @keyframes shimmer { to { background-position: -200% 0; } }
+@keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) {
-  .task-row, .bar b { animation: none !important; transition: none; }
+  .task-row, .glyph .ring, .seg { animation: none !important; transition: none; }
 }
 </style>

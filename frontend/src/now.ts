@@ -41,6 +41,15 @@ export function parseTimestamp(value: string | null | undefined): number | null 
     return Number.isNaN(ms) ? null : ms;
 }
 
+/** A coarse age: "just now", "12m", "3h", "2d". */
+export function formatAge(ms: number): string {
+    const minutes = Math.floor(Math.max(0, ms) / 60_000);
+    if (minutes < 1) return 'just now';
+    if (minutes < 60) return `${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    return hours < 24 ? `${hours}h` : `${Math.floor(hours / 24)}d`;
+}
+
 /** "04:12", or "1:02:03" past an hour. */
 export function formatElapsed(ms: number): string {
     const total = Math.max(0, Math.floor(ms / 1000));

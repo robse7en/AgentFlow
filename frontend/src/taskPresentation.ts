@@ -17,17 +17,22 @@ const STAGE_LABELS = [
 // New Parallel tasks give the planning stage to the Architect, under its own label.
 const STAGE_ALIASES: Partial<Record<string, string>> = { 'Architect Planning': 'Orchestrator' }
 
+/** The workflow's stages in display order: the steps of the task list's stage track. */
+export const WORKFLOW_STAGES: readonly string[] = STAGE_LABELS
+
 export interface TaskProgress {
   stage: string
   percent: number
+  /** Index into WORKFLOW_STAGES of the current stage; its length once finished, -1 when unknown. */
+  index: number
 }
 
 export type StatusTone = 'running' | 'attention' | 'done' | 'failed' | 'idle'
 
 const FINISHED_PROGRESS: Partial<Record<TaskStatus, TaskProgress>> = {
-  READY_FOR_PR: { stage: 'Ready for PR', percent: 100 },
-  PR_CREATED: { stage: 'PR created', percent: 100 },
-  MERGED: { stage: 'Merged', percent: 100 },
+  READY_FOR_PR: { stage: 'Ready for PR', percent: 100, index: STAGE_LABELS.length },
+  PR_CREATED: { stage: 'PR created', percent: 100, index: STAGE_LABELS.length },
+  MERGED: { stage: 'Merged', percent: 100, index: STAGE_LABELS.length },
 }
 
 const STATUS_TONES: Record<TaskStatus, StatusTone> = {
@@ -96,6 +101,28 @@ export function taskProgress(task: Pick<TaskSummary, 'status' | 'phase'>): TaskP
 
   const stage = task.phase.split(':')[0].trim()
   const index = STAGE_LABELS.findIndex((label) => label === (STAGE_ALIASES[stage] ?? stage))
-  if (index < 0) return { stage: task.status === 'ACTIVE' ? 'Starting' : stage, percent: 0 }
-  return { stage, percent: Math.round(((index + 0.5) / STAGE_LABELS.length) * 100) }
+  if (index < 0) return { stage: task.status === 'ACTIVE' ? 'Starting' : stage, percent: 0, index: -1 }
+  return { stage, percent: Math.round(((index + 0.5) / STAGE_LABELS.length) * 100), index }
+}
+
+/**
+ * How a task row presents: like statusTone(), except an Active task is split by its current
+ * node's state, so only a task whose agent is actually working looks busy. A task blocked on a
+ * person ("waiting") or on a failed or interrupted node must not read as running.
+ */
+export type RowState = 'running' | 'waiting' | 'attention' | 'done' | 'failed' | 'idle'
+
+const ACTIVE_ROW_STATES: Partial<Record<string, RowState>> = {
+  RUNNING: 'running',
+  WAITING_FOR_USER: 'waiting',
+  WAITING_FOR_APPROVAL: 'waiting',
+  READY: 'waiting',
+  FAILED: 'failed',
+  INTERRUPTED: 'failed',
+}
+
+export function rowState(task: Pick<TaskSummary, 'status' | 'phase'>): RowState {
+  if (task.status !== 'ACTIVE') return statusTone(task.status) as Exclude<StatusTone, 'running'>
+  const state = task.phase.split(':')[1]?.trim()
+  return (state && ACTIVE_ROW_STATES[state]) || 'idle'
 }

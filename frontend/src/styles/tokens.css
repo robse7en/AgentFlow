@@ -32,6 +32,11 @@
   --run: #436800;
   --run-soft: #eef3dc;
   --run-glow: #9fc83a;
+  /* An agent working right now, in the task list. Blue, so it reads apart from the lime accent
+     (which the Jira key chips use) and from the amber "waiting on you". */
+  --live: #1f5fbf;
+  --live-soft: #e9f0fb;
+  --live-glow: #7fb0ee;
   /* Edge flow-animation colours (the ".wf-edge-flow" dash animation) — a fixed grey/white pair,
      independent of the theme. */
   --edge-flow-mid: #9a9a9a;
@@ -111,6 +116,9 @@
   --run: #c6f04a;
   --run-soft: rgba(198, 241, 74, 0.14);
   --run-glow: #dcf77a;
+  --live: #7db4f0;
+  --live-soft: rgba(125, 180, 240, 0.16);
+  --live-glow: #c3dcf8;
   --info-soft: #1d1d1a;
   --shadow-1: rgba(0, 0, 0, 0.5);
   --shadow-2: rgba(0, 0, 0, 0.35);

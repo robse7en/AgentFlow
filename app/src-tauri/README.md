@@ -60,7 +60,8 @@ Build the installer from the checkout root with PowerShell:
 `-InstallTools` downloads the pinned official Tauri CLI into `.desktop-tools`; omit it on later
 builds. Tauri downloads its NSIS tooling there on first use. The script builds the frontend, shared
 Rust binaries and desktop in order, uses locked offline Cargo dependencies, and stops on failure.
-It needs Node/npm, Rust/Cargo, Windows C++ build tools and frontend dependencies installed with
+It needs Node/npm, Rust/Cargo, the Windows C++ build tools (see
+[Building the Rust code](../../README.md#building-the-rust-code-contributors)) and frontend dependencies installed with
 `npm ci` in `frontend`. Outputs and SHA-256 files are under
 `app/src-tauri/target/installer/release/bundle/nsis/`. `-SkipBuild` reuses the existing frontend and
 release `flowctl` inputs while still compiling the desktop and packaging it.

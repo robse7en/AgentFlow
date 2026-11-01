@@ -149,6 +149,24 @@ The guided setup (§2) checks all of these and offers to install whatever is mis
 The coding CLIs must be **signed in** — AgentFlow just launches them and never manages API keys. The setup
 wizard tells you how to sign in to each one and waits while you do.
 
+### Building the Rust code (contributors)
+
+Only needed to build from source: the desktop app, the Rust `flowctl`, or `cargo test` in `app/`. The
+desktop installer ships prebuilt binaries, so installing AgentFlow never compiles anything.
+
+Install Rust with [rustup](https://rustup.rs). On Windows, Rust links with Microsoft's linker and the
+Windows SDK, and some dependencies (the bundled SQLite, `ring`) compile C code, so you also need the
+**MSVC C++ build tools**, either of:
+
+- Visual Studio (Community is enough): in the Visual Studio Installer choose *Modify* and tick the
+  **Desktop development with C++** workload.
+- The standalone Build Tools, from a terminal:
+  `winget install Microsoft.VisualStudio.2022.BuildTools --override "--passive --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"`
+
+Without them `cargo build` stops at the link step, with `linker 'link.exe' not found` or, when Git for
+Windows puts its own `link` first on `PATH`, `link: missing operand`. `cargo build` in `app/` checks the
+setup.
+
 ### MCP prerequisites (important)
 
 AgentFlow's own Jira client (below) covers search, the ticket's text and attachments, and an opt-in

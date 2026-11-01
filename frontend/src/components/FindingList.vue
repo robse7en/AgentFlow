@@ -6,7 +6,7 @@ import { location, shortSha } from '@/findingCode'
 // Loaded with the first code it draws, so highlight.js stays out of the main bundle.
 const FindingCode = defineAsyncComponent(() => import('@/components/FindingCode.vue'))
 
-const props = defineProps<{ findings: Finding[]; taskKey: string }>()
+const props = defineProps<{ findings: Finding[]; taskKey: string; currentSha: string | null }>()
 
 const grouped = computed(() => {
   const map = new Map<number, Finding[]>()
@@ -55,7 +55,7 @@ function toggle(f: Finding, event: Event) {
         <details v-if="hasCode(f) && f.status !== 'open'" class="code-toggle" @toggle="toggle(f, $event)">
           <summary>Show code · reviewed @ {{ shortSha(f.reviewedSha) }}</summary>
         </details>
-        <FindingCode v-if="codeShown(f)" :task-key="taskKey" :finding="f">
+        <FindingCode v-if="codeShown(f)" :task-key="taskKey" :finding="f" :current-sha="currentSha">
           <div class="small" style="white-space: pre-wrap">{{ f.description || f.title }}</div>
         </FindingCode>
         <div v-if="f.recommendation" class="small muted" style="margin-top: 0.25rem; white-space: pre-wrap">

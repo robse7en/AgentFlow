@@ -560,7 +560,7 @@ watch(() => route.query.node, (key) => {
           </template>
 
           <RequirementsReview v-else-if="tab === 'requirements'" :task="task" />
-          <FindingList v-else-if="tab === 'findings'" :findings="task.findings" :task-key="task.jiraKey" />
+          <FindingList v-else-if="tab === 'findings'" :findings="task.findings" :task-key="task.jiraKey" :current-sha="task.currentSha" />
           <FinalAssessment v-else-if="tab === 'assessment'" :task="task" />
           <EventLog v-else :events="task.events" />
         </div>

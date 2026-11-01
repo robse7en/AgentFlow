@@ -95,8 +95,30 @@ export function splitHighlighted(html: string): string[] {
   return lines;
 }
 
-/** One HTML string per line: highlighted when the language is known, else just escaped. */
-export function highlightLines(lines: string[], path: string): string[] {
+/** Recently highlighted files, so findings in the same file at the same commit share the work. */
+const cache = new Map<string, string[]>();
+const CACHED_FILES = 16;
+
+/**
+ * One HTML string per line: highlighted when the language is known, else just escaped. `key`
+ * (commit and path) names the file for the cache; leave it out for text that isn't a whole file.
+ */
+export function highlightLines(lines: string[], path: string, key?: string): string[] {
+  const hit = key ? cache.get(key) : undefined;
+  if (hit) {
+    cache.delete(key!);
+    cache.set(key!, hit);
+    return hit;
+  }
+  const out = highlight(lines, path);
+  if (key) {
+    cache.set(key, out);
+    if (cache.size > CACHED_FILES) cache.delete(cache.keys().next().value!);
+  }
+  return out;
+}
+
+function highlight(lines: string[], path: string): string[] {
   const language = languageFor(path);
   if (!language || !lines.length) return lines.map(escape);
   const html = hljs.highlight(lines.join('\n'), { language, ignoreIllegals: true }).value;

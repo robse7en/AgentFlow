@@ -17,6 +17,10 @@ def test_paths_stay_inside_the_repository():
     assert repository_path(" ./src\\a.rs ") == "src/a.rs"
     for bad in ["", "/etc/passwd", "C:/x", "a/../../b", ".."]:
         assert repository_path(bad) is None, bad
+    roots = ("D:\\work\\tree\\", "/repo")
+    assert repository_path("d:/Work/tree/src/a.rs", roots) == "src/a.rs"
+    assert repository_path("/repo/b.py", roots) == "b.py"
+    assert repository_path("/repository/b.py", roots) is None
 
 
 def test_lines_drop_their_endings():
@@ -38,7 +42,9 @@ def test_hunks_number_both_sides():
 def test_lines_map_through_the_change():
     hunks = parse_hunks(DIFF)
     assert [map_line(hunks, n) for n in (1, 2, 3, 4, 10, 20, 21)] == [1, 2, 3, 5, 11, 21, 24]
-    assert touches(hunks, 3, 3) and touches(hunks, 1, 5) and not touches(hunks, 4, 20)
+    assert touches(hunks, 3, 3) and touches(hunks, 1, 5) and not touches(hunks, 4, 19)
+    # x and y are added after old line 20: inside 20..21, not at either end of a range.
+    assert touches(hunks, 20, 21) and not touches(hunks, 21, 30) and not touches(hunks, 10, 20)
 
 
 def git(repo, *args):
@@ -74,7 +80,8 @@ def repo(tmp_path):
 
 
 def views(repo, current, **finding):
-    task = SimpleNamespace(repository_root=str(repo.path), base_branch="main", current_sha=current)
+    task = SimpleNamespace(repository_root=str(repo.path), worktree_path="", base_branch="main",
+                           current_sha=current)
     fields = {"file": "src/app.txt", "line": 5, "end_line": 6, "reviewed_sha": repo.reviewed, **finding}
     return asyncio.run(finding_code(GitService(), task, SimpleNamespace(**fields)))
 
@@ -127,3 +134,28 @@ def test_findings_take_an_end_line_by_either_name():
     dumped = Finding.model_validate({"title": "t", "line": 3, "end_line": "5"}).model_dump(by_alias=True, exclude_none=True)
     assert dumped == {"severity": "medium", "line": 3, "endLine": 5, "title": "t"}
     assert Finding.model_validate({"endLine": 7}).end_line == 7
+
+
+def test_lines_added_inside_the_flagged_range_count_as_a_change(repo):
+    # Reviewed lines 7..9 are "line 6".."line 8"; the fix commit only changed lines 5-6 above them.
+    assert views(repo, repo.fixed, line=7, end_line=9)["now"]["changed"] is False
+    lines = (repo.path / "src" / "app.txt").read_text().splitlines()
+    lines[8:8] = ["inserted a", "inserted b"]  # between "line 7" and "line 8"
+    current = commit(repo.path, "\n".join(lines) + "\n", "insert")
+    assert views(repo, current, line=7, end_line=9)["now"]["changed"] is True
+    # Added right after the range's last line is outside it.
+    assert views(repo, current, line=7, end_line=8)["now"]["changed"] is False
+
+
+def test_too_large_globbed_or_missing_repositories_are_unavailable_not_errors(repo, monkeypatch, tmp_path):
+    import agentflow.workflow.finding_code as module
+    monkeypatch.setattr(module, "MAX_BYTES", 10)
+    assert views(repo, repo.fixed)["unavailable"]["snapshot"] == "src/app.txt is too large to show"
+    monkeypatch.undo()
+    message = f"src/*.txt is not in {repo.reviewed[:7]}"
+    assert views(repo, repo.fixed, file="src/*.txt")["unavailable"]["snapshot"] == message
+    task = SimpleNamespace(repository_root=str(tmp_path / "gone"), worktree_path="", base_branch="main",
+                           current_sha=repo.fixed)
+    finding = SimpleNamespace(file="src/app.txt", line=5, end_line=None, reviewed_sha=repo.reviewed)
+    data = asyncio.run(finding_code(GitService(), task, finding))
+    assert data["snapshot"] is None and set(data["unavailable"]) == {"snapshot", "diff", "now"}

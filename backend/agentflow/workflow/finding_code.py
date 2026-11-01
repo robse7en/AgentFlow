@@ -8,20 +8,31 @@ with the same JSON.
 
 from __future__ import annotations
 
+import string
 from pathlib import Path
 from typing import Any
 
 from ..database.models import ReviewFinding, Task
 from ..services.git_workspace import GitError, GitService
+from ..services.process import ProcessError
 
 # Larger files (or diffs) are not sent to the UI.
 MAX_BYTES = 1_000_000
 
+_ASCII_LOWER = str.maketrans(string.ascii_uppercase, string.ascii_lowercase)
 
-def repository_path(file: str) -> str | None:
+
+def repository_path(file: str, roots: tuple[str, ...] = ()) -> str | None:
     """A finding's file as a path inside the repository (`/` separated, no leading `./`), or None
-    when it is absolute or climbs out with `..`."""
+    when it is absolute or climbs out with `..`. An absolute path under one of `roots` (the task
+    worktree or repository, compared without regard to ASCII case) is made relative to it first."""
     path = file.strip().replace("\\", "/")
+    for root in roots:
+        prefix = root.strip().replace("\\", "/").rstrip("/") + "/"
+        if len(prefix) > 1 and len(path) > len(prefix) and \
+                path[:len(prefix)].translate(_ASCII_LOWER) == prefix.translate(_ASCII_LOWER):
+            path = path[len(prefix):]
+            break
     while path.startswith("./"):
         path = path[2:]
     absolute = path.startswith("/") or path[1:2] == ":"
@@ -108,9 +119,19 @@ def map_line(hunks: list[dict[str, Any]], n: int) -> int:
 
 
 def touches(hunks: list[dict[str, Any]], first: int, last: int) -> bool:
-    """Whether the hunks delete or replace any old line from `first` to `last`."""
-    return any(row["kind"] == "del" and row["old"] is not None and first <= row["old"] <= last
-               for hunk in hunks for row in hunk["rows"])
+    """Whether the hunks delete or replace any old line from `first` to `last`, or add lines between
+    two of them."""
+    for hunk in hunks:
+        # The old line the next row comes after; git gives an empty old side the line before it.
+        before = hunk["oldStart"] - (hunk["oldCount"] != 0)
+        for row in hunk["rows"]:
+            if row["old"] is not None:
+                before = row["old"]
+            if row["kind"] == "del" and first <= before <= last:
+                return True
+            if row["kind"] == "add" and first <= before < last:
+                return True
+    return False
 
 
 def _unshowable(path: str, text: str) -> str | None:
@@ -149,12 +170,12 @@ async def _views(git: GitService, task: Task, finding: ReviewFinding, out: dict[
     reviewed = finding.reviewed_sha
     if not reviewed:
         raise _Unavailable("The finding has no reviewed commit")
-    path = repository_path(file)
+    path = repository_path(file, (task.worktree_path, task.repository_root))
     if path is None:
         raise _Unavailable(f"{file} is outside the repository")
     root = Path(task.repository_root)
     try:
-        text = await git.file_at(root, reviewed, path)
+        text = await git.file_at(root, reviewed, path, MAX_BYTES)
         if text is None:
             raise _Unavailable(f"{path} is not in {reviewed[:7]}")
         reason = _unshowable(path, text)
@@ -178,7 +199,7 @@ async def _views(git: GitService, task: Task, finding: ReviewFinding, out: dict[
         if current == reviewed:
             lines, hunks = out["snapshot"]["lines"], []
         else:
-            text = await git.file_at(root, current, path)
+            text = await git.file_at(root, current, path, MAX_BYTES)
             if text is None:
                 unavailable["now"] = f"{path} is not in {current[:7]}"
                 return
@@ -187,7 +208,7 @@ async def _views(git: GitService, task: Task, finding: ReviewFinding, out: dict[
                 unavailable["now"] = reason
                 return
             lines, hunks = split_lines(text), parse_hunks(await git.file_diff(root, reviewed, current, path))
-    except GitError as exc:
+    except (GitError, ProcessError, OSError) as exc:  # a timeout, or the repository is gone
         raise _Unavailable(str(exc)) from exc
     line = map_line(hunks, finding.line) if finding.line is not None else None
     end_line = map_line(hunks, finding.end_line) if finding.end_line is not None else None

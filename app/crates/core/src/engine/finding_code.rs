@@ -14,9 +14,21 @@ use crate::db::{ReviewFindingRow, TaskRow, table};
 pub const MAX_BYTES: usize = 1_000_000;
 
 /// A finding's file as a path inside the repository (`/` separated, no leading `./`), or None
-/// when it is absolute or climbs out with `..`.
-pub fn repository_path(file: &str) -> Option<String> {
-    let path = file.trim().replace('\\', "/");
+/// when it is absolute or climbs out with `..`. An absolute path under one of `roots` (the task
+/// worktree or repository, compared without regard to ASCII case) is made relative to it first.
+pub fn repository_path(file: &str, roots: &[&str]) -> Option<String> {
+    let mut path = file.trim().replace('\\', "/");
+    for root in roots {
+        let prefix = format!("{}/", root.trim().replace('\\', "/").trim_end_matches('/'));
+        if prefix.len() > 1
+            && path.len() > prefix.len()
+            && path.is_char_boundary(prefix.len())
+            && path[..prefix.len()].eq_ignore_ascii_case(&prefix)
+        {
+            path = path[prefix.len()..].to_string();
+            break;
+        }
+    }
     let path = path.trim_start_matches("./");
     let absolute = path.starts_with('/') || path.as_bytes().get(1) == Some(&b':');
     if path.is_empty() || absolute || path.split('/').any(|part| part == "..") {
@@ -113,12 +125,23 @@ pub fn map_line(hunks: &[Value], n: i64) -> i64 {
     n + shift
 }
 
-/// Whether the hunks delete or replace any old line from `first` to `last`.
+/// Whether the hunks delete or replace any old line from `first` to `last`, or add lines between
+/// two of them.
 pub fn touches(hunks: &[Value], first: i64, last: i64) -> bool {
-    hunks
-        .iter()
-        .flat_map(|hunk| hunk["rows"].as_array().into_iter().flatten())
-        .any(|row| row["kind"] == "del" && row["old"].as_i64().is_some_and(|old| (first..=last).contains(&old)))
+    hunks.iter().any(|hunk| {
+        // The old line the next row comes after; git gives an empty old side the line before it.
+        let mut before = int(hunk, "oldStart") - i64::from(int(hunk, "oldCount") != 0);
+        hunk["rows"].as_array().into_iter().flatten().any(|row| {
+            if let Some(old) = row["old"].as_i64() {
+                before = old;
+            }
+            match row["kind"].as_str() {
+                Some("del") => (first..=last).contains(&before),
+                Some("add") => first <= before && before < last,
+                _ => false,
+            }
+        })
+    })
 }
 
 /// Why a file's text can't be shown, if it can't.
@@ -175,12 +198,12 @@ impl Engine {
         let Some(reviewed) = finding.reviewed_sha.as_deref().filter(|s| !s.is_empty()) else {
             return Err("The finding has no reviewed commit".into());
         };
-        let Some(path) = repository_path(file) else {
+        let Some(path) = repository_path(file, &[&task.worktree_path, &task.repository_root]) else {
             return Err(format!("{file} is outside the repository"));
         };
         let root = Path::new(&task.repository_root);
         let git = |e: crate::git::GitError| e.to_string();
-        let Some(text) = self.git.file_at(root, reviewed, &path).await.map_err(git)? else {
+        let Some(text) = self.git.file_at(root, reviewed, &path, MAX_BYTES).await.map_err(git)? else {
             return Err(format!("{path} is not in {}", short(reviewed)));
         };
         if let Some(reason) = unshowable(&path, &text) {
@@ -210,7 +233,7 @@ impl Engine {
         let (lines, hunks) = if current == reviewed {
             (out["snapshot"]["lines"].clone(), Vec::new())
         } else {
-            let Some(text) = self.git.file_at(root, current, &path).await.map_err(git)? else {
+            let Some(text) = self.git.file_at(root, current, &path, MAX_BYTES).await.map_err(git)? else {
                 unavailable.insert("now".into(), json!(format!("{path} is not in {}", short(current))));
                 return Ok(());
             };
@@ -240,10 +263,14 @@ mod tests {
 
     #[test]
     fn paths_stay_inside_the_repository() {
-        assert_eq!(repository_path(" ./src\\a.rs ").as_deref(), Some("src/a.rs"));
+        assert_eq!(repository_path(" ./src\\a.rs ", &[]).as_deref(), Some("src/a.rs"));
         for bad in ["", "/etc/passwd", "C:/x", "a/../../b", ".."] {
-            assert_eq!(repository_path(bad), None, "{bad}");
+            assert_eq!(repository_path(bad, &[]), None, "{bad}");
         }
+        let roots = ["D:\\work\\tree\\", "/repo"];
+        assert_eq!(repository_path("d:/Work/tree/src/a.rs", &roots).as_deref(), Some("src/a.rs"));
+        assert_eq!(repository_path("/repo/b.py", &roots).as_deref(), Some("b.py"));
+        assert_eq!(repository_path("/repository/b.py", &roots), None);
     }
 
     #[test]
@@ -290,6 +317,8 @@ mod tests {
         assert_eq!(map_line(&hunks, 20), 21);
         // Below the insertion after old line 20.
         assert_eq!(map_line(&hunks, 21), 24);
-        assert!(touches(&hunks, 3, 3) && touches(&hunks, 1, 5) && !touches(&hunks, 4, 20));
+        assert!(touches(&hunks, 3, 3) && touches(&hunks, 1, 5) && !touches(&hunks, 4, 19));
+        // x and y are added after old line 20: inside 20..=21, not at either end of a range.
+        assert!(touches(&hunks, 20, 21) && !touches(&hunks, 21, 30) && !touches(&hunks, 10, 20));
     }
 }

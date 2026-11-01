@@ -937,15 +937,20 @@ impl Fixture {
 #[tokio::test]
 async fn test_file_at_reads_a_commit_and_misses_other_paths() {
     let f = Fixture::new();
-    let text = f.service.file_at(&f.repo, &f.sha, "file.txt").await.unwrap();
+    let text = f.service.file_at(&f.repo, &f.sha, "file.txt", 100).await.unwrap();
     assert_eq!(text.as_deref().map(str::trim_end), Some("preserved"));
-    assert_eq!(f.service.file_at(&f.repo, &f.sha, "missing.txt").await.unwrap(), None);
+    assert_eq!(f.service.file_at(&f.repo, &f.sha, "missing.txt", 100).await.unwrap(), None);
+    // A pathspec is literal: a glob matches nothing.
+    assert_eq!(f.service.file_at(&f.repo, &f.sha, "*.txt", 100).await.unwrap(), None);
+    // Too large is refused before the file is read.
+    let error = f.service.file_at(&f.repo, &f.sha, "file.txt", 4).await.unwrap_err().to_string();
+    assert_eq!(error, "file.txt is too large to show");
     // A directory is not a file.
     std::fs::create_dir(f.repo.join("dir")).unwrap();
     std::fs::write(f.repo.join("dir").join("a"), "a\n").unwrap();
     f.git(&["add", "-A"]);
     let head = f.commit("preserved\n", "dir");
-    assert_eq!(f.service.file_at(&f.repo, &head, "dir").await.unwrap(), None);
+    assert_eq!(f.service.file_at(&f.repo, &head, "dir", 100).await.unwrap(), None);
 }
 
 #[tokio::test]

@@ -10,7 +10,7 @@ import {
   location, shortSha,
 } from '@/findingCode';
 
-const props = defineProps<{ taskKey: string; finding: Finding }>();
+const props = defineProps<{ taskKey: string; finding: Finding; currentSha: string | null }>();
 
 const code = ref<FindingCode | null>(null);
 const failed = ref<string | null>(null);
@@ -19,23 +19,36 @@ const mode = ref<CodeMode>(props.finding.status === 'open' ? 'snapshot' : 'diff'
 const windows = ref<Partial<Record<'snapshot' | 'now', [number, number]>>>({});
 const copied = ref(false);
 
+/** Only the latest request may land: an older answer arriving late would show stale code. */
+let latest = 0;
 async function load() {
+  const request = ++latest;
   failed.value = null;
   try {
-    code.value = await api.findingCode(props.taskKey, props.finding.dbId);
+    const data = await api.findingCode(props.taskKey, props.finding.dbId);
+    if (request !== latest) return;
+    code.value = data;
+    // The Now view's lines moved with the new commit; the snapshot's did not.
+    windows.value = { snapshot: windows.value.snapshot };
   } catch (error) {
-    failed.value = error instanceof Error ? error.message : String(error);
+    if (request === latest) failed.value = error instanceof Error ? error.message : String(error);
   }
 }
 onMounted(load);
-watch(() => props.finding.dbId, load);
+// A new checkpoint changes the Now view and the since-review diff.
+watch(() => props.currentSha, load);
 
 const path = computed(() => code.value?.file?.replace(/\\/g, '/').replace(/^(\.\/)+/, '') ?? props.finding.file ?? '');
-const snapshotHtml = computed(() => (code.value?.snapshot ? highlightLines(code.value.snapshot.lines, path.value) : null));
+const snapshotHtml = computed(() => {
+  const snapshot = code.value?.snapshot;
+  return snapshot ? highlightLines(snapshot.lines, path.value, `${snapshot.sha}:${path.value}`) : null;
+});
 const nowHtml = computed(() => {
   const now = code.value?.now;
   if (!now) return null;
-  return now.sha === code.value?.reviewedSha ? snapshotHtml.value : highlightLines(now.lines, path.value);
+  return now.sha === code.value?.reviewedSha
+    ? snapshotHtml.value
+    : highlightLines(now.lines, path.value, `${now.sha}:${path.value}`);
 });
 
 const available = computed<Record<CodeMode, boolean>>(() => ({

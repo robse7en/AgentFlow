@@ -754,15 +754,20 @@ impl GitService {
         Ok(result.ok().then(|| trimmed(&result).to_string()))
     }
 
-    /// The text of `path` at commit `sha`, or None when that commit has no such file. Read from the
-    /// object store, so it works after the task worktree is gone.
-    pub async fn file_at(&self, root: &Path, sha: &str, path: &str) -> Result<Option<String>> {
-        let spec = format!("{sha}:{path}");
-        let kind = self.git(&["cat-file", "-t", &spec], Some(root), SHORT).await?;
-        if !kind.ok() || trimmed(&kind) != "blob" {
+    /// The text of `path` at commit `sha`, or None when that commit has no such file; an error
+    /// (without reading it) when the file is larger than `limit` bytes. Read from the object
+    /// store, so it works after the task worktree is gone.
+    pub async fn file_at(&self, root: &Path, sha: &str, path: &str, limit: usize) -> Result<Option<String>> {
+        // "<mode> <type> <object> <size>\t<path>": the type and size before anything is read.
+        let entry = self.git(&["--literal-pathspecs", "ls-tree", "-l", sha, "--", path], Some(root), SHORT).await?;
+        let fields: Vec<&str> = entry.stdout.lines().next().unwrap_or_default().split_whitespace().collect();
+        if !entry.ok() || fields.get(1) != Some(&"blob") {
             return Ok(None);
         }
-        let result = self.git(&["cat-file", "blob", &spec], Some(root), TIMEOUT).await?;
+        if fields.get(3).and_then(|size| size.parse::<usize>().ok()).is_none_or(|size| size > limit) {
+            return failed(format!("{path} is too large to show"));
+        }
+        let result = self.git(&["cat-file", "blob", fields[2]], Some(root), TIMEOUT).await?;
         if !result.ok() {
             return failed(format!("Cannot read {path} at {sha}: {}", said(&result)));
         }
@@ -773,11 +778,11 @@ impl GitService {
     /// origin's copy together, so the newer of the two counts. None when neither exists.
     pub async fn fork_point(&self, root: &Path, sha: &str, base_branch: &str) -> Result<Option<String>> {
         let mut refs = Vec::new();
-        for reference in [format!("refs/heads/{base_branch}"), format!("refs/remotes/origin/{base_branch}")] {
-            let commit = format!("{reference}^{{commit}}");
-            if self.git(&["rev-parse", "--verify", "--quiet", &commit], Some(root), SHORT).await?.ok() {
-                refs.push(reference);
-            }
+        if self.branch_exists(root, base_branch).await? {
+            refs.push(format!("refs/heads/{base_branch}"));
+        }
+        if self.remote_branch_exists(root, base_branch).await? {
+            refs.push(format!("refs/remotes/origin/{base_branch}"));
         }
         if refs.is_empty() {
             return Ok(None);
@@ -817,8 +822,19 @@ impl GitService {
 
     /// The unified diff (three lines of context) of `path` between two commits.
     pub async fn file_diff(&self, root: &Path, from: &str, to: &str, path: &str) -> Result<String> {
-        let args =
-            ["diff", "--no-color", "--no-ext-diff", "--no-textconv", "--no-renames", "-U3", from, to, "--", path];
+        let args = [
+            "--literal-pathspecs",
+            "diff",
+            "--no-color",
+            "--no-ext-diff",
+            "--no-textconv",
+            "--no-renames",
+            "-U3",
+            from,
+            to,
+            "--",
+            path,
+        ];
         let result = self.git(&args, Some(root), TIMEOUT).await?;
         if !result.ok() {
             return failed(format!("Cannot compare {path}: {}", said(&result)));

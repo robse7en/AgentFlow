@@ -274,14 +274,19 @@ class GitService:
             raise GitError(f"Cannot read HEAD in {cwd}: {result.stderr.strip()}")
         return result.stdout.strip()
 
-    async def file_at(self, root: str | Path, sha: str, path: str) -> str | None:
-        """The text of `path` at commit `sha`, or None when that commit has no such file. Read from
-        the object store, so it works after the task worktree is gone."""
-        spec = f"{sha}:{path}"
-        kind = await self._git("cat-file", "-t", spec, cwd=root, timeout=30.0)
-        if not kind.ok or kind.stdout.strip() != "blob":
+    async def file_at(self, root: str | Path, sha: str, path: str, limit: int) -> str | None:
+        """The text of `path` at commit `sha`, or None when that commit has no such file; an error
+        (without reading it) when the file is larger than `limit` bytes. Read from the object
+        store, so it works after the task worktree is gone."""
+        # "<mode> <type> <object> <size>\t<path>": the type and size before anything is read.
+        entry = await self._git("--literal-pathspecs", "ls-tree", "-l", sha, "--", path, cwd=root, timeout=30.0)
+        fields = next(iter(entry.stdout.splitlines()), "").split()
+        if not entry.ok or fields[1:2] != ["blob"]:
             return None
-        result = await self._git("cat-file", "blob", spec, cwd=root)
+        size = fields[3] if len(fields) > 3 else ""
+        if not size.isdigit() or int(size) > limit:
+            raise GitError(f"{path} is too large to show")
+        result = await self._git("cat-file", "blob", fields[2], cwd=root)
         if not result.ok:
             raise GitError(f"Cannot read {path} at {sha}: {_said(result)}")
         return result.stdout
@@ -290,9 +295,10 @@ class GitService:
         """Where the branch at `sha` left `base_branch`: the merge base with the local branch and
         origin's copy together, so the newer of the two counts. None when neither exists."""
         refs = []
-        for reference in (f"refs/heads/{base_branch}", f"refs/remotes/origin/{base_branch}"):
-            if (await self._git("rev-parse", "--verify", "--quiet", f"{reference}^{{commit}}", cwd=root, timeout=30.0)).ok:
-                refs.append(reference)
+        if await self.branch_exists(str(root), base_branch):
+            refs.append(f"refs/heads/{base_branch}")
+        if await self._remote_branch_exists(str(root), base_branch):
+            refs.append(f"refs/remotes/origin/{base_branch}")
         if not refs:
             return None
         result = await self._git("merge-base", sha, *refs, cwd=root, timeout=30.0)
@@ -324,8 +330,8 @@ class GitService:
 
     async def file_diff(self, root: str | Path, from_sha: str, to_sha: str, path: str) -> str:
         """The unified diff (three lines of context) of `path` between two commits."""
-        result = await self._git("diff", "--no-color", "--no-ext-diff", "--no-textconv", "--no-renames", "-U3",
-                                 from_sha, to_sha, "--", path, cwd=root)
+        result = await self._git("--literal-pathspecs", "diff", "--no-color", "--no-ext-diff", "--no-textconv",
+                                 "--no-renames", "-U3", from_sha, to_sha, "--", path, cwd=root)
         if not result.ok:
             raise GitError(f"Cannot compare {path}: {_said(result)}")
         return result.stdout

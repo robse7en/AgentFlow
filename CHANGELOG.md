@@ -8,13 +8,18 @@ tested. The frontend and Python package versions are independent of desktop vers
 Each version has a local annotated `v<version>` Git tag at the source checkpoint
 shown below. Tags must be pushed separately to share them with other checkouts.
 
-## Unreleased
+## 1.1.11 - 2026-11-03
+
+Source: the version commit tagged `v1.1.11` on `main`.
 
 - Opt-in automatic retries: with `workflow.maxAutomaticRetries` (0–3, default 0), a stage whose
   harness exits without reporting completion relaunches by itself after a short pause. It gets a
   fresh conversation and the retry briefing, and runs the same capacity, budget and
   metered-approval checks as a human's Run. It never covers `flowctl fail`, launch failures,
   interruptions or tasks that aren't Active. See [Automatic retries](README.md#automatic-retries).
+- A running task's icon in the task list has a loading spinner around it: a faint full ring with an
+  arc that spins as it grows and shrinks, so running rows stand out. It holds still when the system
+  asks for reduced motion.
 
 ## 1.1.10 - 2026-11-02
 

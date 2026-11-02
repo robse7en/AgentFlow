@@ -8,6 +8,19 @@ tested. The frontend and Python package versions are independent of desktop vers
 Each version has a local annotated `v<version>` Git tag at the source checkpoint
 shown below. Tags must be pushed separately to share them with other checkouts.
 
+## 1.1.10 - 2026-11-02
+
+Source: the version commit tagged `v1.1.10` on `main`.
+
+- The next pull-request step is the task header's main button: Push & open PR (into the task's base
+  branch, highlighted when it isn't main or master), then Mark PR created, then a link to the PR and
+  Mark merged. The Assessment tab no longer says AgentFlow doesn't open PRs, and the task list's row
+  menu can push and open the PR too.
+- When a task becomes PR Created, by hand or through GitHub PR sync, AgentFlow moves its Jira ticket
+  to "In Code Review", from any status. Set `jira.prCreatedTransitionStatus` to your review status,
+  or `null` to turn it off; `jira.prCreatedTransitionFromStatuses` narrows which statuses it moves
+  from. A Jira problem never blocks or undoes the PR: it is logged on the task.
+
 ## 1.1.9 - 2026-11-02
 
 Source: the version commit tagged `v1.1.9` on `main`.

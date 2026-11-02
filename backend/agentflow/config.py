@@ -221,6 +221,11 @@ class JiraConfig(_Model):
     auto_transition_status: str | None = Field(None, alias="autoTransitionStatus")
     auto_transition_from_statuses: list[str] = Field(
         default_factory=lambda: ["To Do"], alias="autoTransitionFromStatuses")
+    # Null or empty = off. When a task becomes PR Created (marked by hand or found by GitHub PR
+    # sync), AgentFlow moves the ticket to this status. "*" in the from-list matches any status.
+    pr_created_transition_status: str | None = Field("In Code Review", alias="prCreatedTransitionStatus")
+    pr_created_transition_from_statuses: list[str] = Field(
+        default_factory=lambda: ["*"], alias="prCreatedTransitionFromStatuses")
 
     def missing(self) -> list[str]:
         """Settings the integration needs that are unset (Server/Data Center has no email)."""

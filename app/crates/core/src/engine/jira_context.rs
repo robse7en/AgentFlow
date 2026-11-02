@@ -1,6 +1,6 @@
 //! Best-effort Jira context, title retrieval and human-triggered status transitions.
 use super::{Engine, store::TaskState};
-use crate::jira::{JiraError, JiraService, JiraTransport, TicketSync};
+use crate::jira::{JiraError, JiraService, JiraTransport, TicketSync, TransitionOutcome};
 use serde_json::json;
 use std::{path::Path, sync::Arc};
 
@@ -57,6 +57,47 @@ impl Engine {
             Ok(false) => {}
             Err(error) => state.log(format!("Could not update Jira status: {error}"), None, "warning", None),
         }
+    }
+    /// Best-effort: move the ticket to `jira.prCreatedTransitionStatus` now the task is PR Created.
+    /// Called after that change is flushed and the task lock released, so a slow or failing Jira
+    /// never holds it up or undoes it; what happened is logged on the task.
+    pub(crate) async fn transition_jira_for_pr(&self, key: &str) {
+        let config = self.config();
+        let Some(target) = config.jira.pr_created_transition_status.as_deref().filter(|s| !s.is_empty()) else {
+            return;
+        };
+        if super::lifecycle::is_local_task(key) {
+            return;
+        }
+        let result = match self.jira_service() {
+            Ok(Some(service)) => {
+                service.transition(key, target, &config.jira.pr_created_transition_from_statuses).await
+            }
+            Ok(None) => return,
+            Err(error) => Err(error),
+        };
+        let (message, level) = match result {
+            Ok(TransitionOutcome::Moved(current)) => (format!("Jira ticket moved from {current} to {target}"), "info"),
+            Ok(TransitionOutcome::Unavailable(current)) => (
+                format!(
+                    "Jira ticket left in {current}: its workflow has no transition to {target}. Set \
+                     jira.prCreatedTransitionStatus to your review status, or null to turn this off."
+                ),
+                "warning",
+            ),
+            Ok(TransitionOutcome::NotAllowed(current)) => (
+                format!("Jira ticket left in {current}: jira.prCreatedTransitionFromStatuses does not include it"),
+                "info",
+            ),
+            Ok(TransitionOutcome::Already(_)) => return,
+            Err(error) => (format!("Could not move the Jira ticket to {target}: {error}"), "warning"),
+        };
+        let lock = self.lock(key);
+        let _held = lock.lock().await;
+        // Deleted meanwhile: nothing to log on.
+        let Ok(mut state) = self.db.session(|tx| TaskState::load(tx, key)) else { return };
+        state.log(message, None, level, None);
+        let _ = self.db.session(|tx| state.flush(tx));
     }
     pub(crate) fn queue_jira_title(&self, key: &str) {
         if super::lifecycle::is_local_task(key) {

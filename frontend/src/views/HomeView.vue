@@ -139,7 +139,10 @@ const cleanupTask = computed(() => store.tasks.find((t) => t.jiraKey === cleanup
 function rowItems(t: TaskSummary): MenuItem[] {
   const disabled = busy(t.jiraKey)
   const items: MenuItem[] = []
-  if (t.status === 'READY_FOR_PR') items.push({ label: 'Mark PR created', disabled, run: () => openPrModal(t.jiraKey) })
+  if (t.status === 'READY_FOR_PR') {
+    items.push({ label: 'Push & open PR', hint: `Into ${t.baseBranch}`, disabled, run: () => void pushAndOpenPr(t.jiraKey) })
+    items.push({ label: 'Mark PR created', disabled, run: () => openPrModal(t.jiraKey) })
+  }
   if (t.status === 'PR_CREATED') items.push({ label: 'Mark merged', disabled, run: () => void markMerged(t.jiraKey) })
   if (canCleanup(t)) items.push({ label: 'Clean up', disabled, run: () => { cleanupKey.value = t.jiraKey } })
   items.push({ label: 'Move to project…', disabled, run: () => { moveTask.value = t } })
@@ -150,6 +153,19 @@ function rowItems(t: TaskSummary): MenuItem[] {
     items.push({ label: 'Archive', disabled, run: () => void rowAction(t.jiraKey, store.archiveTask) })
   }
   return items
+}
+
+async function pushAndOpenPr(jiraKey: string) {
+  rowBusy[jiraKey] = true
+  rowError[jiraKey] = null
+  try {
+    // Opened after an await, so a browser may block it as a pop-up; the task page also offers it.
+    window.open(await store.openPr(jiraKey), '_blank', 'noopener,noreferrer')
+  } catch (e) {
+    rowError[jiraKey] = e instanceof Error ? e.message : 'Action failed.'
+  } finally {
+    rowBusy[jiraKey] = false
+  }
 }
 
 const prModalKey = ref<string | null>(null)

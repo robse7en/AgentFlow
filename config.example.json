@@ -62,7 +62,9 @@
     "email": "you@yourcompany.com",
     "apiToken": null,
     "autoTransitionStatus": null,
-    "autoTransitionFromStatuses": ["To Do"]
+    "autoTransitionFromStatuses": ["To Do"],
+    "prCreatedTransitionStatus": "In Code Review",
+    "prCreatedTransitionFromStatuses": ["*"]
   },
 
   "slack": {

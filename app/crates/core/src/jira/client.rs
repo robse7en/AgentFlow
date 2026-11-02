@@ -13,6 +13,22 @@ impl From<std::io::Error> for JiraError {
         Self("Jira context file operation failed".into())
     }
 }
+/// What `JiraService::transition` did, with the status the ticket was in.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TransitionOutcome {
+    Moved(String),
+    /// Already in the target status.
+    Already(String),
+    /// Its status is not in the from-list.
+    NotAllowed(String),
+    /// Jira offers no transition to the target from its status.
+    Unavailable(String),
+}
+/// Case-insensitive membership; `"*"` in `from` matches any status.
+pub fn status_allowed(current: &str, from: &[String]) -> bool {
+    let current = current.to_lowercase();
+    from.iter().any(|s| s == "*" || s.to_lowercase() == current)
+}
 pub struct HttpReply {
     pub status: u16,
     pub headers: HashMap<String, String>,
@@ -270,13 +286,19 @@ impl JiraService {
         }
         Ok(comments)
     }
+    /// Moves the ticket to `target` only when its status is in `from` (case-insensitive, `"*"` = any).
     pub async fn transition_to(&self, key: &str, target: &str, from: &[String]) -> Result<bool, JiraError> {
+        Ok(matches!(self.transition(key, target, from).await?, TransitionOutcome::Moved(_)))
+    }
+    /// `transition_to`, saying why the ticket did not move.
+    pub async fn transition(&self, key: &str, target: &str, from: &[String]) -> Result<TransitionOutcome, JiraError> {
         let data = self.api("GET", &format!("/rest/api/3/issue/{key}"), &[("fields", "status".into())], None).await?;
-        if !from
-            .iter()
-            .any(|s| data["fields"]["status"]["name"].as_str().is_some_and(|name| s.eq_ignore_ascii_case(name)))
-        {
-            return Ok(false);
+        let current = data["fields"]["status"]["name"].as_str().unwrap_or("").to_string();
+        if current.to_lowercase() == target.to_lowercase() {
+            return Ok(TransitionOutcome::Already(current));
+        }
+        if !status_allowed(&current, from) {
+            return Ok(TransitionOutcome::NotAllowed(current));
         }
         let path = format!("/rest/api/3/issue/{key}/transitions");
         let data = self.api("GET", &path, &[], None).await?;
@@ -284,12 +306,12 @@ impl JiraService {
             .as_array()
             .into_iter()
             .flatten()
-            .find(|t| t["to"]["name"].as_str().is_some_and(|s| s.eq_ignore_ascii_case(target)))
+            .find(|t| t["to"]["name"].as_str().is_some_and(|s| s.to_lowercase() == target.to_lowercase()))
         else {
-            return Ok(false);
+            return Ok(TransitionOutcome::Unavailable(current));
         };
         self.api("POST", &path, &[], Some(json!({"transition":{"id":found["id"]}}))).await?;
-        Ok(true)
+        Ok(TransitionOutcome::Moved(current))
     }
     pub async fn download(&self, url: &str, dest: &Path, limit: u64) -> Result<u64, JiraError> {
         let mut current = self.validate_url(url, true)?;

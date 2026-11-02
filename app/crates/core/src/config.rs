@@ -444,6 +444,13 @@ pub struct JiraConfig {
     pub auto_transition_status: Option<String>,
     #[serde(alias = "auto_transition_from_statuses")]
     pub auto_transition_from_statuses: Vec<String>,
+    /// Null or empty = off. When a task becomes PR Created (marked by hand or found by GitHub PR
+    /// sync), AgentFlow moves the ticket to this status.
+    #[serde(alias = "pr_created_transition_status")]
+    pub pr_created_transition_status: Option<String>,
+    /// Statuses the PR-created move may start from; `"*"` matches any status.
+    #[serde(alias = "pr_created_transition_from_statuses")]
+    pub pr_created_transition_from_statuses: Vec<String>,
 }
 
 impl Default for JiraConfig {
@@ -463,6 +470,8 @@ impl Default for JiraConfig {
             api_token: None,
             auto_transition_status: None,
             auto_transition_from_statuses: vec!["To Do".into()],
+            pr_created_transition_status: Some("In Code Review".into()),
+            pr_created_transition_from_statuses: vec!["*".into()],
         }
     }
 }

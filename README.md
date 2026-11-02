@@ -192,8 +192,8 @@ setup.
 
 ### MCP prerequisites (important)
 
-AgentFlow's own Jira client (below) covers search, the ticket's text and attachments, and an opt-in
-status transition. Linked issues, custom fields and write-back are left to the harness: the Architect is
+AgentFlow's own Jira client (below) covers search, the ticket's text and attachments, and two
+status transitions. Linked issues, custom fields and write-back are left to the harness: the Architect is
 told to *use its configured Jira MCP* for those, and agents use their own Git/filesystem tools. AgentFlow
 implements no MCP itself. So, in every harness you intend to use:
 
@@ -260,6 +260,14 @@ With it, AgentFlow itself, rather than the harness, talks to Jira for two things
   only when the ticket's current status is in `jira.autoTransitionFromStatuses` (default `["To Do"]`)
   — so it won't touch a ticket someone's already moved elsewhere. It never blocks or fails the run:
   the Architect always starts, and a Jira problem just logs a warning on the task.
+- **On by default: move the ticket to "In Code Review" when its pull request is created.** When a task
+  becomes PR Created (you click *Mark PR created*, or GitHub PR sync finds the PR), AgentFlow moves
+  the ticket to `jira.prCreatedTransitionStatus` (default `"In Code Review"`; `null` turns it off)
+  from any status in `jira.prCreatedTransitionFromStatuses` (default `["*"]`, any status; list names
+  such as `["In Progress"]` to narrow it). A PR first seen already merged doesn't move the ticket.
+  It runs after the PR status is saved, so it never blocks or undoes it. Each outcome goes on the
+  task's events, including a warning when the ticket's workflow has no transition to that status.
+  `"*"` works in `autoTransitionFromStatuses` too.
 
 Jira Cloud uses Basic auth (`email` + an API token from *Jira Settings → Security → API tokens*);
 for Server/Data Center, leave `email` unset and put a Personal Access Token in `apiToken` (sent as a
@@ -784,9 +792,9 @@ config.example.json
 ```
 
 Out of scope for the MVP (by design): arbitrary workflow editing, automatic PR creation, general Jira
-write-back (comments, custom fields, linked issues — still the harness's MCP's job; the one narrow
-exception is the opt-in Todo → In Progress transition in §1), multi-user/remote execution, full
-interactive browser terminal. Nodes carry an `executionMode` (`manual | automatic | approval_required`)
+write-back (comments, custom fields, linked issues — still the harness's MCP's job; the narrow
+exceptions are the two status transitions in §1: opt-in To Do → In Progress, and In Code Review once
+the PR is created), multi-user/remote execution, full interactive browser terminal. Nodes carry an `executionMode` (`manual | automatic | approval_required`)
 so steps can be automated later without changing the engine.
 # Local diagnostics
 

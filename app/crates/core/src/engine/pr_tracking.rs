@@ -38,6 +38,7 @@ impl Engine {
         state.log("Human marked the pull request as created", None, "info", Some(json!({"prUrl":url})));
         self.db.session(|tx| state.flush(tx))?;
         drop(held);
+        self.transition_jira_for_pr(key).await;
         self.publish(key)
     }
     pub async fn revert_pr_created(&self, key: &str) -> Result<Value, WorkflowError> {
@@ -55,10 +56,8 @@ impl Engine {
         state.task.pr_created_at = None;
         state.task.pr_base_branch = None;
         let pause = self.pause_pr_sync(&mut state.task);
-        state.task.status_message = Some(format!(
-            "Ready for PR. Create the pull request manually from branch {}{pause}",
-            state.task.branch_name
-        ));
+        state.task.status_message =
+            Some(format!("Ready for PR. Push branch {} and open the pull request.{pause}", state.task.branch_name));
         state.log("Human reverted the PR-created status", None, "warning", None);
         self.db.session(|tx| state.flush(tx))?;
         drop(held);
@@ -195,8 +194,13 @@ impl Engine {
         if tracked(&state.task) == before {
             return Ok(None);
         }
+        // Not when the PR was found already merged: that ticket is past code review.
+        let opened = before.0 == "READY_FOR_PR" && state.task.status == "PR_CREATED";
         self.db.session(|tx| state.flush(tx))?;
         drop(held);
+        if opened {
+            self.transition_jira_for_pr(key).await;
+        }
         Ok(Some(self.publish(key)?))
     }
     /// Push the reviewed branch and return GitHub's new-PR form with the task's base branch

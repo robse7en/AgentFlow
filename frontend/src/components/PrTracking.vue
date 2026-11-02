@@ -98,7 +98,7 @@ const openPr = () => act(async () => {
 
         <template v-if="task.status === 'READY_FOR_PR'">
             <div class="row">
-                <button class="primary" :disabled="busy" @click="openPr">Push &amp; open PR into {{ task.baseBranch }}</button>
+                <button :disabled="busy" @click="openPr">Push &amp; open PR into {{ task.baseBranch }}</button>
                 <a v-if="formUrl" :href="formUrl" target="_blank" rel="noopener noreferrer" class="small">Open the PR form again</a>
             </div>
             <p v-if="formUrl" class="small muted">

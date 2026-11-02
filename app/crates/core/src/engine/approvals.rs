@@ -125,7 +125,7 @@ impl Engine {
             state.set_state(node, NodeState::Completed, Some("Ready for PR"), None);
             state.set_status(TaskStatus::ReadyForPr);
             state.task.status_message =
-                Some(format!("Ready for PR. Create the pull request manually from branch {}", state.task.branch_name));
+                Some(format!("Ready for PR. Push branch {} and open the pull request.", state.task.branch_name));
             state.info("Task is READY_FOR_PR");
         } else {
             return Err(WorkflowError::conflict(format!("{} cannot be approved", state.nodes[node].label)));

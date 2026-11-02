@@ -1542,7 +1542,43 @@ class WorkflowEngine:
                 task.pr_sync_paused = False
                 task.status_message = f"PR created: {pr_url}. Mark it Merged once it lands."
                 self._log(session, task, "Human marked the pull request as created", data={"prUrl": pr_url})
+        await self._transition_jira_for_pr(jira_key)
         return await self._publish(jira_key)
+
+    async def _transition_jira_for_pr(self, jira_key: str) -> None:
+        """Best-effort: move the ticket to jira.prCreatedTransitionStatus now the task is PR
+        Created. Runs after that change is committed and the task lock released, so a slow or
+        failing Jira never holds it up or undoes it; what happened is logged on the task."""
+        target = self.config.jira.pr_created_transition_status
+        if not target or is_local_task(jira_key):
+            return
+        jira_service = build_jira_service(self.config.jira)
+        if not jira_service:
+            return
+        try:
+            outcome = await jira_service.transition(
+                jira_key, target, self.config.jira.pr_created_transition_from_statuses)
+        except JiraError as exc:
+            message, level = f"Could not move the Jira ticket to {target}: {exc}", "warning"
+        else:
+            if outcome.result == "moved":
+                message, level = f"Jira ticket moved from {outcome.current} to {target}", "info"
+            elif outcome.result == "unavailable":
+                message, level = (f"Jira ticket left in {outcome.current}: its workflow has no transition to "
+                                  f"{target}. Set jira.prCreatedTransitionStatus to your review status, or "
+                                  "null to turn this off.", "warning")
+            elif outcome.result == "not-allowed":
+                message, level = (f"Jira ticket left in {outcome.current}: jira.prCreatedTransitionFromStatuses "
+                                  "does not include it", "info")
+            else:
+                return
+        async with self._lock(jira_key):
+            with self.db.session() as session:
+                try:
+                    task = self._load_task(session, jira_key)
+                except WorkflowError:
+                    return  # deleted meanwhile
+                self._log(session, task, message, level=level)
 
     async def revert_pr_created(self, jira_key: str) -> dict[str, Any]:
         async with self._lock(jira_key):
@@ -1554,8 +1590,8 @@ class WorkflowEngine:
                 task.pr_url = None
                 task.pr_created_at = None
                 task.pr_base_branch = None
-                task.status_message = ("Ready for PR. Create the pull request manually from branch "
-                                       + task.branch_name + self._pause_pr_sync(task))
+                task.status_message = (f"Ready for PR. Push branch {task.branch_name} and open the pull request."
+                                       + self._pause_pr_sync(task))
                 self._log(session, task, "Human reverted the PR-created status", level="warning")
         return await self._publish(jira_key)
 
@@ -1653,6 +1689,10 @@ class WorkflowEngine:
                                   data={"prUrl": pr.url, "prBaseBranch": pr.base_branch})
                 if (task.status, task.status_message, task.merged_head_sha, task.pr_base_branch) == before:
                     return None
+                # Not when the PR was found already merged: that ticket is past code review.
+                opened = before[0] == TaskStatus.READY_FOR_PR and task.status == TaskStatus.PR_CREATED
+        if opened:
+            await self._transition_jira_for_pr(jira_key)
         return await self._publish(jira_key)
 
     async def open_pr(self, jira_key: str) -> dict[str, Any]:
@@ -2645,7 +2685,7 @@ class WorkflowEngine:
     def _finish_ready_for_pr(self, session: Session, task: Task, node: WorkflowNode) -> None:
         self._set_state(session, task, node, NodeState.COMPLETED, "Ready for PR")
         task.status = TaskStatus.READY_FOR_PR
-        task.status_message = "Ready for PR. Create the pull request manually from branch " + task.branch_name
+        task.status_message = f"Ready for PR. Push branch {task.branch_name} and open the pull request."
         self._log(session, task, "Task is READY_FOR_PR")
 
     @staticmethod

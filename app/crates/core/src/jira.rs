@@ -10,7 +10,9 @@ mod client;
 mod entities;
 mod render;
 mod sync;
-pub use client::{HttpReply, JiraError, JiraService, JiraTransport, UreqTransport, build_service};
+pub use client::{
+    HttpReply, JiraError, JiraService, JiraTransport, TransitionOutcome, UreqTransport, build_service, status_allowed,
+};
 pub use render::{html_to_text, issue_markdown, referenced_ids, sanitize_filename};
 pub use sync::{SkippedAttachment, TicketSync};
 

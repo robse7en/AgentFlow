@@ -27,6 +27,10 @@ const riskClass = computed(() => {
 
 <template>
   <div>
+    <div v-if="task.status === 'READY_FOR_PR'" class="alert info" style="margin-bottom: 0.9rem">
+      Ready for PR. Use <b>Push &amp; open PR</b> at the top of the page to push <code>{{ task.branchName }}</code>
+      and open GitHub's pull request form into <code>{{ task.baseBranch }}</code>.
+    </div>
     <ul class="check-list" style="margin-bottom: 0.9rem">
       <li :class="done('requirements_gate') ? 'ok' : 'bad'">Requirements approved</li>
       <li :class="done('implementer') && task.currentSha ? 'ok' : 'bad'">
@@ -79,9 +83,6 @@ const riskClass = computed(() => {
         <summary class="small">Full assessment (assessment.md)</summary>
         <MarkdownView :source="task.assessmentMarkdown" />
       </details>
-      <div v-if="task.status === 'READY_FOR_PR'" class="alert info" style="margin-top: 0.75rem">
-        Create the pull request manually from branch <code>{{ task.branchName }}</code>. AgentFlow does not open PRs.
-      </div>
     </template>
     <p v-else class="muted small">The final assessment appears here once the Architect completes final verification.</p>
   </div>

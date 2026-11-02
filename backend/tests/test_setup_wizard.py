@@ -141,7 +141,7 @@ CLAUDE_CLOUD = (
     "", "subscription", "",             # sign-in, billing, trusted repositories
     "y",  # enable optional Jira integration
     "", "https://x.atlassian.net/", "a@b.com", "token-1234567890",  # Jira kind, URL, email, token
-    "", "",                             # comments, auto-transition
+    "", "", "",                         # comments, auto-transition, PR-created transition
     "",                                 # Slack
     "",                                 # write
 )
@@ -223,7 +223,7 @@ async def test_roles_can_be_assigned_separately(tmp_path):
 
     # Rerunning keeps the split: "separately" now defaults to yes, and each role to its harness.
     before = path.read_text(encoding="utf-8")
-    await _setup(path, *[""] * (len(answers) - len(CLAUDE_CLOUD[5:]) + 9))
+    await _setup(path, *[""] * (len(answers) - len(CLAUDE_CLOUD[5:]) + 10))
     assert path.read_text(encoding="utf-8") == before
     assert json.loads(before)["agents"].get("orchestrator") is None  # the Architect plans Parallel tasks
 
@@ -259,7 +259,7 @@ async def test_switching_to_server_clears_the_email_and_uses_a_bearer_token(tmp_
     await _setup(path, *CLAUDE_CLOUD)
     seen = []
     answers = ["", "", "", "", "",                   # config, harnesses, sign-in, billing, trusted
-               "y", "server", "https://jira.example.com", "pat-abcdefghijkl", "", "", "", ""]
+               "y", "server", "https://jira.example.com", "pat-abcdefghijkl", "", "", "", "", ""]
     await _setup(path, *answers, transport=_jira(seen=seen))
     config = read_config(path)
     assert config.jira.email is None and config.jira.base_url == "https://jira.example.com"

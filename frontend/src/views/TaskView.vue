@@ -16,6 +16,7 @@ import EventLog from '@/components/EventLog.vue';
 import ZellijViewer from '@/components/ZellijViewer.vue';
 import WorktreeCleanup from '@/components/WorktreeCleanup.vue';
 import PrTracking from '@/components/PrTracking.vue';
+import PrHeaderAction from '@/components/PrHeaderAction.vue';
 import ImplementerWorkers from '@/components/ImplementerWorkers.vue';
 import ExecutionEvidence from '@/components/ExecutionEvidence.vue';
 import TaskBudget from '@/components/TaskBudget.vue';
@@ -383,6 +384,7 @@ watch(() => route.query.node, (key) => {
           Details
         </button>
         <button v-if="nextStep" type="button" class="primary" @click="goToNextStep">{{ nextStep.action }}</button>
+        <PrHeaderAction :key="task.jiraKey" :task="task" />
         <ActionMenu :items="taskMenuItems" label="More task actions" />
       </div>
     </header>

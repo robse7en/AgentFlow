@@ -33,6 +33,25 @@ class JiraError(RuntimeError):
     pass
 
 
+@dataclass(frozen=True)
+class TransitionOutcome:
+    """What `JiraService.transition` did. `result` is "moved", "already" (the ticket is in the
+    target status), "not-allowed" (its status is not in the from-list) or "unavailable" (Jira
+    offers no transition to the target from its status). `current` is the status it was in."""
+    result: str
+    current: str
+
+    @property
+    def moved(self) -> bool:
+        return self.result == "moved"
+
+
+def status_allowed(current: str, from_statuses: list[str]) -> bool:
+    """Case-insensitive membership; "*" in from_statuses matches any status."""
+    allowed = {s.casefold() for s in from_statuses}
+    return "*" in allowed or current.casefold() in allowed
+
+
 @dataclass
 class JiraIssueSummary:
     key: str
@@ -461,10 +480,14 @@ class JiraService:
 
     async def transition_to(self, issue_key: str, target_status: str, from_statuses: list[str]) -> bool:
         """Best-effort: move issue_key to target_status, but only if its current status is
-        one of from_statuses (case-insensitive). Returns False (not an error) when the
-        guard excludes it, or when no transition to target_status is available from the
-        current status — the caller treats both as a silent no-op.
+        one of from_statuses (case-insensitive, "*" = any). Returns False (not an error) when
+        the guard excludes it, when it is already there, or when no transition to
+        target_status is available from the current status.
         """
+        return (await self.transition(issue_key, target_status, from_statuses)).moved
+
+    async def transition(self, issue_key: str, target_status: str, from_statuses: list[str]) -> TransitionOutcome:
+        """`transition_to`, saying why the ticket did not move."""
         headers, auth = self._auth()
         async with self._client(10.0) as client:
             try:
@@ -478,9 +501,10 @@ class JiraService:
                 raise JiraError(f"Cannot reach Jira: {exc}") from exc
             self._raise_for_status(response, f"fetch status for {issue_key}", not_found_key=issue_key)
             current = ((response.json().get("fields") or {}).get("status") or {}).get("name", "")
-            allowed = {s.casefold() for s in from_statuses}
-            if current.casefold() not in allowed:
-                return False
+            if current.casefold() == target_status.casefold():
+                return TransitionOutcome("already", current)
+            if not status_allowed(current, from_statuses):
+                return TransitionOutcome("not-allowed", current)
 
             try:
                 response = await client.get(
@@ -497,7 +521,7 @@ class JiraService:
                 None,
             )
             if match is None:
-                return False
+                return TransitionOutcome("unavailable", current)
 
             try:
                 response = await client.post(
@@ -509,7 +533,7 @@ class JiraService:
             except httpx.HTTPError as exc:
                 raise JiraError(f"Cannot reach Jira: {exc}") from exc
         self._raise_for_status(response, f"transition {issue_key} to {target_status}", not_found_key=issue_key)
-        return True
+        return TransitionOutcome("moved", current)
 
     @staticmethod
     def _raise_for_status(response: httpx.Response, action: str, not_found_key: str | None = None) -> None:

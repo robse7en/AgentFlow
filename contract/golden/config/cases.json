@@ -68,6 +68,10 @@
         "autoTransitionStatus": null,
         "autoTransitionFromStatuses": [
           "To Do"
+        ],
+        "prCreatedTransitionStatus": "In Code Review",
+        "prCreatedTransitionFromStatuses": [
+          "*"
         ]
       },
       "slack": {
@@ -280,6 +284,10 @@
         "autoTransitionStatus": null,
         "autoTransitionFromStatuses": [
           "To Do"
+        ],
+        "prCreatedTransitionStatus": "In Code Review",
+        "prCreatedTransitionFromStatuses": [
+          "*"
         ]
       },
       "slack": {
@@ -510,6 +518,10 @@
         "autoTransitionStatus": null,
         "autoTransitionFromStatuses": [
           "To Do"
+        ],
+        "prCreatedTransitionStatus": "In Code Review",
+        "prCreatedTransitionFromStatuses": [
+          "*"
         ]
       },
       "slack": {
@@ -777,6 +789,10 @@
         "autoTransitionStatus": null,
         "autoTransitionFromStatuses": [
           "To Do"
+        ],
+        "prCreatedTransitionStatus": "In Code Review",
+        "prCreatedTransitionFromStatuses": [
+          "*"
         ]
       },
       "slack": {
@@ -1000,6 +1016,10 @@
         "autoTransitionStatus": null,
         "autoTransitionFromStatuses": [
           "To Do"
+        ],
+        "prCreatedTransitionStatus": "In Code Review",
+        "prCreatedTransitionFromStatuses": [
+          "*"
         ]
       },
       "slack": {
@@ -1223,6 +1243,10 @@
         "autoTransitionStatus": null,
         "autoTransitionFromStatuses": [
           "To Do"
+        ],
+        "prCreatedTransitionStatus": "In Code Review",
+        "prCreatedTransitionFromStatuses": [
+          "*"
         ]
       },
       "slack": {
@@ -1453,6 +1477,10 @@
         "autoTransitionStatus": null,
         "autoTransitionFromStatuses": [
           "To Do"
+        ],
+        "prCreatedTransitionStatus": "In Code Review",
+        "prCreatedTransitionFromStatuses": [
+          "*"
         ]
       },
       "slack": {
@@ -1688,6 +1716,10 @@
         "autoTransitionStatus": null,
         "autoTransitionFromStatuses": [
           "To Do"
+        ],
+        "prCreatedTransitionStatus": "In Code Review",
+        "prCreatedTransitionFromStatuses": [
+          "*"
         ]
       },
       "slack": {
@@ -1916,6 +1948,10 @@
         "autoTransitionStatus": null,
         "autoTransitionFromStatuses": [
           "To Do"
+        ],
+        "prCreatedTransitionStatus": "In Code Review",
+        "prCreatedTransitionFromStatuses": [
+          "*"
         ]
       },
       "slack": {
@@ -2175,6 +2211,10 @@
         "autoTransitionStatus": "In Progress",
         "autoTransitionFromStatuses": [
           "To Do"
+        ],
+        "prCreatedTransitionStatus": "In Code Review",
+        "prCreatedTransitionFromStatuses": [
+          "*"
         ]
       },
       "slack": {
@@ -2397,6 +2437,10 @@
         "autoTransitionStatus": null,
         "autoTransitionFromStatuses": [
           "To Do"
+        ],
+        "prCreatedTransitionStatus": "In Code Review",
+        "prCreatedTransitionFromStatuses": [
+          "*"
         ]
       },
       "slack": {
@@ -2618,6 +2662,10 @@
         "autoTransitionStatus": null,
         "autoTransitionFromStatuses": [
           "To Do"
+        ],
+        "prCreatedTransitionStatus": "In Code Review",
+        "prCreatedTransitionFromStatuses": [
+          "*"
         ]
       },
       "slack": {
@@ -2882,6 +2930,10 @@
         "autoTransitionStatus": null,
         "autoTransitionFromStatuses": [
           "To Do"
+        ],
+        "prCreatedTransitionStatus": "In Code Review",
+        "prCreatedTransitionFromStatuses": [
+          "*"
         ]
       },
       "slack": {

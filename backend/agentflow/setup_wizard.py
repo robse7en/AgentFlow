@@ -352,6 +352,9 @@ async def jira(io, raw: dict, transport: httpx.BaseTransport | None = None) -> N
     status = io.ask("   Move the ticket to this status when the Architect starts ('-' for never)",
                     section.get("autoTransitionStatus") or "-")
     section["autoTransitionStatus"] = None if status == "-" else status
+    review = io.ask("   Move the ticket to this status when its pull request is created ('-' for never)",
+                    section.get("prCreatedTransitionStatus", "In Code Review") or "-")
+    section["prCreatedTransitionStatus"] = None if review == "-" else review
     if not cloud:
         io.say("   The official Atlassian MCP is Jira Cloud only: add a Jira MCP to each harness by hand "
                "(README, \"MCP prerequisites\")")

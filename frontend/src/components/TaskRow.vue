@@ -55,7 +55,7 @@ const when = computed(() => {
     <!-- The state by shape and colour, so it reads without motion too. -->
     <span class="glyph" :class="state" aria-hidden="true">
       <template v-if="state === 'running'">
-        <svg class="ring" width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M22 2.5a19.5 19.5 0 0 1 19.5 19.5" /></svg>
+        <svg class="ring" width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle class="ring-track" cx="22" cy="22" r="20.5" /><circle class="ring-arc" cx="22" cy="22" r="20.5" /></svg>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z" /></svg>
       </template>
       <svg v-else-if="state === 'waiting'" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg>
@@ -143,7 +143,11 @@ const when = computed(() => {
 .glyph.waiting, .glyph.attention { background: var(--warn-soft); color: var(--warn); }
 .glyph.done { background: var(--ok-soft); color: var(--ok); }
 .glyph.failed { background: var(--danger-soft); color: var(--danger); }
-.glyph .ring { position: absolute; inset: 0; animation: spin 1.1s linear infinite; }
+/* A loading spinner around a running glyph: a faint full track, and an arc that spins while it
+   grows and shrinks, so the row reads as busy at a glance. */
+.glyph .ring { position: absolute; inset: 0; animation: spin 1.6s linear infinite; }
+.glyph .ring-track { opacity: 0.22; }
+.glyph .ring-arc { stroke-dasharray: 96 200; animation: ring-dash 1.4s ease-in-out infinite; }
 
 .key {
   position: relative; z-index: 2; display: inline-flex; align-items: center; gap: 0.4rem; min-height: 44px; padding: 0 0.85rem;
@@ -204,7 +208,13 @@ a.key:hover { background: var(--accent-border); transform: translateY(-2px); tex
 @keyframes row-in { from { opacity: 0; transform: translateX(-14px); } }
 @keyframes shimmer { to { background-position: -200% 0; } }
 @keyframes spin { to { transform: rotate(360deg); } }
+/* Circumference of r=20.5 is ~129: the arc starts as a dot, stretches to ~3/4, then its tail catches up. */
+@keyframes ring-dash {
+  0% { stroke-dasharray: 1 200; stroke-dashoffset: 0; }
+  50% { stroke-dasharray: 96 200; stroke-dashoffset: -32; }
+  100% { stroke-dasharray: 96 200; stroke-dashoffset: -127; }
+}
 @media (prefers-reduced-motion: reduce) {
-  .task-row, .glyph .ring, .seg { animation: none !important; transition: none; }
+  .task-row, .glyph .ring, .glyph .ring-arc, .seg { animation: none !important; transition: none; }
 }
 </style>

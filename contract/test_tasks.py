@@ -23,6 +23,32 @@ def human(backend):
     return backend.human()
 
 
+def test_cost_estimate_for_a_new_task(launch):
+    # A fresh backend: no run history, so every stage says there is not enough of it.
+    with launch(STUB_MANUAL="1") as fresh:
+        human = fresh.human()
+        direct = human.ok("POST", "/api/tasks/cost-estimate", json={"implementationMode": "direct"})
+        assert direct["implementationMode"] == "direct"
+        assert [(s["key"], s["label"], s["harness"]) for s in direct["stages"]] == [
+            ("architect", "Architect", "stub"), ("implementer", "Implementer", "stub"),
+            ("code_review", "Code Review", "stub"), ("security_review", "Security Review", "stub"),
+            ("final_architect", "Final Architect Verification", "stub")]
+        assert direct["stages"][0]["estimate"] == {"unit": "usd", "runs": 0, "enough": False, "typical": None,
+                                                   "high": None, "costKind": None}
+        assert direct["missing"] == [s["label"] for s in direct["stages"]]
+        assert direct["onePass"] == {"usd": None, "tokens": None} and direct["perWorker"] is None
+
+        # The form's overrides decide the planner, as they do when the task is created.
+        parallel = human.ok("POST", "/api/tasks/cost-estimate", json={
+            "implementationMode": "parallel", "agentOverrides": {"orchestrator": {"harness": "stub"}}})
+        assert [(s["key"], s["label"]) for s in parallel["stages"]][1:3] == [
+            ("orchestrator", "Orchestrator"), ("worker", "Worker")]
+        assert parallel["perWorker"] == {"usd": None, "tokens": None}
+        assert human.ok("POST", "/api/tasks/cost-estimate", json={})["implementationMode"] == "direct"
+        golden.check_shape("cost-estimate", parallel)
+        assert human.post("/api/tasks/cost-estimate", json={"implementationMode": "serial"}).status_code == 422
+
+
 def test_create_makes_a_worktree_on_a_task_branch(human, repo):
     key = new_key("TK")
     snap = human.create_task(key, repo, projectRelativePath="src", additionalContext="ctx")

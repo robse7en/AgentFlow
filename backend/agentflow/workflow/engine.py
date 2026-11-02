@@ -64,6 +64,7 @@ from . import workers, worker_prompts
 from . import assurance
 from . import review_loop
 from . import finding_code
+from . import estimates
 from .screen_tracking import ScreenTracker
 from .usage import UsagePending, UsageReport, collect_usage, cost_kind as _cost_kind, prepare_baseline, run_usage
 from .attention import attention_items
@@ -315,6 +316,12 @@ class WorkflowEngine:
             node = self._node(task, wf.IMPLEMENTER)
             override = None
         role = node.role or ""
+        return self._resolve_role_config(role, (
+            task.agent_overrides.get(role) if task.agent_overrides else None, node.config_override or None,
+            override.model_dump(exclude_none=True) if override else None))
+
+    def _resolve_role_config(self, role: str, layers) -> dict[str, Any]:
+        """A role's configuration with the task, stage and request layers (any may be None) applied in order."""
         base = self.config.agents.for_role(role)
         resolved: dict[str, Any] = {"harness": base.harness, "model": base.model, "reasoning": base.reasoning}
         explicit_model = False
@@ -328,8 +335,7 @@ class WorkflowEngine:
             else:
                 route_reason = "Copilot preference unavailable; configured role fallback"
         routed_harness = resolved["harness"]
-        for layer in (task.agent_overrides.get(role) if task.agent_overrides else None, node.config_override or None,
-                      override.model_dump(exclude_none=True) if override else None):
+        for layer in layers:
             if layer:
                 route_reason = "Explicit task or stage configuration"
                 for field in ("harness", "model", "reasoning"):
@@ -3454,6 +3460,51 @@ class WorkflowEngine:
             workspace = self.workspace(task)
         return workspace.jira_issue()
 
+    @staticmethod
+    def _estimate_samples(session: Session) -> dict[tuple[str, str | None, str | None], list[dict[str, Any]]]:
+        """Usage records of every finished run, by (stage, harness, model), most recent first:
+        what `estimates.estimate` reads."""
+        rows = session.execute(
+            select(WorkflowNode.key, NodeRun.harness, NodeRun.model, RunEvidence.usage)
+            .join(NodeRun, NodeRun.node_id == WorkflowNode.id).join(RunEvidence, RunEvidence.run_id == NodeRun.id)
+            .where(NodeRun.state.in_([NodeState.COMPLETED, NodeState.FAILED]))
+            .order_by(NodeRun.completed_at.desc(), NodeRun.id.desc())).all()
+        groups: dict[tuple[str, str | None, str | None], list[dict[str, Any]]] = {}
+        for key, harness, model, usage in rows:
+            if isinstance(usage, dict):
+                groups.setdefault((estimates.stage_key(key), harness, model), []).append(usage)
+        return groups
+
+    def cost_estimate(self, implementation_mode: str | None, agent_overrides: dict[str, AgentOverride]) -> dict[str, Any]:
+        """What a new task would cost on a route (New Task form), from past runs of each of its stages
+        with the agents it would get: the configured ones under the form's overrides."""
+        mode = implementation_mode or self.config.workflow.implementation_mode
+        layers = {role: value.model_dump(exclude_none=True) for role, value in agent_overrides.items()}
+        planner = wf.planner_role(self.config, layers)
+        specs = {spec.key: spec for spec in self.spec.nodes}
+        stages: list[tuple[str, str, str]] = []  # (stage, label, role), in workflow order
+        for spec_node in self.spec.nodes:
+            if spec_node.kind != NodeKind.AGENT:
+                continue
+            if spec_node.key == wf.ORCHESTRATOR:
+                if mode == "direct":
+                    continue
+                label = wf.ARCHITECT_PLANNING_LABEL if planner == Role.ARCHITECT else spec_node.label
+                stages.append((spec_node.key, label, planner))
+                stages.append((estimates.WORKER_STAGE, "Worker", Role.IMPLEMENTER))
+            else:
+                stages.append((spec_node.key, specs[spec_node.key].label, spec_node.role))
+        with self.db.session() as session:
+            samples = self._estimate_samples(session)
+        route = []
+        for key, label, role in stages:
+            cfg = self._resolve_role_config(str(role), (layers.get(str(role)),))
+            route.append({"key": key, "label": label, "harness": cfg["harness"], "model": cfg["model"],
+                          "billingMode": cfg["billingMode"],
+                          "estimate": estimates.estimate(samples.get((key, cfg["harness"], cfg["model"]), []),
+                                                         cfg["billingMode"])})
+        return {"implementationMode": mode, **estimates.route(route)}
+
     def snapshot(self, jira_key: str) -> dict[str, Any]:
         with self.db.session() as session:
             task = self._load_task(session, jira_key)
@@ -3490,6 +3541,7 @@ class WorkflowEngine:
             specs = {spec.key: spec for spec in self.spec.nodes}
             order = {key: index for index, key in enumerate(specs)}
             items = {item.node_id: item for item in workers.work_items(session, task)}
+            samples = self._estimate_samples(session)
             for node in sorted(task.nodes, key=lambda n: order.get(n.key, len(order))):
                 node_runs = runs_by_node.get(node.id, [])
                 last = node_runs[-1] if node_runs else None
@@ -3520,6 +3572,9 @@ class WorkflowEngine:
                     "findingsCount": len(node_findings), "blockingCount": sum(1 for f in node_findings if f.blocking),
                     "runCount": len(node_runs),
                     "usage": self._usage_summary(node_runs, evidence_by_run),
+                    "costEstimate": estimates.estimate(
+                        samples.get((estimates.stage_key(node.key), effective["harness"], effective["model"]), []),
+                        effective["billingMode"]) if effective else None,
                     "lastRun": {
                         "id": last.id, "runNumber": last.run_number, "state": last.state, "harness": last.harness, "model": last.model,
                         "reasoning": last.reasoning, "runDir": last.run_dir, "promptPath": last.prompt_path, "resultPath": last.result_path,

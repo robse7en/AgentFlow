@@ -83,6 +83,11 @@ reservation. Warnings default to 80%. Missing completed-run costs pause further 
 when a budget is enabled. A paused stage remains Ready and explains the next action; use Run after
 correcting costs or changing limits. Subscription launches are exempt from API budgets.
 
+Cost estimates (README, [Cost estimates](../README.md#cost-estimates)) are display only. They show
+the median and 90th-percentile cost of a stage's last runs on the Run control and in the New Task
+form. They never feed `launchReserveUsd`, a budget check or an approval: the fixed reserve still
+applies to every metered launch.
+
 These are launch controls, **not hard provider spend caps**: an already-running agent may exceed
 its reservation. Budgets count only provider-billed costs of metered runs; list-price estimates
 never count. Missing usage/model/cost stays unknown, never zero.

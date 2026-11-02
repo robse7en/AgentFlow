@@ -1,11 +1,15 @@
 <script lang="ts" setup>
 import { computed, ref } from 'vue';
 import AgentReadiness from '@/components/AgentReadiness.vue';
+import { describeEstimate } from '@/estimates';
 import { useTaskStore } from '@/stores/tasks';
+import { useUsdToNzdRate } from '@/usage';
 import type { WorkflowNodeDto } from '@/api/types';
 
 const props = defineProps<{ taskKey: string; node: WorkflowNodeDto }>();
 const store = useTaskStore();
+const rate = useUsdToNzdRate();
+const estimate = computed(() => props.node.costEstimate ? describeEstimate(props.node.costEstimate, rate.value) : '');
 const readinessConfirmed = ref(false);
 const needsReadiness = computed(() => !props.node.lastRun || !props.node.effectiveConfig?.harnessAvailable);
 const launchReady = computed(() => !needsReadiness.value || readinessConfirmed.value);
@@ -39,6 +43,7 @@ const run = async (): Promise<void> => {
                 {{ node.effectiveConfig.model ?? 'default model' }}. Enter a reason.</span>
             <input v-model="reason" maxlength="1000" :disabled="busy" />
         </label>
+        <p v-if="estimate" class="hint small estimate">{{ estimate }}</p>
         <button class="sm primary" :disabled="busy || !launchReady || (node.effectiveConfig?.requiresMeteredApproval && !reason.trim())"
             @click="run">
             {{ node.effectiveConfig?.requiresMeteredApproval ? 'Approve API launch' : node.state === 'FAILED' ? 'Retry' : 'Run' }}
@@ -49,4 +54,5 @@ const run = async (): Promise<void> => {
 
 <style scoped>
 .launch { max-width: 100%; }
+.estimate { margin: 0.25rem 0; }
 </style>

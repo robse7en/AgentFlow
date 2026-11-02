@@ -8,6 +8,14 @@ tested. The frontend and Python package versions are independent of desktop vers
 Each version has a local annotated `v<version>` Git tag at the source checkpoint
 shown below. Tags must be pushed separately to share them with other checkouts.
 
+## Unreleased
+
+- Cost estimates from past runs: a stage's Run control shows its typical and high cost (the median
+  and 90th percentile of its last 20 runs with the same harness and model). The New Task form shows
+  what the chosen route would cost for one pass, plus what each worker and each fix round adds.
+  Subscription harnesses are shown in tokens. Display only: budgets and launch reserves are
+  unchanged. See [Cost estimates](README.md#cost-estimates).
+
 ## 1.1.11 - 2026-11-03
 
 Source: the version commit tagged `v1.1.11` on `main`.

@@ -7,6 +7,7 @@ use std::path::Path;
 
 use serde_json::{Map, Value, json};
 
+use super::estimates;
 use super::rules;
 use super::spec::{self, NodeSpec};
 use super::states::{NodeKind, NodeState, TaskStatus};
@@ -21,6 +22,9 @@ use crate::db::{
 use crate::harness::HarnessRegistry;
 use crate::paths::py_str;
 use crate::workspace::TaskWorkspace;
+
+/// Finished runs' usage records by (stage, harness, model), most recent first.
+pub(crate) type EstimateSamples = HashMap<(String, Option<String>, Option<String>), Vec<Value>>;
 
 /// `_iso`: a stored (UTC) time in isoformat with an offset, or null.
 pub fn iso(time: Option<&DbTime>) -> Value {
@@ -74,14 +78,27 @@ pub fn resolve_agent_config(
         (node, override_layer)
     };
     let role = node.role.clone().unwrap_or_default();
-    let base = config.agents.for_role(config_role(&role).unwrap_or(ConfigRole::Architect));
+    let task_layer = task.agent_overrides.0.get(&role).and_then(Value::as_object).cloned();
+    let node_layer = node.config_override.0.as_object().cloned();
+    resolve_role_config(config, harnesses, &role, &[task_layer.as_ref(), node_layer.as_ref(), override_layer])
+}
+
+/// A role's configuration with the task, stage and request layers (any may be None) applied in
+/// order.
+pub fn resolve_role_config(
+    config: &Config,
+    harnesses: &HarnessRegistry,
+    role: &str,
+    layers: &[Option<&Map<String, Value>>],
+) -> Map<String, Value> {
+    let base = config.agents.for_role(config_role(role).unwrap_or(ConfigRole::Architect));
     let mut resolved = Map::new();
     resolved.insert("harness".into(), json!(base.harness));
     resolved.insert("model".into(), json!(base.model));
     resolved.insert("reasoning".into(), json!(base.reasoning));
     let mut explicit_model = false;
     let controls = &config.workflow.cost_controls;
-    let copilot_role = config_role(&role).is_some_and(|r| controls.copilot_roles.contains(&r));
+    let copilot_role = config_role(role).is_some_and(|r| controls.copilot_roles.contains(&r));
     let mut route_reason = "Configured role assignment";
     if copilot_role {
         let preferred = config.harnesses.get("copilot");
@@ -96,9 +113,7 @@ pub fn resolve_agent_config(
         }
     }
     let routed_harness = resolved["harness"].clone();
-    let task_layer = task.agent_overrides.0.get(&role).and_then(Value::as_object).cloned();
-    let node_layer = node.config_override.0.as_object().cloned();
-    for layer in [task_layer.as_ref(), node_layer.as_ref(), override_layer].into_iter().flatten() {
+    for layer in layers.iter().copied().flatten() {
         if layer.is_empty() {
             continue;
         }
@@ -225,6 +240,99 @@ impl Engine {
     }
 
     /// The full task view the UI renders (and every task-changing route returns).
+    /// Usage records of every finished run, by (stage, harness, model), most recent first: what
+    /// `estimates::estimate` reads.
+    pub(crate) fn estimate_samples(&self) -> Result<EstimateSamples, WorkflowError> {
+        let rows = self.db.session(|tx| {
+            let mut query = tx.prepare(
+                "SELECT workflow_nodes.key, node_runs.harness, node_runs.model, run_evidence.usage \
+                 FROM workflow_nodes JOIN node_runs ON node_runs.node_id = workflow_nodes.id \
+                 JOIN run_evidence ON run_evidence.run_id = node_runs.id \
+                 WHERE node_runs.state IN ('COMPLETED', 'FAILED') \
+                 ORDER BY node_runs.completed_at DESC, node_runs.id DESC",
+            )?;
+            query
+                .query_map([], |row| {
+                    Ok((
+                        row.get::<_, String>(0)?,
+                        row.get::<_, Option<String>>(1)?,
+                        row.get::<_, Option<String>>(2)?,
+                        row.get::<_, Option<String>>(3)?,
+                    ))
+                })?
+                .collect::<rusqlite::Result<Vec<_>>>()
+        })?;
+        let mut groups = EstimateSamples::new();
+        for (key, harness, model, usage) in rows {
+            let usage: Option<Value> = usage.and_then(|text| serde_json::from_str(&text).ok());
+            if let Some(usage) = usage.filter(Value::is_object) {
+                groups.entry((estimates::stage_key(&key).to_string(), harness, model)).or_default().push(usage);
+            }
+        }
+        Ok(groups)
+    }
+
+    /// What a new task would cost on a route (New Task form), from past runs of each of its
+    /// stages with the agents it would get: the configured ones under the form's overrides.
+    pub fn cost_estimate(
+        &self,
+        implementation_mode: Option<&str>,
+        overrides: &indexmap::IndexMap<String, super::lifecycle::AgentOverride>,
+    ) -> Result<Value, WorkflowError> {
+        let config = self.config();
+        let harnesses = self.harnesses();
+        let mode = implementation_mode
+            .map(String::from)
+            .unwrap_or_else(|| json!(config.workflow.implementation_mode).as_str().unwrap_or_default().to_string());
+        let layers: Map<String, Value> =
+            overrides.iter().map(|(role, o)| (role.clone(), Value::Object(o.without_nones()))).collect();
+        let planner = spec::planner_role(&config, &layers);
+        let mut stages: Vec<(&str, &str, String)> = Vec::new(); // (stage, label, role), in workflow order
+        for spec_node in spec::nodes(&config) {
+            if spec_node.kind != NodeKind::Agent {
+                continue;
+            }
+            if spec_node.key == spec::ORCHESTRATOR {
+                if mode == "direct" {
+                    continue;
+                }
+                let label = if planner == super::states::Role::Architect {
+                    spec::ARCHITECT_PLANNING_LABEL
+                } else {
+                    spec_node.label
+                };
+                stages.push((spec_node.key, label, planner.as_str().to_string()));
+                stages.push((estimates::WORKER_STAGE, "Worker", super::states::Role::Implementer.as_str().to_string()));
+            } else {
+                let role = spec_node.role.map(|r| r.as_str().to_string()).unwrap_or_default();
+                stages.push((spec_node.key, spec_node.label, role));
+            }
+        }
+        let samples = self.estimate_samples()?;
+        let route = stages
+            .into_iter()
+            .map(|(key, label, role)| {
+                let layer = layers.get(&role).and_then(Value::as_object);
+                let cfg = resolve_role_config(&config, &harnesses, &role, &[layer]);
+                let group = (
+                    key.to_string(),
+                    cfg["harness"].as_str().map(String::from),
+                    cfg["model"].as_str().map(String::from),
+                );
+                let billing = cfg["billingMode"].as_str().unwrap_or_default();
+                json!({"key": key, "label": label, "harness": cfg["harness"], "model": cfg["model"],
+                       "billingMode": cfg["billingMode"],
+                       "estimate": estimates::estimate(samples.get(&group).map_or(&[][..], Vec::as_slice), billing)})
+            })
+            .collect();
+        let mut result = Map::new();
+        result.insert("implementationMode".into(), json!(mode));
+        if let Value::Object(route) = estimates::route(route) {
+            result.extend(route);
+        }
+        Ok(Value::Object(result))
+    }
+
     pub fn snapshot(&self, jira_key: &str) -> Result<Value, WorkflowError> {
         let loaded = self.load_snapshot(jira_key)?;
         let config = self.config();
@@ -259,6 +367,7 @@ impl Engine {
         let specs: Vec<NodeSpec> = spec::nodes(&config);
         let order = |key: &str| specs.iter().position(|s| s.key == key).unwrap_or(specs.len());
         let items: HashMap<i64, &ImplementationWorkItemRow> = loaded.items.iter().map(|i| (i.node_id, i)).collect();
+        let samples = self.estimate_samples()?;
         let mut sorted = nodes.clone();
         sorted.sort_by_key(|n| order(&n.key));
         let mut node_values = Vec::new();
@@ -318,6 +427,17 @@ impl Engine {
                 "findingsCount": node_findings.len(), "blockingCount": node_findings.iter().filter(|f| f.blocking).count(),
                 "runCount": node_runs.len(),
                 "usage": rules::usage_summary(&node_runs, &evidence_by_run),
+                "costEstimate": effective.as_ref().map(|cfg| {
+                    let group = (
+                        estimates::stage_key(&node.key).to_string(),
+                        cfg["harness"].as_str().map(String::from),
+                        cfg["model"].as_str().map(String::from),
+                    );
+                    estimates::estimate(
+                        samples.get(&group).map_or(&[][..], Vec::as_slice),
+                        cfg["billingMode"].as_str().unwrap_or_default(),
+                    )
+                }),
                 "lastRun": last.map(|last| json!({
                     "id": last.id, "runNumber": last.run_number, "state": last.state, "harness": last.harness, "model": last.model,
                     "reasoning": last.reasoning, "runDir": last.run_dir, "promptPath": last.prompt_path, "resultPath": last.result_path,

@@ -161,6 +161,23 @@ retry.
   Ctrl-C, looks the same as a crash and is retried. Cancel the task, or leave the setting at 0,
   if you close agents by hand.
 
+### Cost estimates
+
+AgentFlow estimates what a stage usually costs from its past runs. An estimate is a guide only:
+budgets, launch reserves and approvals never use it.
+
+- **Where:** a stage's Run, Retry and Approve API launch controls show *Typical run …, up to …
+  (N past runs)*. The New Task form shows, for the chosen route and agents, one pass through
+  every stage, plus what each worker and each review round that sends fixes back adds. How many
+  of those there will be isn't known upfront.
+- **From what:** the last 20 finished runs (completed or failed, since failed runs are paid for
+  too) of the same stage with the same harness and model, across all tasks. Workers share one
+  stage. *Typical* is the median and *up to* the 90th percentile. With fewer than 3 such runs,
+  the stage says there isn't enough history and is left out of the route totals.
+- **Units:** a subscription harness is shown in tokens, since its runs cost nothing extra. Any
+  other harness is shown in money, marked when the figures are list-price estimates rather than
+  provider-billed amounts.
+
 Key rules it enforces:
 
 - one Jira ticket = one primary Git worktree plus isolated worker worktrees — agents never

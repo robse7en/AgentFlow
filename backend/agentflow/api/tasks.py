@@ -217,6 +217,18 @@ async def create_task(req: CreateTaskRequest, state: AppState = Depends(get_stat
         raise http_error(exc)
 
 
+class CostEstimateRequest(BaseModel):
+    implementation_mode: Literal["direct", "parallel"] | None = Field(None, alias="implementationMode")
+    agent_overrides: dict[str, AgentOverride] = Field(default_factory=dict, alias="agentOverrides")
+    model_config = ConfigDict(populate_by_name=True)
+
+
+@router.post("/cost-estimate")
+def cost_estimate(req: CostEstimateRequest, state: AppState = Depends(get_state)):
+    """What a new task would cost on a route, from past runs (display only)."""
+    return state.engine.cost_estimate(req.implementation_mode, req.agent_overrides)
+
+
 @router.post("/validate-repository")
 async def validate_repository(req: ValidateRepositoryRequest, state: AppState = Depends(get_state)):
     try:

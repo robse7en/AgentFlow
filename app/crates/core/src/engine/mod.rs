@@ -11,6 +11,7 @@ pub mod completion;
 mod consolidate;
 pub mod controls;
 pub mod decisions;
+pub mod estimates;
 pub mod finding_code;
 pub mod heartbeats;
 pub mod instruction_ui;

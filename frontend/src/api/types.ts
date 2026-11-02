@@ -108,7 +108,38 @@ export interface WorkflowNodeDto {
   runCount: number
   lastRun: NodeRunSummary | null
   usage: UsageSummary | null
+  /** What one run of this stage usually costs, from past runs (display only); absent from older backends. */
+  costEstimate?: CostEstimate | null
   description: string
+}
+
+/** A stage's cost from its last (up to 20) finished runs with the same harness and model: USD, or
+ *  tokens on a subscription harness. `typical` is the median, `high` the 90th percentile; both are
+ *  null until `enough` (3+) runs exist. */
+export interface CostEstimate {
+  unit: 'usd' | 'tokens'
+  runs: number
+  enough: boolean
+  typical: number | null
+  high: number | null
+  /** USD only: provider-billed, list-price estimates, or a mix of both. */
+  costKind: 'billed' | 'estimated' | 'mixed' | null
+}
+
+export interface EstimateTotals {
+  usd: { typical: number; high: number } | null
+  tokens: { typical: number; high: number } | null
+}
+
+/** POST /api/tasks/cost-estimate: what a new task would cost on a route. */
+export interface RouteEstimate {
+  implementationMode: 'direct' | 'parallel'
+  stages: { key: string; label: string; harness: string; model: string | null; billingMode: string; estimate: CostEstimate }[]
+  onePass: EstimateTotals
+  perWorker: EstimateTotals | null
+  perFixRound: EstimateTotals
+  /** Stages without enough history; left out of the totals. */
+  missing: string[]
 }
 
 export interface Finding {

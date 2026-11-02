@@ -1,5 +1,6 @@
 import type {
   AgentOverride,
+  RouteEstimate,
   AnswerBody,
   BudgetGroup,
   MeteredApproval,
@@ -106,6 +107,8 @@ export const api = {
   task: (key: string) => request<TaskSnapshot>(`/api/tasks/${encodeURIComponent(key)}`),
   createTask: (payload: CreateTaskPayload, operationId?: string) =>
     post<TaskSnapshot>('/api/tasks', payload, operationId),
+  costEstimate: (implementationMode: 'direct' | 'parallel' | undefined, agentOverrides: Record<string, AgentOverride>) =>
+    post<RouteEstimate>('/api/tasks/cost-estimate', { implementationMode, agentOverrides }),
   validateRepository: (path: string, baseBranch?: string | null, projectRelativePath?: string | null) =>
     post<RepositoryValidation>('/api/tasks/validate-repository', { path, baseBranch, projectRelativePath }),
   cancelTask: (key: string) => post<TaskSnapshot>(`/api/tasks/${encodeURIComponent(key)}/cancel`),

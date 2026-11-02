@@ -1,0 +1,906 @@
+[
+  {
+    "name": "empty",
+    "function": "estimate",
+    "samples": [],
+    "billingMode": "metered",
+    "result": {
+      "unit": "usd",
+      "runs": 0,
+      "enough": false,
+      "typical": null,
+      "high": null,
+      "costKind": null
+    }
+  },
+  {
+    "name": "too-few",
+    "function": "estimate",
+    "samples": [
+      {
+        "costUsd": 0.5,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 0.25,
+        "totalTokens": null
+      }
+    ],
+    "billingMode": "metered",
+    "result": {
+      "unit": "usd",
+      "runs": 2,
+      "enough": false,
+      "typical": null,
+      "high": null,
+      "costKind": null
+    }
+  },
+  {
+    "name": "three",
+    "function": "estimate",
+    "samples": [
+      {
+        "costUsd": 0.75,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 0.25,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 0.5,
+        "totalTokens": null
+      }
+    ],
+    "billingMode": "metered",
+    "result": {
+      "unit": "usd",
+      "runs": 3,
+      "enough": true,
+      "typical": 0.5,
+      "high": 0.75,
+      "costKind": "billed"
+    }
+  },
+  {
+    "name": "odd-ranks",
+    "function": "estimate",
+    "samples": [
+      {
+        "costUsd": 0.9,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 0.1,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 0.5,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 0.3,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 0.7,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 0.2,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 0.8,
+        "totalTokens": null
+      }
+    ],
+    "billingMode": "unknown",
+    "result": {
+      "unit": "usd",
+      "runs": 7,
+      "enough": true,
+      "typical": 0.5,
+      "high": 0.9,
+      "costKind": "billed"
+    }
+  },
+  {
+    "name": "even-ranks",
+    "function": "estimate",
+    "samples": [
+      {
+        "costUsd": 0.125,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 0.25,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 0.375,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 0.5,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 0.625,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 0.75,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 0.875,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 1.0,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 1.125,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 1.25,
+        "totalTokens": null
+      }
+    ],
+    "billingMode": "metered",
+    "result": {
+      "unit": "usd",
+      "runs": 10,
+      "enough": true,
+      "typical": 0.625,
+      "high": 1.125,
+      "costKind": "billed"
+    }
+  },
+  {
+    "name": "only-recent-twenty",
+    "function": "estimate",
+    "samples": [
+      {
+        "costUsd": 1.5,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 1.5,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 1.5,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 1.5,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 1.5,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 1.5,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 1.5,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 1.5,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 1.5,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 1.5,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 1.5,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 1.5,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 1.5,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 1.5,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 1.5,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 1.5,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 1.5,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 1.5,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 1.5,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 1.5,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 99.0,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 99.0,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 99.0,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 99.0,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 99.0,
+        "totalTokens": null
+      }
+    ],
+    "billingMode": "metered",
+    "result": {
+      "unit": "usd",
+      "runs": 20,
+      "enough": true,
+      "typical": 1.5,
+      "high": 1.5,
+      "costKind": "billed"
+    }
+  },
+  {
+    "name": "partial-and-missing-skipped",
+    "function": "estimate",
+    "samples": [
+      null,
+      {
+        "costUsd": null,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 50.0,
+        "totalTokens": null,
+        "partial": true
+      },
+      {
+        "costUsd": 0.125,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 0.375,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 0.25,
+        "totalTokens": null
+      }
+    ],
+    "billingMode": "metered",
+    "result": {
+      "unit": "usd",
+      "runs": 3,
+      "enough": true,
+      "typical": 0.25,
+      "high": 0.375,
+      "costKind": "billed"
+    }
+  },
+  {
+    "name": "list-price",
+    "function": "estimate",
+    "samples": [
+      {
+        "costUsd": 0.5,
+        "costKind": "estimated",
+        "totalTokens": null
+      },
+      {
+        "costUsd": 1.25,
+        "costKind": "estimated",
+        "totalTokens": null
+      },
+      {
+        "costUsd": 0.75,
+        "costKind": "estimated",
+        "totalTokens": null
+      }
+    ],
+    "billingMode": "metered",
+    "result": {
+      "unit": "usd",
+      "runs": 3,
+      "enough": true,
+      "typical": 0.75,
+      "high": 1.25,
+      "costKind": "estimated"
+    }
+  },
+  {
+    "name": "mixed-kinds",
+    "function": "estimate",
+    "samples": [
+      {
+        "costUsd": 0.5,
+        "costKind": "estimated",
+        "totalTokens": null
+      },
+      {
+        "costUsd": 1.25,
+        "costKind": "billed",
+        "totalTokens": null
+      },
+      {
+        "costUsd": 0.75,
+        "totalTokens": null
+      }
+    ],
+    "billingMode": "metered",
+    "result": {
+      "unit": "usd",
+      "runs": 3,
+      "enough": true,
+      "typical": 0.75,
+      "high": 1.25,
+      "costKind": "mixed"
+    }
+  },
+  {
+    "name": "subscription-tokens",
+    "function": "estimate",
+    "samples": [
+      {
+        "costUsd": 0.5,
+        "costKind": "estimated",
+        "totalTokens": 12000
+      },
+      {
+        "costUsd": 0.5,
+        "costKind": "estimated",
+        "totalTokens": 4000
+      },
+      {
+        "costUsd": 0.5,
+        "costKind": "estimated",
+        "totalTokens": 30000
+      },
+      {
+        "costUsd": 0.5,
+        "costKind": "estimated",
+        "totalTokens": 8000
+      }
+    ],
+    "billingMode": "subscription",
+    "result": {
+      "unit": "tokens",
+      "runs": 4,
+      "enough": true,
+      "typical": 8000,
+      "high": 30000,
+      "costKind": null
+    }
+  },
+  {
+    "name": "subscription-without-tokens",
+    "function": "estimate",
+    "samples": [
+      {
+        "costUsd": 0.5,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 0.5,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 0.5,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 0.5,
+        "totalTokens": null
+      }
+    ],
+    "billingMode": "subscription",
+    "result": {
+      "unit": "tokens",
+      "runs": 0,
+      "enough": false,
+      "typical": null,
+      "high": null,
+      "costKind": null
+    }
+  },
+  {
+    "name": "repeating-decimals",
+    "function": "estimate",
+    "samples": [
+      {
+        "costUsd": 0.1,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 0.2,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 0.30000000000000004,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 0.7,
+        "totalTokens": null
+      },
+      {
+        "costUsd": 1.1,
+        "totalTokens": null
+      }
+    ],
+    "billingMode": "metered",
+    "result": {
+      "unit": "usd",
+      "runs": 5,
+      "enough": true,
+      "typical": 0.30000000000000004,
+      "high": 1.1,
+      "costKind": "billed"
+    }
+  },
+  {
+    "name": "direct-complete",
+    "function": "route",
+    "stages": [
+      {
+        "key": "architect",
+        "label": "Architect",
+        "estimate": {
+          "unit": "usd",
+          "runs": 3,
+          "enough": true,
+          "typical": 0.3,
+          "high": 0.3,
+          "costKind": "billed"
+        }
+      },
+      {
+        "key": "implementer",
+        "label": "Implementer",
+        "estimate": {
+          "unit": "usd",
+          "runs": 3,
+          "enough": true,
+          "typical": 0.2,
+          "high": 0.7,
+          "costKind": "billed"
+        }
+      },
+      {
+        "key": "code_review",
+        "label": "Code Review",
+        "estimate": {
+          "unit": "usd",
+          "runs": 4,
+          "enough": true,
+          "typical": 0.1,
+          "high": 0.1,
+          "costKind": "billed"
+        }
+      },
+      {
+        "key": "security_review",
+        "label": "Security Review",
+        "estimate": {
+          "unit": "usd",
+          "runs": 3,
+          "enough": true,
+          "typical": 0.2,
+          "high": 0.2,
+          "costKind": "billed"
+        }
+      },
+      {
+        "key": "final_architect",
+        "label": "Final Architect Verification",
+        "estimate": {
+          "unit": "usd",
+          "runs": 3,
+          "enough": true,
+          "typical": 0.05,
+          "high": 0.05,
+          "costKind": "billed"
+        }
+      }
+    ],
+    "result": {
+      "stages": [
+        {
+          "key": "architect",
+          "label": "Architect",
+          "estimate": {
+            "unit": "usd",
+            "runs": 3,
+            "enough": true,
+            "typical": 0.3,
+            "high": 0.3,
+            "costKind": "billed"
+          }
+        },
+        {
+          "key": "implementer",
+          "label": "Implementer",
+          "estimate": {
+            "unit": "usd",
+            "runs": 3,
+            "enough": true,
+            "typical": 0.2,
+            "high": 0.7,
+            "costKind": "billed"
+          }
+        },
+        {
+          "key": "code_review",
+          "label": "Code Review",
+          "estimate": {
+            "unit": "usd",
+            "runs": 4,
+            "enough": true,
+            "typical": 0.1,
+            "high": 0.1,
+            "costKind": "billed"
+          }
+        },
+        {
+          "key": "security_review",
+          "label": "Security Review",
+          "estimate": {
+            "unit": "usd",
+            "runs": 3,
+            "enough": true,
+            "typical": 0.2,
+            "high": 0.2,
+            "costKind": "billed"
+          }
+        },
+        {
+          "key": "final_architect",
+          "label": "Final Architect Verification",
+          "estimate": {
+            "unit": "usd",
+            "runs": 3,
+            "enough": true,
+            "typical": 0.05,
+            "high": 0.05,
+            "costKind": "billed"
+          }
+        }
+      ],
+      "onePass": {
+        "usd": {
+          "typical": 0.8500000000000001,
+          "high": 1.35
+        },
+        "tokens": null
+      },
+      "perWorker": null,
+      "perFixRound": {
+        "usd": {
+          "typical": 0.5,
+          "high": 1.0
+        },
+        "tokens": null
+      },
+      "missing": []
+    }
+  },
+  {
+    "name": "parallel-mixed-units",
+    "function": "route",
+    "stages": [
+      {
+        "key": "architect",
+        "label": "Architect",
+        "estimate": {
+          "unit": "usd",
+          "runs": 3,
+          "enough": true,
+          "typical": 0.3,
+          "high": 0.3,
+          "costKind": "billed"
+        }
+      },
+      {
+        "key": "orchestrator",
+        "label": "Architect Planning",
+        "estimate": {
+          "unit": "usd",
+          "runs": 0,
+          "enough": false,
+          "typical": null,
+          "high": null,
+          "costKind": null
+        }
+      },
+      {
+        "key": "worker",
+        "label": "Worker",
+        "estimate": {
+          "unit": "usd",
+          "runs": 3,
+          "enough": true,
+          "typical": 0.2,
+          "high": 0.7,
+          "costKind": "billed"
+        }
+      },
+      {
+        "key": "implementer",
+        "label": "Implementer",
+        "estimate": {
+          "unit": "tokens",
+          "runs": 3,
+          "enough": true,
+          "typical": 200,
+          "high": 300,
+          "costKind": null
+        }
+      },
+      {
+        "key": "code_review",
+        "label": "Code Review",
+        "estimate": {
+          "unit": "usd",
+          "runs": 1,
+          "enough": false,
+          "typical": null,
+          "high": null,
+          "costKind": null
+        }
+      },
+      {
+        "key": "security_review",
+        "label": "Security Review",
+        "estimate": {
+          "unit": "usd",
+          "runs": 3,
+          "enough": true,
+          "typical": 0.2,
+          "high": 0.7,
+          "costKind": "billed"
+        }
+      },
+      {
+        "key": "final_architect",
+        "label": "Final Architect Verification",
+        "estimate": {
+          "unit": "usd",
+          "runs": 0,
+          "enough": false,
+          "typical": null,
+          "high": null,
+          "costKind": null
+        }
+      }
+    ],
+    "result": {
+      "stages": [
+        {
+          "key": "architect",
+          "label": "Architect",
+          "estimate": {
+            "unit": "usd",
+            "runs": 3,
+            "enough": true,
+            "typical": 0.3,
+            "high": 0.3,
+            "costKind": "billed"
+          }
+        },
+        {
+          "key": "orchestrator",
+          "label": "Architect Planning",
+          "estimate": {
+            "unit": "usd",
+            "runs": 0,
+            "enough": false,
+            "typical": null,
+            "high": null,
+            "costKind": null
+          }
+        },
+        {
+          "key": "worker",
+          "label": "Worker",
+          "estimate": {
+            "unit": "usd",
+            "runs": 3,
+            "enough": true,
+            "typical": 0.2,
+            "high": 0.7,
+            "costKind": "billed"
+          }
+        },
+        {
+          "key": "implementer",
+          "label": "Implementer",
+          "estimate": {
+            "unit": "tokens",
+            "runs": 3,
+            "enough": true,
+            "typical": 200,
+            "high": 300,
+            "costKind": null
+          }
+        },
+        {
+          "key": "code_review",
+          "label": "Code Review",
+          "estimate": {
+            "unit": "usd",
+            "runs": 1,
+            "enough": false,
+            "typical": null,
+            "high": null,
+            "costKind": null
+          }
+        },
+        {
+          "key": "security_review",
+          "label": "Security Review",
+          "estimate": {
+            "unit": "usd",
+            "runs": 3,
+            "enough": true,
+            "typical": 0.2,
+            "high": 0.7,
+            "costKind": "billed"
+          }
+        },
+        {
+          "key": "final_architect",
+          "label": "Final Architect Verification",
+          "estimate": {
+            "unit": "usd",
+            "runs": 0,
+            "enough": false,
+            "typical": null,
+            "high": null,
+            "costKind": null
+          }
+        }
+      ],
+      "onePass": {
+        "usd": {
+          "typical": 0.5,
+          "high": 1.0
+        },
+        "tokens": {
+          "typical": 200,
+          "high": 300
+        }
+      },
+      "perWorker": {
+        "usd": {
+          "typical": 0.2,
+          "high": 0.7
+        },
+        "tokens": null
+      },
+      "perFixRound": {
+        "usd": {
+          "typical": 0.2,
+          "high": 0.7
+        },
+        "tokens": {
+          "typical": 200,
+          "high": 300
+        }
+      },
+      "missing": [
+        "Architect Planning",
+        "Code Review",
+        "Final Architect Verification"
+      ]
+    }
+  },
+  {
+    "name": "nothing-known",
+    "function": "route",
+    "stages": [
+      {
+        "key": "architect",
+        "label": "Architect",
+        "estimate": {
+          "unit": "usd",
+          "runs": 0,
+          "enough": false,
+          "typical": null,
+          "high": null,
+          "costKind": null
+        }
+      },
+      {
+        "key": "worker",
+        "label": "Worker",
+        "estimate": {
+          "unit": "usd",
+          "runs": 0,
+          "enough": false,
+          "typical": null,
+          "high": null,
+          "costKind": null
+        }
+      }
+    ],
+    "result": {
+      "stages": [
+        {
+          "key": "architect",
+          "label": "Architect",
+          "estimate": {
+            "unit": "usd",
+            "runs": 0,
+            "enough": false,
+            "typical": null,
+            "high": null,
+            "costKind": null
+          }
+        },
+        {
+          "key": "worker",
+          "label": "Worker",
+          "estimate": {
+            "unit": "usd",
+            "runs": 0,
+            "enough": false,
+            "typical": null,
+            "high": null,
+            "costKind": null
+          }
+        }
+      ],
+      "onePass": {
+        "usd": null,
+        "tokens": null
+      },
+      "perWorker": {
+        "usd": null,
+        "tokens": null
+      },
+      "perFixRound": {
+        "usd": null,
+        "tokens": null
+      },
+      "missing": [
+        "Architect",
+        "Worker"
+      ]
+    }
+  }
+]

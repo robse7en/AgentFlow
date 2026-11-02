@@ -129,6 +129,20 @@ pub struct ValidateRepository {
     project_relative_path: Option<String>,
 }
 
+#[derive(Deserialize)]
+pub struct CostEstimate {
+    #[serde(rename = "implementationMode")]
+    implementation_mode: Option<crate::config::ImplementationMode>,
+    #[serde(rename = "agentOverrides", default)]
+    agent_overrides: indexmap::IndexMap<String, crate::engine::lifecycle::AgentOverride>,
+}
+
+/// What a new task would cost on a route, from past runs (display only).
+pub async fn cost_estimate(State(app): State<Arc<App>>, Body422(body): Body422<CostEstimate>) -> ApiResult {
+    let mode = body.implementation_mode.map(|m| json!(m).as_str().unwrap_or_default().to_string());
+    Ok(Json(app.engine.cost_estimate(mode.as_deref(), &body.agent_overrides)?))
+}
+
 /// Any failure (not a repository, git missing) becomes an actionable check, not an error status.
 pub async fn validate_repository(
     State(app): State<Arc<App>>,

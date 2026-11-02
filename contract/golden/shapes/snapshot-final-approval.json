@@ -159,6 +159,19 @@
       "blockingCount": "number",
       "checkpointSha": "null|str",
       "configOverride": {},
+      "costEstimate": {
+        "anyOf": [
+          {
+            "costKind": "null",
+            "enough": "bool",
+            "high": "null",
+            "runs": "number",
+            "typical": "null",
+            "unit": "str"
+          },
+          "null"
+        ]
+      },
       "description": "str",
       "displayState": "str",
       "effectiveConfig": {

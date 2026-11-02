@@ -2,7 +2,9 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api, ApiError } from '@/api/client'
-import type { AgentOverride, JiraSearchResult, Project, RepositoryValidation } from '@/api/types'
+import type { AgentOverride, JiraSearchResult, Project, RepositoryValidation, RouteEstimate } from '@/api/types'
+import { describeTotals } from '@/estimates'
+import { useUsdToNzdRate } from '@/usage'
 import { useTaskStore } from '@/stores/tasks'
 import { useConfigStore } from '@/stores/config'
 import { useOperationStore } from '@/stores/operations'
@@ -242,6 +244,32 @@ watch(() => [validation.value?.root, form.projectRelativePath, projects.loaded] 
   suggestedFrom.value = suggestion ? (dir || root.replace(/\\/g, '/').split('/').filter(Boolean).pop() || root) : null
 })
 
+// What the chosen route would cost with these agents, from past runs (display only; never a limit).
+const routeEstimate = ref<RouteEstimate | null>(null)
+const rate = useUsdToNzdRate()
+let estimateRequest = 0
+watch([implementationMode, () => JSON.stringify(cleanOverrides(overrides))], async () => {
+  const request = ++estimateRequest
+  try {
+    const estimate = await api.costEstimate(implementationMode.value || undefined, cleanOverrides(overrides))
+    if (request === estimateRequest) routeEstimate.value = estimate
+  } catch {
+    if (request === estimateRequest) routeEstimate.value = null // an older backend has no estimate
+  }
+}, { immediate: true })
+const estimateLines = computed(() => {
+  const estimate = routeEstimate.value
+  if (!estimate) return []
+  const onePass = describeTotals(estimate.onePass, rate.value)
+  const lines = [onePass ? `One pass through every stage: ${onePass}.` : 'No stage has enough past runs for an estimate yet.']
+  const worker = describeTotals(estimate.perWorker, rate.value)
+  if (worker) lines.push(`Each worker adds ${worker}.`)
+  const fixRound = describeTotals(estimate.perFixRound, rate.value)
+  if (fixRound) lines.push(`Each review round that sends fixes back adds ${fixRound}.`)
+  if (estimate.missing.length && onePass) lines.push(`Not included, too few past runs: ${estimate.missing.join(', ')}.`)
+  return lines
+})
+
 // The same ticket can't be created twice; the second request would only fail once the first lands.
 const alreadyCreating = computed(() => taskSource.value === 'jira' && !!form.jiraKey.trim()
   && !!operations.runningFor(form.jiraKey.trim().toUpperCase(), 'create'))
@@ -359,6 +387,10 @@ watch(pendingDraft, (draft) => {
         </select>
         <span class="hint">Both routes retain requirements approval, reviews and final approval.</span>
     </label>
+    <div v-if="estimateLines.length" class="estimate small">
+        <p v-for="line in estimateLines" :key="line" class="muted">{{ line }}</p>
+        <p class="hint">From the last runs of each stage with the same harness and model; a guide, not a limit.</p>
+    </div>
     <p class="muted small">
       AgentFlow creates a dedicated Git worktree and branch for the task, one terminal session for all its agents,
       and never runs agents in your original checkout.
@@ -469,6 +501,7 @@ watch(pendingDraft, (draft) => {
 </template>
 
 <style scoped>
+.estimate p { margin: 0.15rem 0; }
 .project-select { align-items: center; }
 .project-select .project-dot { width: 11px; height: 11px; margin-inline: 0.2rem; }
 .project-select select { flex: 1; }

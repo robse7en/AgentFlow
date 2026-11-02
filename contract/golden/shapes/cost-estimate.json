@@ -1,0 +1,35 @@
+{
+  "implementationMode": "str",
+  "missing": [
+    "str"
+  ],
+  "onePass": {
+    "tokens": "null",
+    "usd": "null"
+  },
+  "perFixRound": {
+    "tokens": "null",
+    "usd": "null"
+  },
+  "perWorker": {
+    "tokens": "null",
+    "usd": "null"
+  },
+  "stages": [
+    {
+      "billingMode": "str",
+      "estimate": {
+        "costKind": "null",
+        "enough": "bool",
+        "high": "null",
+        "runs": "number",
+        "typical": "null",
+        "unit": "str"
+      },
+      "harness": "str",
+      "key": "str",
+      "label": "str",
+      "model": "null"
+    }
+  ]
+}

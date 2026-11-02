@@ -923,6 +923,65 @@ def record_usage() -> None:
     write_json(GOLDEN / "usage" / "cases.json", cases)
 
 
+def _usd(cost, kind=None, **extra):
+    return {"costUsd": cost, **({"costKind": kind} if kind else {}), "totalTokens": None, **extra}
+
+
+# (name, samples, billing mode): every rule estimates.estimate freezes.
+ESTIMATE_CASES = [
+    ("empty", [], "metered"),
+    ("too-few", [_usd(0.5), _usd(0.25)], "metered"),
+    ("three", [_usd(0.75), _usd(0.25), _usd(0.5)], "metered"),
+    ("odd-ranks", [_usd(c) for c in (0.9, 0.1, 0.5, 0.3, 0.7, 0.2, 0.8)], "unknown"),
+    ("even-ranks", [_usd(float(n) / 8) for n in range(1, 11)], "metered"),
+    ("only-recent-twenty", [_usd(1.5)] * 20 + [_usd(99.0)] * 5, "metered"),
+    ("partial-and-missing-skipped", [None, _usd(None), _usd(50.0, partial=True),
+                                     _usd(0.125), _usd(0.375), _usd(0.25)], "metered"),
+    ("list-price", [_usd(c, "estimated") for c in (0.5, 1.25, 0.75)], "metered"),
+    ("mixed-kinds", [_usd(0.5, "estimated"), _usd(1.25, "billed"), _usd(0.75)], "metered"),
+    ("subscription-tokens", [{"costUsd": 0.5, "costKind": "estimated", "totalTokens": n}
+                             for n in (12000, 4000, 30000, 8000)], "subscription"),
+    ("subscription-without-tokens", [_usd(0.5)] * 4, "subscription"),
+    ("repeating-decimals", [_usd(c) for c in (0.1, 0.2, 0.30000000000000004, 0.7, 1.1)], "metered"),
+]
+
+
+def _stage(key, label, samples, mode="metered"):
+    from agentflow.workflow import estimates
+    return {"key": key, "label": label, "estimate": estimates.estimate(samples, mode)}
+
+
+def route_cases() -> list:
+    three = [_usd(0.1), _usd(0.2), _usd(0.7)]
+    return [
+        ("direct-complete", [_stage("architect", "Architect", [_usd(0.3)] * 3),
+                             _stage("implementer", "Implementer", three),
+                             _stage("code_review", "Code Review", [_usd(0.1)] * 4),
+                             _stage("security_review", "Security Review", [_usd(0.2)] * 3),
+                             _stage("final_architect", "Final Architect Verification", [_usd(0.05)] * 3)]),
+        ("parallel-mixed-units", [_stage("architect", "Architect", [_usd(0.3)] * 3),
+                                  _stage("orchestrator", "Architect Planning", []),
+                                  _stage("worker", "Worker", three),
+                                  _stage("implementer", "Implementer", [{"totalTokens": n, "costUsd": None}
+                                                                       for n in (100, 300, 200)], "subscription"),
+                                  _stage("code_review", "Code Review", [_usd(0.1)]),
+                                  _stage("security_review", "Security Review", three),
+                                  _stage("final_architect", "Final Architect Verification", [])]),
+        ("nothing-known", [_stage("architect", "Architect", []), _stage("worker", "Worker", [])]),
+    ]
+
+
+def record_estimates() -> None:
+    """estimates.estimate and estimates.route on fixed inputs: golden/estimates-unit/cases.json."""
+    from agentflow.workflow import estimates
+    cases = [{"name": name, "function": "estimate", "samples": samples, "billingMode": mode,
+              "result": estimates.estimate(samples, mode)} for name, samples, mode in ESTIMATE_CASES]
+    cases += [{"name": name, "function": "route", "stages": stages, "result": estimates.route(stages)}
+              for name, stages in route_cases()]
+    (GOLDEN / "estimates-unit").mkdir(exist_ok=True)
+    write_json(GOLDEN / "estimates-unit" / "cases.json", cases)
+
+
 def write_json(path: Path, value: object) -> None:
     path.write_text(json.dumps(value, indent=2) + "\n", encoding="utf-8")
 
@@ -934,5 +993,6 @@ if __name__ == "__main__":
     record_harness()
     record_prompts()
     record_usage()
+    record_estimates()
     write_schema_rs()
     print(f"recorded into {GOLDEN}")

@@ -230,6 +230,7 @@ pub fn router_with_ui(app: Arc<App>, dist: Option<PathBuf>) -> Router {
         .route("/api/harnesses/detect", post(config::detect_harnesses))
         .route("/api/tasks", get(tasks::list_tasks).post(tasks::create_task))
         .route("/api/tasks/validate-repository", post(tasks::validate_repository))
+        .route("/api/tasks/cost-estimate", post(tasks::cost_estimate))
         .route("/api/tasks/{jira_key}", get(tasks::get_task))
         .route("/api/tasks/{jira_key}/instructions", get(instructions::task))
         .route("/api/tasks/{jira_key}/instructions/{role}", put(instructions::save_task))

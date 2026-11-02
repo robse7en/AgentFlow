@@ -1,3 +1,4 @@
+import asyncio
 import json
 from pathlib import Path
 from types import SimpleNamespace
@@ -188,6 +189,25 @@ async def test_worker_retry_briefing_carries_the_failed_attempt(parallel_engine)
     assert "src/part-0/api.py" in section and "?? src/part-0/draft.py" in section
     worktree = first["worker"]["worktreePath"]
     engine.git.changed_paths.assert_awaited_once_with(str(Path(worktree)), SHA, "d" * 40)
+
+
+@pytest.mark.asyncio
+async def test_worker_harness_exit_is_retried_automatically_in_its_own_slot(parallel_engine):
+    engine = parallel_engine
+    engine.config.workflow.max_automatic_retries = 1
+    engine.automatic_retry_delay = 0
+    nodes = await submit_plan(engine)
+    first = nodes[0]
+    run_id = first["lastRun"]["id"]
+    await engine.agent_exited("TEST-1", "implementer", run_id, 1)
+    await asyncio.gather(*engine._automatic_retries.values())
+    snap = engine.snapshot("TEST-1")
+    retried = next(n for n in snap["nodes"] if n["key"] == first["key"])
+    assert retried["state"] == "RUNNING" and retried["lastRun"]["id"] != run_id
+    assert "## Previous attempt at this stage" in Path(retried["lastRun"]["promptPath"]).read_text()
+    # The other workers keep their slots; the fourth is still queued.
+    states = [n["state"] for n in snap["nodes"] if n["key"].startswith("worker_")]
+    assert states.count("RUNNING") == 3 and states.count("PENDING") == 1
 
 
 @pytest.mark.asyncio

@@ -27,6 +27,9 @@ use crate::workspace as files;
 
 /// Seconds between attempts to collect a run's usage that its provider had not finished writing.
 pub(crate) const USAGE_RETRY_DELAYS: [u64; 6] = [5, 10, 15, 30, 60, 120];
+/// The pause before an automatic retry (`workflow.maxAutomaticRetries`): lets the dying launcher
+/// finish and close its tab, and gives a human a moment to act first.
+pub(crate) const AUTOMATIC_RETRY_DELAY_SECONDS: u64 = 5;
 /// How long stopping an agent waits for a harness asked to exit to write its final usage.
 const EXIT_USAGE_WAIT: Duration = Duration::from_secs(10);
 
@@ -776,21 +779,123 @@ impl Engine {
             .iter()
             .position(|n| n.id == node_id)
             .ok_or_else(|| WorkflowError::not_found("Node not found"))?;
+        let mut retry = None;
         if Self::run_is_active(&state, run) && Self::node_is_active(&state, node) {
             let error = format!("Harness exited with code {exit_code} before reporting completion");
             state.runs[run].state = NodeState::Failed.as_str().into();
             state.runs[run].completed_at = Some(DbTime::now());
             state.runs[run].error = Some(error.clone());
-            state.set_state(node, NodeState::Failed, Some(&format!("Harness exited (code {exit_code})")), Some(error));
+            retry = self.automatic_retry_number(&mut state, node);
+            let mut message = format!("Harness exited (code {exit_code})");
+            if let Some(number) = retry {
+                let limit = self.config().workflow.max_automatic_retries;
+                message += &format!("; automatic retry {number} of {limit} starts shortly");
+            }
+            state.set_state(node, NodeState::Failed, Some(&message), Some(error));
         } else {
             let (label, key) = (state.nodes[node].label.clone(), state.nodes[node].key.clone());
             state.log(format!("{label} harness process exited (code {exit_code})"), Some(&key), "info", None);
         }
         let result = json!({"ok": true, "state": state.nodes[node].state});
+        let (failed_run_id, node_key) = (state.runs[run].id, state.nodes[node].key.clone());
         self.db.session(|tx| state.flush(tx))?;
         drop(held);
+        if let Some(number) = retry {
+            self.schedule_automatic_retry(jira_key, &node_key, failed_run_id, number);
+        }
         self.publish(jira_key)?;
         Ok(result)
+    }
+
+    /// Which automatic retry (1-based) a harness exit of `node` earns, or None (logged once the
+    /// allowance is used up). Counted from the node's trailing FAILED runs in this review round, so
+    /// it needs no stored counter, and a human's retry does not reset it.
+    fn automatic_retry_number(&self, state: &mut TaskState, node: usize) -> Option<i64> {
+        let limit = self.config().workflow.max_automatic_retries;
+        if limit == 0
+            || state.status() != Some(TaskStatus::Active)
+            || state.nodes[node].kind != super::states::NodeKind::Agent.as_str()
+        {
+            return None;
+        }
+        let node_id = state.nodes[node].id;
+        let failures = state
+            .runs
+            .iter()
+            .rev()
+            .filter(|r| r.node_id == node_id)
+            .take_while(|r| r.state == NodeState::Failed.as_str() && r.iteration == state.task.review_iteration)
+            .count() as i64;
+        if failures > limit {
+            let (label, key) = (state.nodes[node].label.clone(), state.nodes[node].key.clone());
+            state.log(
+                format!(
+                    "{label} not retried automatically: it has failed {failures} times in a row in this review \
+                     round (workflow.maxAutomaticRetries is {limit})"
+                ),
+                Some(&key),
+                "warning",
+                None,
+            );
+            return None;
+        }
+        (failures > 0).then_some(failures)
+    }
+
+    fn schedule_automatic_retry(&self, jira_key: &str, node_key: &str, failed_run_id: i64, number: i64) {
+        let mut retries = self.automatic_retries.lock().unwrap_or_else(|e| e.into_inner());
+        let (engine, key, node_key) = (self.me.clone(), jira_key.to_string(), node_key.to_string());
+        let delay = self.automatic_retry_delay();
+        let task = tokio::spawn(async move {
+            tokio::time::sleep(delay).await;
+            if let Some(engine) = engine.upgrade() {
+                engine.automatic_retry(&key, &node_key, failed_run_id, number).await;
+                engine.automatic_retries.lock().unwrap_or_else(|e| e.into_inner()).remove(&failed_run_id);
+            }
+        });
+        retries.insert(failed_run_id, task);
+    }
+
+    /// Relaunch a stage after its harness exited, unless anything changed meanwhile (the
+    /// background task waits `automatic_retry_delay` first; public for tests). It launches the way
+    /// a human's Retry does, so capacity, budgets and metered approval still apply; when one of
+    /// them blocks it, the stage stays FAILED and says why.
+    pub async fn automatic_retry(&self, jira_key: &str, node_key: &str, failed_run_id: i64, number: i64) {
+        let lock = self.lock(jira_key);
+        let held = lock.lock().await;
+        // A task deleted meanwhile has nothing to retry.
+        let Ok(mut state) = self.db.session(|tx| TaskState::load(tx, jira_key)) else { return };
+        let Ok(index) = state.node_index(node_key) else { return };
+        let node_id = state.nodes[index].id;
+        let latest = state.runs.iter().rev().find(|r| r.node_id == node_id).map(|r| r.id);
+        if state.status() != Some(TaskStatus::Active)
+            || state.node_state(index) != Some(NodeState::Failed)
+            || latest != Some(failed_run_id)
+        {
+            return; // a human retried, cancelled or otherwise moved on meanwhile
+        }
+        let label = state.nodes[index].label.clone();
+        let limit = self.config().workflow.max_automatic_retries;
+        state.log(
+            format!("{label}: automatic retry {number} of {limit} after the harness exited"),
+            Some(node_key),
+            "warning",
+            Some(json!({"automatic": true, "failedRunId": failed_run_id})),
+        );
+        if let Err(error) = self.start_agent_run(&mut state, index, None, true).await {
+            if let Some(run) = state
+                .runs
+                .iter_mut()
+                .rev()
+                .find(|r| r.node_id == node_id && NodeState::parse(&r.state).is_some_and(NodeState::is_active))
+            {
+                TaskState::finish_run(run, NodeState::Failed, Some(error.to_string()));
+            }
+            state.set_state(index, NodeState::Failed, Some("Automatic retry failed"), Some(error.to_string()));
+        }
+        let _ = self.db.session(|tx| state.flush(tx));
+        drop(held);
+        let _ = self.publish(jira_key);
     }
 
     pub async fn agent_complete(

@@ -28,6 +28,7 @@
     },
     "implementationMode": "direct",
     "maxConcurrentAgents": 4,
+    "maxAutomaticRetries": 0,
     "verificationCommands": [],
     "maxReviewIterations": 5,
     "maxRequirementsRevisions": 3,

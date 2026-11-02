@@ -138,6 +138,29 @@ changes, that list is replaced by a pointer to the git command to run, the other
 appears, and the launch goes ahead. A resumed conversation gets the same section, as restated
 context.
 
+### Automatic retries
+
+Off by default. Set `workflow.maxAutomaticRetries` (0–3) in `config.json` to have AgentFlow
+relaunch a stage when its harness process exits without reporting `flowctl complete`. The node
+shows *automatic retry 1 of N starts shortly*, and about five seconds later the stage relaunches
+with a fresh conversation and the retry briefing above. The task log records each automatic
+retry.
+
+- **What it covers:** only a harness exit before completion. It never covers an agent that ran
+  `flowctl fail`, a launch that failed, an interrupted run (backend restart), a quiet or overdue
+  agent, or a task that is not Active (cancelled or awaiting human review).
+- **How many:** a stage is retried while it has failed at most N times in a row in the current
+  review round. The count is taken from its runs, so a human's Retry does not reset it.
+- **Same checks as a human's Run:** global capacity, budgets and metered approval still apply.
+  An automatic retry carries no approval, so a role that needs metered approval is never retried
+  automatically. When a check blocks the retry, the stage stays Failed and says why. Each retry
+  is a new run, and is charged like one.
+- **A human acts first:** a Retry, cancel or other change during the pause wins, and the automatic
+  retry does nothing. A pending retry is dropped if the backend stops during the pause.
+- **Not detected:** an agent closed on purpose in its terminal, for example with `/exit` or
+  Ctrl-C, looks the same as a crash and is retried. Cancel the task, or leave the setting at 0,
+  if you close agents by hand.
+
 Key rules it enforces:
 
 - one Jira ticket = one primary Git worktree plus isolated worker worktrees — agents never

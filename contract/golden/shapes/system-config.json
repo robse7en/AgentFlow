@@ -93,6 +93,7 @@
     "defaultExecutionMode": "str",
     "heartbeatWarningSeconds": "number",
     "implementationMode": "str",
+    "maxAutomaticRetries": "number",
     "maxConcurrentAgents": "number",
     "maxRequirementsRevisions": "number",
     "maxReviewIterations": "number",

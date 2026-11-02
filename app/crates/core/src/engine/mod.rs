@@ -117,6 +117,10 @@ pub struct Engine {
     pub screen_trackers: screen::ScreenTrackers,
     /// Background collections of usage a provider had not finished writing, by run id.
     usage_retries: agents::UsageRetries,
+    /// Pending automatic retries after a harness exit, by the failed run's id.
+    automatic_retries: agents::UsageRetries,
+    /// The pause before an automatic retry (`workflow.maxAutomaticRetries`).
+    automatic_retry_delay: RwLock<std::time::Duration>,
     pub(crate) verifications: Mutex<HashMap<String, tokio::sync::watch::Sender<bool>>>,
     /// Worktree setups running in the background.
     setups: worktree_setup::Running,
@@ -173,6 +177,8 @@ impl Engine {
             flowctl,
             screen_trackers: screen::ScreenTrackers::default(),
             usage_retries: Mutex::new(HashMap::new()),
+            automatic_retries: Mutex::new(HashMap::new()),
+            automatic_retry_delay: RwLock::new(std::time::Duration::from_secs(agents::AUTOMATIC_RETRY_DELAY_SECONDS)),
             verifications: Mutex::new(HashMap::new()),
             setups: Mutex::new(HashMap::new()),
             github_source: RwLock::new(Arc::new(crate::github::GitHubCli)),
@@ -217,6 +223,32 @@ impl Engine {
     /// Whether any background usage retry is still scheduled.
     pub fn usage_retries_pending(&self) -> bool {
         self.usage_retries.lock().unwrap_or_else(|e| e.into_inner()).values().any(|r| !r.is_finished())
+    }
+
+    pub fn automatic_retry_delay(&self) -> std::time::Duration {
+        *self.automatic_retry_delay.read().unwrap_or_else(|p| p.into_inner())
+    }
+
+    /// Replace the pause before an automatic retry (tests).
+    pub fn set_automatic_retry_delay(&self, delay: std::time::Duration) {
+        *self.automatic_retry_delay.write().unwrap_or_else(|p| p.into_inner()) = delay;
+    }
+
+    /// Wait for the automatic retry scheduled after `failed_run_id`, if there is one.
+    pub async fn join_automatic_retry(&self, failed_run_id: i64) {
+        let retry = self.automatic_retries.lock().unwrap_or_else(|e| e.into_inner()).remove(&failed_run_id);
+        if let Some(retry) = retry {
+            let _ = retry.await;
+        }
+    }
+
+    /// Whether an automatic retry is scheduled after `failed_run_id`.
+    pub fn automatic_retry_pending(&self, failed_run_id: i64) -> bool {
+        self.automatic_retries
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(&failed_run_id)
+            .is_some_and(|r| !r.is_finished())
     }
 
     /// The flowctl executable launchers call.
@@ -267,6 +299,9 @@ impl Engine {
             cancel.send_replace(true);
         }
         for (_, retry) in self.usage_retries.lock().unwrap_or_else(|e| e.into_inner()).drain() {
+            retry.abort();
+        }
+        for (_, retry) in self.automatic_retries.lock().unwrap_or_else(|e| e.into_inner()).drain() {
             retry.abort();
         }
         self.screen_trackers.stop_all();

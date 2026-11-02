@@ -27,6 +27,7 @@
     },
     "implementationMode": "direct",
     "maxConcurrentAgents": 4,
+    "maxAutomaticRetries": 0,
     "usdToNzdRate": 1.65,
     "verificationCommands": [],
     "maxReviewIterations": 5,

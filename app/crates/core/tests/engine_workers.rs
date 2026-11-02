@@ -302,6 +302,32 @@ async fn test_worker_retry_briefing_carries_the_failed_attempt() {
 }
 
 #[tokio::test]
+async fn test_worker_harness_exit_is_retried_automatically_in_its_own_slot() {
+    let h = parallel().await;
+    h.configure(|c| c.workflow.max_automatic_retries = 1);
+    h.engine.set_automatic_retry_delay(std::time::Duration::ZERO);
+    let first = submit(&h, plan(4)).await[0].clone();
+    let run_id = first["lastRun"]["id"].as_i64().unwrap();
+    h.engine.agent_exited("TEST-1", "implementer", Some(run_id), 1).await.unwrap();
+    h.engine.join_automatic_retry(run_id).await;
+    let snap = h.engine.snapshot("TEST-1").unwrap();
+    let nodes = snap["nodes"].as_array().unwrap();
+    let retried = nodes.iter().find(|n| n["key"] == first["key"]).unwrap();
+    assert_eq!(retried["state"], "RUNNING");
+    assert_ne!(retried["lastRun"]["id"].as_i64(), Some(run_id));
+    let prompt = std::fs::read_to_string(retried["lastRun"]["promptPath"].as_str().unwrap()).unwrap();
+    assert!(prompt.contains("## Previous attempt at this stage"));
+    // The other workers keep their slots; the fourth is still queued.
+    let states: Vec<&str> = nodes
+        .iter()
+        .filter(|n| n["key"].as_str().unwrap().starts_with("worker_"))
+        .map(|n| n["state"].as_str().unwrap())
+        .collect();
+    assert_eq!(states.iter().filter(|s| **s == "RUNNING").count(), 3);
+    assert_eq!(states.iter().filter(|s| **s == "PENDING").count(), 1);
+}
+
+#[tokio::test]
 async fn test_launch_failure_is_durable_and_recovery_finds_guid_tab() {
     let h = parallel().await;
     h.terminals.fail("new_tab", "fixture failure");

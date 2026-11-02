@@ -335,6 +335,12 @@ pub struct WorkflowConfig {
     pub implementation_mode: ImplementationMode,
     #[serde(alias = "max_concurrent_agents")]
     pub max_concurrent_agents: i64,
+    /// Opt-in: relaunch a stage whose harness exited without reporting completion, while it has
+    /// failed at most this many times in a row in the review round (0 = never). Never after
+    /// `flowctl fail`, a launch failure or an interruption; never past a budget, capacity or
+    /// metered-approval check.
+    #[serde(alias = "max_automatic_retries")]
+    pub max_automatic_retries: i64,
     /// Fixed display-only conversion for showing reported USD costs in NZD; bumped by hand.
     #[serde(alias = "usd_to_nzd_rate")]
     pub usd_to_nzd_rate: f64,
@@ -361,6 +367,7 @@ impl Default for WorkflowConfig {
             cost_controls: CostControls::default(),
             implementation_mode: ImplementationMode::Direct,
             max_concurrent_agents: 4,
+            max_automatic_retries: 0,
             usd_to_nzd_rate: 1.65,
             verification_commands: Vec::new(),
             max_review_iterations: 5,
@@ -912,6 +919,7 @@ impl Config {
         let w = &self.workflow;
         range("workflow.heartbeatWarningSeconds", w.heartbeat_warning_seconds, 300, Some(86400));
         range("workflow.maxConcurrentAgents", w.max_concurrent_agents, 1, Some(32));
+        range("workflow.maxAutomaticRetries", w.max_automatic_retries, 0, Some(3));
         range("workflow.maxReviewIterations", w.max_review_iterations, 1, Some(50));
         range("workflow.maxRequirementsRevisions", w.max_requirements_revisions, 1, Some(50));
         range("workflow.costControls.warningPercent", w.cost_controls.warning_percent, 1, Some(100));

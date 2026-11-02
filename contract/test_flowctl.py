@@ -318,6 +318,41 @@ def test_exited_reports_the_harness_exit(flowctl, reviewers, human):
     assert review["lastRun"]["exitCode"] == 3
 
 
+def test_a_harness_exit_is_retried_automatically_when_enabled(flowctl, launch, repo):
+    with launch(workflow={"maxConcurrentAgents": 32, "maxAutomaticRetries": 1}, STUB_MANUAL="1") as backend:
+        human = backend.human()
+        key = new_key("FA")
+        human.create_task(key, repo)
+        human.run(key, "architect")
+        first = agent_run(backend, human.wait_node(key, "architect", "RUNNING"), "architect")
+        result = flowctl("exited", "--code", "3", env=first.env())
+        assert (result.returncode, result.stderr) == (0, "")
+        architect = node(human.task(key), "architect")
+        assert (architect["state"], architect["message"]) == (
+            "FAILED", "Harness exited (code 3); automatic retry 1 of 1 starts shortly")
+        failed = architect["lastRun"]["id"]
+
+        # After the pause the stage relaunches by itself, briefed on the failed attempt.
+        snapshot = human.wait_task(key, lambda s: node(s, "architect")["state"] == "RUNNING"
+                                   and node(s, "architect")["lastRun"]["id"] != failed, "automatic retry", 60)
+        [event] = [e for e in snapshot["events"] if "automatic retry" in e["message"] and e["data"]]
+        assert (event["message"], event["level"], event["data"]) == (
+            "Architect: automatic retry 1 of 1 after the harness exited", "warning",
+            {"automatic": True, "failedRunId": failed})
+        second = agent_run(backend, snapshot, "architect")
+        assert second.run_dir != first.run_dir
+        assert "## Previous attempt at this stage" in (second.run_dir / "prompt.md").read_text(encoding="utf-8")
+
+        # The allowance is used up: the next exit stays failed.
+        result = flowctl("exited", "--code", "3", env=second.env())
+        assert result.returncode == 0, result.stderr
+        snapshot = human.task(key)
+        assert (node(snapshot, "architect")["state"], node(snapshot, "architect")["message"]) == (
+            "FAILED", "Harness exited (code 3)")
+        assert any(e["message"] == "Architect not retried automatically: it has failed 2 times in a row in this "
+                   "review round (workflow.maxAutomaticRetries is 1)" for e in snapshot["events"])
+
+
 def test_status_json_prints_the_snapshot(flowctl, architect):
     result = flowctl("status", "--json", env=architect.env())
     assert result.returncode == 0, result.stderr

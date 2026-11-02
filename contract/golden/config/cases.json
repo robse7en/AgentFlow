@@ -31,6 +31,7 @@
         },
         "implementationMode": "direct",
         "maxConcurrentAgents": 4,
+        "maxAutomaticRetries": 0,
         "usdToNzdRate": 1.65,
         "verificationCommands": [],
         "maxReviewIterations": 5,
@@ -248,6 +249,7 @@
         },
         "implementationMode": "direct",
         "maxConcurrentAgents": 4,
+        "maxAutomaticRetries": 0,
         "verificationCommands": [],
         "maxReviewIterations": 5,
         "maxRequirementsRevisions": 3,
@@ -481,6 +483,7 @@
         },
         "implementationMode": "direct",
         "maxConcurrentAgents": 4,
+        "maxAutomaticRetries": 0,
         "usdToNzdRate": 1.65,
         "verificationCommands": [],
         "maxReviewIterations": 5,
@@ -752,6 +755,7 @@
         },
         "implementationMode": "direct",
         "maxConcurrentAgents": 4,
+        "maxAutomaticRetries": 0,
         "usdToNzdRate": 1.65,
         "verificationCommands": [],
         "maxReviewIterations": 5,
@@ -979,6 +983,7 @@
         },
         "implementationMode": "direct",
         "maxConcurrentAgents": 4,
+        "maxAutomaticRetries": 0,
         "usdToNzdRate": 1.65,
         "verificationCommands": [],
         "maxReviewIterations": 5,
@@ -1206,6 +1211,7 @@
         },
         "implementationMode": "direct",
         "maxConcurrentAgents": 4,
+        "maxAutomaticRetries": 0,
         "usdToNzdRate": 1.65,
         "verificationCommands": [],
         "maxReviewIterations": 5,
@@ -1440,6 +1446,7 @@
         },
         "implementationMode": "direct",
         "maxConcurrentAgents": 8,
+        "maxAutomaticRetries": 0,
         "usdToNzdRate": 1.65,
         "verificationCommands": [],
         "maxReviewIterations": 5,
@@ -1679,6 +1686,7 @@
         },
         "implementationMode": "direct",
         "maxConcurrentAgents": 4,
+        "maxAutomaticRetries": 0,
         "usdToNzdRate": 1.65,
         "verificationCommands": [],
         "maxReviewIterations": 5,
@@ -1902,6 +1910,7 @@
         },
         "implementationMode": "parallel",
         "maxConcurrentAgents": 32,
+        "maxAutomaticRetries": 0,
         "usdToNzdRate": 1.7,
         "verificationCommands": [
           [
@@ -2174,6 +2183,7 @@
         },
         "implementationMode": "direct",
         "maxConcurrentAgents": 4,
+        "maxAutomaticRetries": 0,
         "usdToNzdRate": 1.65,
         "verificationCommands": [],
         "maxReviewIterations": 5,
@@ -2400,6 +2410,7 @@
         },
         "implementationMode": "direct",
         "maxConcurrentAgents": 4,
+        "maxAutomaticRetries": 0,
         "usdToNzdRate": 1.65,
         "verificationCommands": [],
         "maxReviewIterations": 5,
@@ -2625,6 +2636,7 @@
         },
         "implementationMode": "direct",
         "maxConcurrentAgents": 4,
+        "maxAutomaticRetries": 0,
         "usdToNzdRate": 1.65,
         "verificationCommands": [],
         "maxReviewIterations": 5,
@@ -2893,6 +2905,232 @@
         },
         "implementationMode": "direct",
         "maxConcurrentAgents": 4,
+        "maxAutomaticRetries": 0,
+        "usdToNzdRate": 1.65,
+        "verificationCommands": [],
+        "maxReviewIterations": 5,
+        "maxRequirementsRevisions": 3,
+        "defaultExecutionMode": "manual",
+        "requireRequirementsApproval": true,
+        "requireFinalApproval": true,
+        "commitCheckpoints": true
+      },
+      "zellij": {
+        "command": "zellij",
+        "sessionPrefix": "agentflow-",
+        "webClientEnabled": false,
+        "webClientBaseUrl": "http://127.0.0.1:8082",
+        "shell": null,
+        "headlessCols": 200,
+        "headlessRows": 50,
+        "useInDesktop": false
+      },
+      "jira": {
+        "attachmentHosts": [
+          "api.media.atlassian.com"
+        ],
+        "maxAttachmentBytes": 20000000,
+        "maxTotalAttachmentBytes": 100000000,
+        "maxAttachments": 30,
+        "fetchComments": true,
+        "maxFramesPerVideo": 20,
+        "frameExtractionTimeoutSeconds": 120,
+        "ffmpegPath": null,
+        "enabled": false,
+        "baseUrl": null,
+        "email": null,
+        "apiToken": null,
+        "autoTransitionStatus": null,
+        "autoTransitionFromStatuses": [
+          "To Do"
+        ],
+        "prCreatedTransitionStatus": "In Code Review",
+        "prCreatedTransitionFromStatuses": [
+          "*"
+        ]
+      },
+      "slack": {
+        "enabled": false,
+        "botToken": null,
+        "appToken": null,
+        "userId": null,
+        "command": "/agentflow",
+        "includeQuestionText": true,
+        "details": [],
+        "digestAt": null,
+        "ask": {
+          "enabled": false,
+          "harness": "claude",
+          "model": null,
+          "timeoutSeconds": 90,
+          "allowMetered": false
+        },
+        "notify": [
+          "WAITING_FOR_USER",
+          "WAITING_FOR_APPROVAL",
+          "FAILED",
+          "INTERRUPTED",
+          "NEEDS_HUMAN_REVIEW",
+          "READY_FOR_PR"
+        ],
+        "uiBaseUrl": "http://127.0.0.1:5173",
+        "allowActions": [
+          "answer"
+        ]
+      },
+      "github": {
+        "prSync": true,
+        "pollIntervalSeconds": 120,
+        "command": "gh",
+        "hosts": [
+          "github.com"
+        ]
+      },
+      "harnesses": {
+        "claude": {
+          "billingMode": "unknown",
+          "trustedRepositories": [],
+          "usageCommand": null,
+          "enabled": true,
+          "type": "claude",
+          "displayName": "Claude Code",
+          "command": "claude",
+          "args": [],
+          "env": {},
+          "modelArgument": null,
+          "reasoningArgument": null,
+          "promptArgument": null,
+          "reasoningMap": {},
+          "defaultModel": "claude-sonnet-5",
+          "availableModels": [
+            "claude-opus-5",
+            "claude-sonnet-5",
+            "claude-fable-5-1",
+            "claude-haiku-4-5-20251001"
+          ]
+        },
+        "codex": {
+          "billingMode": "unknown",
+          "trustedRepositories": [],
+          "usageCommand": null,
+          "enabled": true,
+          "type": "codex",
+          "displayName": "Codex CLI",
+          "command": "codex",
+          "args": [],
+          "env": {},
+          "modelArgument": null,
+          "reasoningArgument": null,
+          "promptArgument": null,
+          "reasoningMap": {},
+          "defaultModel": "gpt-5.6-luna",
+          "availableModels": [
+            "gpt-6-astra",
+            "gpt-5.6-sol",
+            "gpt-5.6-terra",
+            "gpt-5.6-luna",
+            "gpt-5.5"
+          ]
+        },
+        "copilot": {
+          "billingMode": "unknown",
+          "trustedRepositories": [],
+          "usageCommand": null,
+          "enabled": true,
+          "type": "copilot",
+          "displayName": "GitHub Copilot CLI",
+          "command": "copilot",
+          "args": [
+            "--allow-all-tools",
+            "--allow-all-paths",
+            "--deny-tool=shell(rm)",
+            "--deny-tool=shell(rmdir)",
+            "--deny-tool=shell(del)",
+            "--deny-tool=shell(erase)",
+            "--deny-tool=shell(rd)",
+            "--deny-tool=shell(Remove-Item)",
+            "--deny-tool=shell(ri)",
+            "--deny-tool=shell(git push)",
+            "--deny-tool=shell(git clean)"
+          ],
+          "env": {},
+          "modelArgument": null,
+          "reasoningArgument": null,
+          "promptArgument": null,
+          "reasoningMap": {},
+          "defaultModel": "gpt-5.6-luna",
+          "availableModels": [
+            "gpt-5.6-luna",
+            "gpt-5.6-sol",
+            "gpt-5.6-terra",
+            "claude-opus-5",
+            "claude-sonnet-5",
+            "claude-haiku-4.5"
+          ]
+        }
+      },
+      "agents": {
+        "architect": {
+          "harness": "claude",
+          "model": null,
+          "reasoning": "high"
+        },
+        "orchestrator": null,
+        "implementer": {
+          "harness": "codex",
+          "model": null,
+          "reasoning": "high"
+        },
+        "codeReviewer": {
+          "harness": "claude",
+          "model": null,
+          "reasoning": "high"
+        },
+        "securityReviewer": {
+          "harness": "claude",
+          "model": null,
+          "reasoning": "high"
+        }
+      }
+    }
+  },
+  {
+    "name": "automatic-retries",
+    "input": {
+      "workflow": {
+        "maxAutomaticRetries": 3
+      }
+    },
+    "dump": {
+      "app": {
+        "dataDirectory": "~/.agentflow",
+        "databasePath": "~/.agentflow/agentflow.db"
+      },
+      "server": {
+        "host": "127.0.0.1",
+        "port": 8765,
+        "runAsAdministrator": false
+      },
+      "workspace": {
+        "worktreeDirectory": "~/.agentflow/worktrees",
+        "taskDirectory": "~/.agentflow/tasks",
+        "branchPrefix": "",
+        "defaultRepositoryDirectory": null,
+        "worktreeSetup": {}
+      },
+      "workflow": {
+        "heartbeatWarningSeconds": 600,
+        "costControls": {
+          "taskBudgetUsd": null,
+          "dailyBudgetUsd": null,
+          "warningPercent": 80,
+          "launchReserveUsd": 1,
+          "copilotRoles": [],
+          "requireMeteredApproval": false
+        },
+        "implementationMode": "direct",
+        "maxConcurrentAgents": 4,
+        "maxAutomaticRetries": 3,
         "usdToNzdRate": 1.65,
         "verificationCommands": [],
         "maxReviewIterations": 5,
@@ -3139,6 +3377,26 @@
     },
     "rejected": true,
     "pythonError": "<config> is invalid: | 1 validation error for Config | workflow.maxReviewIterations"
+  },
+  {
+    "name": "reject-automatic-retries-high",
+    "input": {
+      "workflow": {
+        "maxAutomaticRetries": 4
+      }
+    },
+    "rejected": true,
+    "pythonError": "<config> is invalid: | 1 validation error for Config | workflow.maxAutomaticRetries"
+  },
+  {
+    "name": "reject-automatic-retries-negative",
+    "input": {
+      "workflow": {
+        "maxAutomaticRetries": -1
+      }
+    },
+    "rejected": true,
+    "pythonError": "<config> is invalid: | 1 validation error for Config | workflow.maxAutomaticRetries"
   },
   {
     "name": "reject-budget-zero",

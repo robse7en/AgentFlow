@@ -15,7 +15,7 @@ impl Engine {
     pub(crate) async fn on_ready(&self, state: &mut TaskState, node: usize) -> Result<(), WorkflowError> {
         if state.nodes[node].execution_mode == "automatic"
             && state.nodes[node].kind == "agent"
-            && let Err(error) = self.start_agent_run(state, node, None).await
+            && let Err(error) = self.start_agent_run(state, node, None, false).await
         {
             if let Some(run) = state.runs.iter_mut().rev().find(|r| {
                 r.node_id == state.nodes[node].id && NodeState::parse(&r.state).is_some_and(NodeState::is_active)

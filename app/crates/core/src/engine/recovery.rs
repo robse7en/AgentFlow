@@ -126,7 +126,7 @@ impl Engine {
                     Some("Human retried after interruption".into()),
                 );
             }
-            self.start_agent_run(&mut state, node, None).await?;
+            self.start_agent_run(&mut state, node, None, false).await?;
         } else {
             let live = self.live_session(&mut state, &role, Some(node)).await?;
             let access: Option<AgentAccessRow> = match run {

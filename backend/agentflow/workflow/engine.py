@@ -91,6 +91,9 @@ log = logging.getLogger(__name__)
 USAGE_RETRY_DELAYS = (5, 10, 15, 30, 60, 120)
 # How long stopping an agent waits for a harness asked to exit to write its final usage.
 EXIT_USAGE_WAIT_SECONDS = 10
+# The pause before an automatic retry (workflow.maxAutomaticRetries): lets the dying launcher finish
+# and close its tab, and gives a human a moment to act first.
+AUTOMATIC_RETRY_DELAY_SECONDS = 5
 
 
 class WorkflowError(Exception):
@@ -184,6 +187,9 @@ class WorkflowEngine:
         self._projects_lock = asyncio.Lock()
         self._verification_tasks: dict[str, asyncio.Task] = {}
         self._usage_retries: dict[int, asyncio.Task] = {}
+        # Pending automatic retries after a harness exit, by the failed run's id.
+        self._automatic_retries: dict[int, asyncio.Task] = {}
+        self.automatic_retry_delay: float = AUTOMATIC_RETRY_DELAY_SECONDS
         self.screen_tracker = ScreenTracker(zellij, db, self._publish)
         # gh for the human's PR actions (retarget); tests replace it. PR sync has its own.
         self.github: Callable[[GitHubConfig], GitHubCli] = lambda settings: GitHubCli(settings.command)
@@ -297,7 +303,7 @@ class WorkflowEngine:
                                   agent_session.zellij_pane_id, adapter)
 
     async def shutdown(self) -> None:
-        for retry in list(self._usage_retries.values()):
+        for retry in [*self._usage_retries.values(), *self._automatic_retries.values()]:
             retry.cancel()
         await self.screen_tracker.stop_all()
 
@@ -2157,16 +2163,78 @@ class WorkflowEngine:
                         if later is not None:
                             run = later
                             node = self._node(task, later.node.key)
+                retry = None
                 if run.state in ACTIVE_STATES and node.state in ACTIVE_STATES:
                     run.state = NodeState.FAILED
                     run.completed_at = _now()
                     run.error = f"Harness exited with code {exit_code} before reporting completion"
-                    self._set_state(session, task, node, NodeState.FAILED, f"Harness exited (code {exit_code})", error=run.error)
+                    retry = self._automatic_retry_number(session, task, node)
+                    limit = self.config.workflow.max_automatic_retries
+                    message = f"Harness exited (code {exit_code})"
+                    if retry is not None:
+                        message += f"; automatic retry {retry} of {limit} starts shortly"
+                    self._set_state(session, task, node, NodeState.FAILED, message, error=run.error)
                 else:
                     self._log(session, task, f"{node.label} harness process exited (code {exit_code})", node_key=node.key)
                 result = {"ok": True, "state": node.state}
+                failed_run_id, node_key = run.id, node.key
+        if retry is not None:
+            self._schedule_automatic_retry(jira_key, node_key, failed_run_id, retry)
         await self._publish(jira_key)
         return result
+
+    def _automatic_retry_number(self, session: Session, task: Task, node: WorkflowNode) -> int | None:
+        """Which automatic retry (1-based) a harness exit of `node` earns, or None (logged once the
+        allowance is used up). Counted from the node's trailing FAILED runs in this review round, so it
+        needs no stored counter, and a human's retry does not reset it."""
+        limit = self.config.workflow.max_automatic_retries
+        if not limit or task.status != TaskStatus.ACTIVE or node.kind != NodeKind.AGENT:
+            return None
+        failures = 0
+        runs = session.scalars(select(NodeRun).where(NodeRun.node_id == node.id).order_by(NodeRun.id.desc()))
+        for run in runs:
+            if run.state != NodeState.FAILED or run.iteration != task.review_iteration:
+                break
+            failures += 1
+        if failures > limit:
+            self._log(session, task, f"{node.label} not retried automatically: it has failed {failures} times in a "
+                      f"row in this review round (workflow.maxAutomaticRetries is {limit})",
+                      node_key=node.key, level="warning")
+            return None
+        return failures or None
+
+    def _schedule_automatic_retry(self, jira_key: str, node_key: str, failed_run_id: int, number: int) -> None:
+        retry = asyncio.ensure_future(self._automatic_retry(jira_key, node_key, failed_run_id, number))
+        self._automatic_retries[failed_run_id] = retry
+        retry.add_done_callback(lambda _t: self._automatic_retries.pop(failed_run_id, None))
+
+    async def _automatic_retry(self, jira_key: str, node_key: str, failed_run_id: int, number: int) -> None:
+        """Relaunch a stage after its harness exited, unless anything changed meanwhile. It launches the
+        way a human's Retry does, so capacity, budgets and metered approval still apply; when one of them
+        blocks it, the stage stays FAILED and says why."""
+        await asyncio.sleep(self.automatic_retry_delay)
+        try:
+            async with self._lock(jira_key):
+                with self.db.session() as session:
+                    task = self._load_task(session, jira_key)
+                    node = self._node(task, node_key)
+                    latest = session.scalar(select(NodeRun.id).where(NodeRun.node_id == node.id)
+                                            .order_by(NodeRun.id.desc()))
+                    if task.status != TaskStatus.ACTIVE or node.state != NodeState.FAILED or latest != failed_run_id:
+                        return  # a human retried, cancelled or otherwise moved on meanwhile
+                    self._log(session, task, f"{node.label}: automatic retry {number} of "
+                              f"{self.config.workflow.max_automatic_retries} after the harness exited",
+                              node_key=node.key, level="warning", data={"automatic": True, "failedRunId": failed_run_id})
+                    try:
+                        await self._start_agent_run(session, task, node, automatic=True)
+                    except WorkflowError as exc:
+                        run = session.scalar(select(NodeRun).where(NodeRun.node_id == node.id).order_by(NodeRun.id.desc()))
+                        if run is not None and run.state in ACTIVE_STATES:
+                            self._finish_run(run, NodeState.FAILED, str(exc))
+                        self._set_state(session, task, node, NodeState.FAILED, "Automatic retry failed", error=str(exc))
+            await self._publish(jira_key)
+        except WorkflowError:
+            return  # the task was deleted meanwhile
 
     async def agent_complete(self, jira_key: str, role: str, run_id: int | None, result: dict[str, Any]) -> dict[str, Any]:
         async with self._lock(jira_key):
@@ -2725,7 +2793,9 @@ class WorkflowEngine:
     # launching agents
     # ------------------------------------------------------------------------------
     async def _start_agent_run(self, session: Session, task: Task, node: WorkflowNode,
-                               *, metered_approval=None) -> NodeRun | None:
+                               *, metered_approval=None, automatic: bool = False) -> NodeRun | None:
+        """`automatic` (an automatic retry) never carries a metered approval, and a launch it cannot
+        make leaves the node FAILED, with its failure, instead of READY."""
         # Persist the transition before waiting for the global launch lock. A caller
         # must not hold SQLite's writer lock while another launch needs to commit.
         session.commit()
@@ -2749,6 +2819,10 @@ class WorkflowEngine:
                                 and metered_approval.model == cfg["model"])
                     if not approved:
                         reason = reason or "API launch needs approval: review the selected harness and model, and enter a reason"
+            if reason and automatic:
+                self._set_state(session, task, node, NodeState.FAILED, f"Not retried automatically: {reason}",
+                                error=node.error)
+                return None
             if reason:
                 self._set_state(session, task, node, NodeState.READY, reason)
                 self._log(session, task, reason, node_key=node.key)

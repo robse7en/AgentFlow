@@ -58,6 +58,7 @@ CONFIG_CASES: list[tuple[str, object]] = [
         "D:/Dev/repo": {"copy": [".env", "apps/web/.env.local", "./tools\\local.json"],
                         "commands": [["npm", "ci"], ["dotnet", "restore"]], "timeoutSeconds": 600},
         "~/other": {}}}}),
+    ("automatic-retries", {"workflow": {"maxAutomaticRetries": 3}}),
     # Rejected by Python.
     ("reject-unknown-top-level", {"nope": 1}),
     ("reject-unknown-nested", {"server": {"port": 1, "colour": "red"}}),
@@ -65,6 +66,8 @@ CONFIG_CASES: list[tuple[str, object]] = [
     ("reject-host", {"server": {"host": "0.0.0.0"}}),
     ("reject-range", {"workflow": {"maxConcurrentAgents": 0}}),
     ("reject-range-high", {"workflow": {"maxReviewIterations": 51}}),
+    ("reject-automatic-retries-high", {"workflow": {"maxAutomaticRetries": 4}}),
+    ("reject-automatic-retries-negative", {"workflow": {"maxAutomaticRetries": -1}}),
     ("reject-budget-zero", {"workflow": {"costControls": {"taskBudgetUsd": 0}}}),
     ("reject-empty-argv", {"workflow": {"verificationCommands": [[]]}}),
     ("reject-blank-argv-part", {"workflow": {"verificationCommands": [["pytest", " "]]}}),

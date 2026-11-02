@@ -160,6 +160,7 @@ const roleLabels: Record<string, string> = {
           <dt>Max requirements revisions</dt><dd>{{ store.config.workflow.maxRequirementsRevisions }}</dd>
           <dt>Implementation route</dt><dd>{{ store.config.workflow.implementationMode }}</dd>
           <dt>Global agent limit</dt><dd>{{ store.config.workflow.maxConcurrentAgents }}</dd>
+          <dt>Automatic retries</dt><dd>{{ store.config.workflow.maxAutomaticRetries ? `up to ${store.config.workflow.maxAutomaticRetries} in a row after a harness exit` : 'off (set workflow.maxAutomaticRetries)' }}</dd>
           <dt>Verification commands</dt><dd>{{ store.config.workflow.verificationCommands }}</dd>
           <dt>Default execution mode</dt><dd>{{ store.config.workflow.defaultExecutionMode }}</dd>
           <dt>Requirements approval</dt><dd>{{ store.config.workflow.requireRequirementsApproval ? 'required' : 'automatic' }}</dd>

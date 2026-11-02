@@ -312,7 +312,7 @@ impl Engine {
             state.task.status_message = None;
             state.log("Human resumed the stopped review loop", None, "warning", None);
         }
-        self.start_agent_run(&mut state, index, request.metered_approval.as_ref()).await?;
+        self.start_agent_run(&mut state, index, request.metered_approval.as_ref(), false).await?;
         if node_key == spec::ARCHITECT {
             self.transition_jira(&mut state).await;
         }
@@ -323,11 +323,15 @@ impl Engine {
 
     /// Start a node's agent, unless launch policy (capacity, budget, metered approval) refuses:
     /// then the node goes back to READY with the reason. Returns the new run's id.
+    ///
+    /// `automatic` (an automatic retry) never carries a metered approval, and a launch it cannot
+    /// make leaves the node FAILED, with its failure, instead of READY.
     pub(crate) async fn start_agent_run(
         &self,
         state: &mut TaskState,
         index: usize,
         metered: Option<&MeteredApproval>,
+        automatic: bool,
     ) -> Result<Option<i64>, WorkflowError> {
         // Persist the transition before waiting for the global launch lock: a caller must not
         // hold SQLite's writer lock while another launch needs to commit.
@@ -337,7 +341,12 @@ impl Engine {
         }
         // Setup may run for minutes: it is started here, in the background, never waited for.
         if let Some(reason) = self.setup_blocker(state, index).await? {
-            state.set_state(index, NodeState::Ready, Some(&reason), None);
+            if automatic {
+                let error = state.nodes[index].error.clone();
+                state.set_state(index, NodeState::Failed, Some(&format!("Not retried automatically: {reason}")), error);
+            } else {
+                state.set_state(index, NodeState::Ready, Some(&reason), None);
+            }
             self.db.session(|tx| state.flush(tx))?;
             return Ok(None);
         }
@@ -372,6 +381,11 @@ impl Engine {
             }
         }
         let key = state.nodes[index].key.clone();
+        if let Some(reason) = reason.as_ref().filter(|_| automatic) {
+            let error = state.nodes[index].error.clone();
+            state.set_state(index, NodeState::Failed, Some(&format!("Not retried automatically: {reason}")), error);
+            return Ok(None);
+        }
         if let Some(reason) = reason {
             state.set_state(index, NodeState::Ready, Some(&reason), None);
             state.log(reason, Some(&key), "info", None);

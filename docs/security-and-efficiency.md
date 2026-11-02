@@ -67,6 +67,12 @@ OS permissions; use an isolated account or environment for untrusted repositorie
 a paused node stays Ready and explains why, and starts once a slot is free. Waiting/interrupted runs
 occupy capacity. Run only one backend writer per DB.
 
+An automatic retry (`workflow.maxAutomaticRetries`, off by default; see the README's
+[Automatic retries](../README.md#automatic-retries)) is a new run and is charged like one. It goes
+through the same capacity, budget and metered-approval checks as a human's Run. It never carries an
+approval, so a role that needs metered approval is never retried automatically. A blocked retry
+leaves the stage Failed with the reason, instead of Ready.
+
 Cost controls are opt-in under Settings → API spend controls. Existing configurations retain
 their role assignments and unlimited launches until limits or approval policies are enabled.
 Configure a default ticket USD budget, an optional ticket-specific override, and a shared daily

@@ -157,6 +157,10 @@ class WorkflowConfig(_Model):
     cost_controls: CostControls = Field(default_factory=CostControls, alias="costControls")
     implementation_mode: Literal["direct", "parallel"] = Field("direct", alias="implementationMode")
     max_concurrent_agents: int = Field(4, alias="maxConcurrentAgents", ge=1, le=32)
+    # Opt-in: relaunch a stage whose harness exited without reporting completion, while it has failed at
+    # most this many times in a row in the review round (0 = never). Never after `flowctl fail`, a launch
+    # failure or an interruption; never past a budget, capacity or metered-approval check.
+    max_automatic_retries: int = Field(0, alias="maxAutomaticRetries", ge=0, le=3)
     # Fixed display-only conversion for showing reported USD costs in NZD (see
     # frontend ExecutionEvidence.vue); not a live FX lookup, so it drifts and is
     # meant to be bumped by hand from Settings when it does.

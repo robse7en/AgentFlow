@@ -125,6 +125,16 @@ pub async fn fail(
     Ok(Json(app.engine.agent_fail(&jira_key, &who.role, who.run_id, message).await?))
 }
 
+pub async fn lesson(
+    State(app): State<Arc<App>>,
+    Path(jira_key): Path<String>,
+    Body422(body): Body422<Map<String, Value>>,
+) -> ApiResult {
+    let who = caller(&body)?;
+    let message = text(&body, "message")?;
+    Ok(Json(app.engine.agent_lesson(&jira_key, &who.role, who.run_id, message).await?))
+}
+
 pub async fn exited(
     State(app): State<Arc<App>>,
     Path(jira_key): Path<String>,

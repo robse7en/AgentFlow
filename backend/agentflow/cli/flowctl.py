@@ -132,6 +132,12 @@ def cmd_question(args: argparse.Namespace) -> None:
     print(f"Question recorded. Node is now {result['state']}. Wait for the human to reply in AgentFlow, then run: flowctl running")
 
 
+def cmd_lesson(args: argparse.Namespace) -> None:
+    _require(args)
+    result = _post(args, "lesson", {"message": args.message})
+    print(f"Lesson proposed for human review ({result['count']} from this run). It does not change this run.")
+
+
 def cmd_heartbeat(args: argparse.Namespace) -> None:
     _require(args)
     _post(args, "heartbeat", {"phase": args.phase})
@@ -265,6 +271,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--phase", default="working",
                    choices=["working", "investigating", "implementing", "testing", "reviewing"])
     p.set_defaults(func=cmd_heartbeat)
+
+    p = sub.add_parser("lesson", help="Propose a lesson for your role's repository guidance; a human reviews it")
+    _common(p)
+    p.add_argument("--message", "-m", required=True, help="One sentence a later agent in your role should know")
+    p.set_defaults(func=cmd_lesson)
 
     p = sub.add_parser("running", help="Questions answered; node is RUNNING again")
     _common(p)

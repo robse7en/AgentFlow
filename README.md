@@ -178,6 +178,21 @@ budgets, launch reserves and approvals never use it.
   other harness is shown in money, marked when the figures are list-price estimates rather than
   provider-billed amounts.
 
+### Reviewed lessons
+
+Agents can propose a lesson for their role with `flowctl lesson --message "…"`: something durable
+about the repository that a later agent in that role should know. Nothing an agent proposes reaches
+a briefing on its own:
+
+1. You review the proposal in the task's **Lessons** tab. Edit it, approve it or dismiss it.
+2. Approving appends it to that role's `.agentflow-instructions/<role>.md` in the task's original
+   repository checkout. It is saved, not committed, and never written to the task worktree.
+3. Commit the file with your normal review. Tasks created after that commit get it in their
+   instruction snapshot.
+
+Lessons are single lines of at most 300 characters, shown as plain text. See
+[Lessons proposed by agents](docs/custom-agent-instructions.md#lessons-proposed-by-agents).
+
 Key rules it enforces:
 
 - one Jira ticket = one primary Git worktree plus isolated worker worktrees — agents never

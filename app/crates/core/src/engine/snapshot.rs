@@ -543,6 +543,7 @@ impl Engine {
                     .collect(),
             ),
         );
+        add("lessons", Value::Array(Engine::snapshot_lessons(task)));
         add(
             "events",
             Value::Array(

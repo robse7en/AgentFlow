@@ -64,6 +64,7 @@ from . import workers, worker_prompts
 from . import assurance
 from . import review_loop
 from . import finding_code
+from . import lessons
 from . import estimates
 from .screen_tracking import ScreenTracker
 from .usage import UsagePending, UsageReport, collect_usage, cost_kind as _cost_kind, prepare_baseline, run_usage
@@ -2080,6 +2081,97 @@ class WorkflowEngine:
         await self._publish(jira_key)
         return result
 
+    def _read_lessons(self, task: Task) -> list[dict[str, Any]]:
+        try:
+            return lessons.read(self.workspace(task).root)
+        except lessons.LessonError as exc:
+            raise WorkflowError(str(exc), 409) from exc
+
+    def _write_lessons(self, task: Task, items: list[dict[str, Any]]) -> None:
+        try:
+            instructions.atomic_json(lessons.path(self.workspace(task).root), {"schema": 1, "lessons": items})
+        except instructions.InstructionError as exc:
+            raise WorkflowError(f"Could not save the task's lessons: {exc}", 409) from exc
+
+    def _snapshot_lessons(self, task: Task) -> list[dict[str, Any]]:
+        """The task's lessons for the UI. An unreadable file shows none here; every write fails closed."""
+        try:
+            return lessons.read(self.workspace(task).root)
+        except lessons.LessonError:
+            return []
+
+    async def agent_lesson(self, jira_key: str, role: str, run_id: int | None, message: str) -> dict[str, Any]:
+        """Record a lesson an agent proposes for its role's repository guidance. Only a proposal: nothing
+        reaches any briefing until a human approves it (decide_lesson) and commits the guidance file."""
+        try:
+            line = lessons.validate(message)
+        except lessons.LessonError as exc:
+            raise WorkflowError(str(exc), 422) from exc
+        async with self._lock(jira_key):
+            with self.db.session() as session:
+                task = self._load_task(session, jira_key)
+                node, run = self._resolve_run(session, task, role, run_id)
+                if run.state not in ACTIVE_STATES or node.state not in ACTIVE_STATES:
+                    raise WorkflowError("Lessons require an active run and node", 409)
+                items = self._read_lessons(task)
+                from_run = sum(1 for item in items if item.get("runId") == run.id)
+                if from_run >= lessons.MAX_PER_RUN:
+                    raise WorkflowError(f"This run already proposed {lessons.MAX_PER_RUN} lessons", 409)
+                if len(items) >= lessons.MAX_PER_TASK:
+                    raise WorkflowError(f"This task already has {lessons.MAX_PER_TASK} lessons", 409)
+                lesson = {"uid": str(uuid4()), "role": node.role, "nodeKey": node.key, "nodeLabel": node.label,
+                          "runId": run.id, "runNumber": run.run_number, "text": line, "status": "proposed",
+                          "createdAt": _iso(_now()), "decidedAt": None, "approvedText": None, "path": None}
+                self._write_lessons(task, [*items, lesson])
+                self._log(session, task, f"{node.label} proposed a lesson for human review", node_key=node.key)
+                result = {"ok": True, "uid": lesson["uid"], "count": from_run + 1}
+        await self._publish(jira_key)
+        return result
+
+    async def decide_lesson(self, jira_key: str, uid: str, approve: bool, text: str | None = None) -> dict[str, Any]:
+        """A human approves (optionally edited) or dismisses a proposed lesson. Approving appends it to
+        the role's `.agentflow-instructions` file in the task's original repository checkout: never the
+        task worktree, never committed. It reaches future tasks only once a human commits it."""
+        async with self._lock(jira_key):
+            async with self._projects_lock:
+                with self.db.session() as session:
+                    task = self._load_task(session, jira_key)
+                    items = self._read_lessons(task)
+                    lesson = next((item for item in items if item.get("uid") == uid), None)
+                    if lesson is None:
+                        raise WorkflowError("Lesson not found", 404)
+                    if lesson.get("status") != "proposed":
+                        raise WorkflowError(f"This lesson was already {lesson.get('status')}", 409)
+                    dirty: list[str] = []
+                    if approve:
+                        try:
+                            line = lessons.validate(lesson["text"] if text is None else text)
+                        except lessons.LessonError as exc:
+                            raise WorkflowError(str(exc), 422) from exc
+                        root = Path(task.repository_root)
+                        try:
+                            current = instructions.read_source(root, lesson["role"])
+                            saved = instructions.save_source(root, lesson["role"],
+                                                             lessons.append_lesson(current["content"], line),
+                                                             current["hash"])
+                        except instructions.InstructionError as exc:
+                            raise WorkflowError(str(exc), 409) from exc
+                        lesson.update(status="approved", approvedText=line, path=str(root / saved["path"]))
+                        try:
+                            dirty = await self.git.dirty_paths(root)
+                        except (GitError, ProcessError, OSError):
+                            dirty = []
+                        self._log(session, task, f"Human approved a lesson into {saved['path']} (not committed)",
+                                  node_key=lesson.get("nodeKey"))
+                    else:
+                        lesson["status"] = "dismissed"
+                        self._log(session, task, "Human dismissed a proposed lesson", node_key=lesson.get("nodeKey"))
+                    lesson["decidedAt"] = _iso(_now())
+                    self._write_lessons(task, items)
+                    result = {"lesson": lesson, "dirtyPaths": dirty}
+        await self._publish(jira_key)
+        return result
+
     async def agent_running(self, jira_key: str, role: str, run_id: int | None) -> dict[str, Any]:
         async with self._lock(jira_key):
             with self.db.session() as session:
@@ -3642,6 +3734,7 @@ class WorkflowEngine:
                 ],
                 "findings": [self._finding_dict(f) for f in findings],
                 "questions": [self._question_dict(q, runs_by_id, _question_actionable(q)) for q in questions],
+                "lessons": self._snapshot_lessons(task),
                 "events": [
                     {"id": e.id, "timestamp": _iso(e.timestamp), "level": e.level, "nodeKey": e.node_key, "message": e.message, "data": e.data}
                     for e in reversed(events)

@@ -366,6 +366,13 @@ class FailRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
+class LessonRequest(BaseModel):
+    role: str
+    run_id: int | None = Field(None, alias="runId")
+    message: str
+    model_config = ConfigDict(populate_by_name=True)
+
+
 class ExitedRequest(BaseModel):
     role: str
     run_id: int | None = Field(None, alias="runId")

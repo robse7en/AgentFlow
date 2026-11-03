@@ -1,0 +1,14 @@
+{
+  "approvedText": "null",
+  "createdAt": "str",
+  "decidedAt": "null",
+  "nodeKey": "str",
+  "nodeLabel": "str",
+  "path": "null",
+  "role": "str",
+  "runId": "number",
+  "runNumber": "number",
+  "status": "str",
+  "text": "str",
+  "uid": "str"
+}

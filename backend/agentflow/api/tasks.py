@@ -317,6 +317,28 @@ async def answer_question(
         raise http_error(exc)
 
 
+class LessonApproval(BaseModel):
+    """The lesson's text as the human edited it; omitted keeps the proposed text."""
+    text: str | None = None
+    model_config = ConfigDict(extra="forbid")
+
+
+@router.post("/{jira_key}/lessons/{lesson_uid}/approve")
+async def approve_lesson(jira_key: str, lesson_uid: UUID, req: LessonApproval, state: AppState = Depends(get_state)):
+    try:
+        return await state.engine.decide_lesson(jira_key, str(lesson_uid), True, req.text)
+    except WorkflowError as exc:
+        raise http_error(exc)
+
+
+@router.post("/{jira_key}/lessons/{lesson_uid}/dismiss")
+async def dismiss_lesson(jira_key: str, lesson_uid: UUID, state: AppState = Depends(get_state)):
+    try:
+        return await state.engine.decide_lesson(jira_key, str(lesson_uid), False)
+    except WorkflowError as exc:
+        raise http_error(exc)
+
+
 @router.get("/{jira_key}/terminal/{role}")
 async def stream_terminal(jira_key: str, role: str, state: AppState = Depends(get_state)):
     try:

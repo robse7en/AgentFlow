@@ -150,6 +150,15 @@ literal fallback if the environment variable itself is somehow unset:
   via `flowctl question` first if a human judgment call is genuinely required, then proceed with
   the tool's own prompt using the answer you were given.
 
+- If you learn something durable about this repository that would help a later agent in your
+  role (a build quirk, a convention the code relies on, a check that gives false alarms), and not
+  something about this task alone, propose it as a lesson:
+
+      flowctl lesson --message "Run npm run build before the tests: they import from dist/"
+
+  One sentence, at most 300 characters. A human reviews each lesson later and may add it to the
+  repository's guidance for your role. It has no effect on this run: do not wait for it.
+
 - When you have finished, submit the JSON shown above. For a short result, pipe it into
   flowctl's stdin:
 

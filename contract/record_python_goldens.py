@@ -982,6 +982,36 @@ def record_estimates() -> None:
     write_json(GOLDEN / "estimates-unit" / "cases.json", cases)
 
 
+# Lesson text as agents send it: every whitespace Python's str.split() knows, and the limits.
+LESSON_TEXTS = [
+    "Run the build first", "  padded \t\n line  ", "a\r\nb\rc\nd", "x\x1cy\x1dz\x1ew\x1fv", "nbsp here　and there",
+    "\x85next\x0bvertical\x0cfeed", "", " \n\t ", "# Heading\n- list", "a\x00b", "é" * 300, "é" * 301, "x" * 299 + "  y",
+]
+LESSON_FILES = [
+    None, "", "\n", "# Implementer\n\nUse tabs.", "# Implementer\n\nUse tabs.\n", "# Reviewer\r\n\r\nBe brief.",
+    "# Reviewer\r\n\r\nBe brief.\r\n", "## Lessons from past tasks\n\n- Old\n",
+    "## Lessons from past tasks\n\n- Old\n\n## Testing\n\nRun pytest.\n", "No headings at all\nsecond line",
+    "## Lessons from past tasks\r\n\r\n- Old", "#!/bin/sh starts like a heading\n", "café ☕\n## Lessons from past tasks\n",
+]
+
+
+def record_lessons() -> None:
+    """lessons.normalize / validate / append_lesson on fixed inputs: golden/lessons-unit/cases.json."""
+    from agentflow.workflow import lessons
+    cases = []
+    for text in LESSON_TEXTS:
+        try:
+            validated = {"line": lessons.validate(text)}
+        except lessons.LessonError as exc:
+            validated = {"error": str(exc)}
+        cases.append({"function": "validate", "text": text, "normalized": lessons.normalize(text), **validated})
+    cases += [{"function": "append_lesson", "existing": existing, "line": line,
+               "result": lessons.append_lesson(existing, line)}
+              for existing in LESSON_FILES for line in ("Run the build first", "Use `make` – not ninja")]
+    (GOLDEN / "lessons-unit").mkdir(exist_ok=True)
+    write_json(GOLDEN / "lessons-unit" / "cases.json", cases)
+
+
 def write_json(path: Path, value: object) -> None:
     path.write_text(json.dumps(value, indent=2) + "\n", encoding="utf-8")
 
@@ -994,5 +1024,6 @@ if __name__ == "__main__":
     record_prompts()
     record_usage()
     record_estimates()
+    record_lessons()
     write_schema_rs()
     print(f"recorded into {GOLDEN}")

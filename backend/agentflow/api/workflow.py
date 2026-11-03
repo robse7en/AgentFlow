@@ -5,7 +5,8 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 
 from ..workflow.engine import WorkflowError
-from ..workflow.models import HeartbeatRequest, CompleteRequest, ExitedRequest, FailRequest, FindingRequest, QuestionRequest, RunningRequest
+from ..workflow.models import (HeartbeatRequest, CompleteRequest, ExitedRequest, FailRequest, FindingRequest,
+                               LessonRequest, QuestionRequest, RunningRequest)
 from .deps import AppState, get_state, http_error
 
 router = APIRouter(prefix="/api/tasks/{jira_key}/agent", tags=["agent"])
@@ -24,6 +25,14 @@ async def question(jira_key: str, req: QuestionRequest, state: AppState = Depend
 async def heartbeat(jira_key: str, req: HeartbeatRequest, state: AppState = Depends(get_state)):
     try:
         return await state.engine.agent_heartbeat(jira_key, req.role, req.run_id, req.phase)
+    except WorkflowError as exc:
+        raise http_error(exc)
+
+
+@router.post("/lesson")
+async def lesson(jira_key: str, req: LessonRequest, state: AppState = Depends(get_state)):
+    try:
+        return await state.engine.agent_lesson(jira_key, req.role, req.run_id, req.message)
     except WorkflowError as exc:
         raise http_error(exc)
 

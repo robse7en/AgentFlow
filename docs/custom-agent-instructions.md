@@ -67,6 +67,31 @@ launch; workflow state, Jira synchronization and assigned run ID can change befo
 Project editing has no workflow briefing until a task exists. Historical inspection does not
 depend on the worktree still existing.
 
+## Lessons proposed by agents
+
+Agents can propose additions to their own role's file. Every briefing tells them to use
+`flowctl lesson --message "…"` for something durable about the repository, such as a build quirk, a
+convention or a check that gives false alarms, rather than something about one task. A proposal is
+only a record on the task (`<task>/lessons.json`). It changes nothing for the current run.
+
+- **Review:** the task's **Lessons** tab lists proposals. Edit the text if needed, then
+  **Approve into guidance** or **Dismiss**.
+- **What approval does:** it appends the lesson as one bullet under a `## Lessons from past tasks`
+  heading. The heading is added when it isn't the file's last heading. The file is the role's
+  `.agentflow-instructions/<role>.md` in the task's **original repository checkout** (its repository
+  root), never the task worktree.
+- **What approval doesn't do:** it never commits. The tab shows the checkout's uncommitted paths.
+  Commit the file with your normal review, and tasks created from that commit capture it in their
+  instruction snapshot. Until then no agent sees it.
+- **Saving:** approval uses the same validated save as the editor: role allowlist, size limits, the
+  hash check against concurrent edits, and an atomic write. An approval that doesn't fit, or that
+  races an external edit, is refused with `409` and the lesson stays proposed.
+- **Text rules:** lesson text is agent output. It is normalised to a single line, at most 300
+  characters, so it can't add headings or other structure. It is shown as plain text, and the
+  existing file's line endings are kept.
+- **Limits:** five proposals per run and 50 per task. A lesson can be decided once; deciding it
+  again returns `409`. Agents' credentials can propose but never approve or dismiss.
+
 ## Snapshots, updates and conversations
 
 The first agent launch captures all five roles from the task worktree, including the exact
@@ -127,6 +152,8 @@ Agent bearer credentials cannot read or mutate them, even for their own task.
 | `GET /api/tasks/{key}/instructions?runId=123` | Historical briefing and metadata, task-scoped |
 | `PUT /api/tasks/{key}/instructions/{role}` | Save/create a task-worktree source |
 | `POST /api/tasks/{key}/instructions/apply` | Explicit version update for future launches |
+| `POST /api/tasks/{key}/lessons/{uid}/approve` | Append a proposed lesson (`{ "text": "…" }`, optional) to the role's file in the original checkout |
+| `POST /api/tasks/{key}/lessons/{uid}/dismiss` | Dismiss a proposed lesson |
 
 API role keys are `architect`, `orchestrator`, `implementer`, `code_reviewer`, `security_reviewer`.
 A source save requires `{ "content": "...", "expectedHash": "<sha256>" }`; use an explicit

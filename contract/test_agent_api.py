@@ -67,6 +67,9 @@ def test_agents_cannot_perform_human_actions(architect):
     url = architect.backend.url
     for method, path in (("POST", f"/api/tasks/{architect.key}/cancel"),
                          ("POST", f"/api/tasks/{architect.key}/nodes/requirements_gate/approve"),
+                         # An agent can propose a lesson, never approve or dismiss one.
+                         ("POST", f"/api/tasks/{architect.key}/lessons/00000000-0000-0000-0000-000000000000/approve"),
+                         ("POST", f"/api/tasks/{architect.key}/lessons/00000000-0000-0000-0000-000000000000/dismiss"),
                          ("GET", "/api/tasks"), ("GET", "/api/config")):
         assert httpx.request(method, url + path, headers=headers, json={}).status_code == 403, path
 

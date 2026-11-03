@@ -370,6 +370,31 @@ export interface WorktreeSetupStatus {
   logPath: string
 }
 
+/** A lesson an agent proposed for its role's repository guidance (`flowctl lesson`). Its text is
+ *  agent output: display it as plain text only. */
+export interface Lesson {
+  uid: string
+  role: string
+  nodeKey: string
+  nodeLabel: string
+  runId: number
+  runNumber: number
+  text: string
+  status: 'proposed' | 'approved' | 'dismissed'
+  createdAt: string
+  decidedAt: string | null
+  /** The text the human approved (possibly edited). */
+  approvedText: string | null
+  /** The guidance file it was appended to, in the task's original repository checkout. */
+  path: string | null
+}
+
+export interface LessonDecision {
+  lesson: Lesson
+  /** `git status --porcelain` of that checkout after approving: the file is saved, not committed. */
+  dirtyPaths: string[]
+}
+
 export interface TaskSnapshot extends TaskSummary {
     budget?: {
         task: BudgetGroup;
@@ -409,6 +434,8 @@ export interface TaskSnapshot extends TaskSummary {
   sessions: AgentSessionDto[]
   findings: Finding[]
   questions: QuestionDto[]
+  /** Absent from older backends. */
+  lessons?: Lesson[]
   events: EventDto[]
   requirements: Record<string, string>
   assessment: Record<string, any> | null

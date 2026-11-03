@@ -14,6 +14,7 @@ from pathlib import Path
 
 import pytest
 
+import golden
 from conftest import rust_flowctl
 from support import (ARCHITECT_RESULT, ROOT, agent_run, free_port, git, new_key, node, python_executable, reach_reviews,
                      write_requirements)
@@ -60,6 +61,7 @@ def test_usage_errors_exit_2(flowctl):
     assert flowctl("question").returncode == 2  # --message is required
     assert flowctl("complete", "--verdict", "maybe").returncode == 2
     assert flowctl("finding", "--title", "t", "--severity", "huge").returncode == 2
+    assert flowctl("lesson").returncode == 2  # --message is required
 
 
 def test_task_and_agent_are_required(flowctl):
@@ -351,6 +353,42 @@ def test_a_harness_exit_is_retried_automatically_when_enabled(flowctl, launch, r
             "FAILED", "Harness exited (code 3)")
         assert any(e["message"] == "Architect not retried automatically: it has failed 2 times in a row in this "
                    "review round (workflow.maxAutomaticRetries is 1)" for e in snapshot["events"])
+
+
+def test_a_lesson_is_proposed_and_a_human_approves_it_into_the_checkout(flowctl, architect, human):
+    env = architect.env()
+    result = flowctl("lesson", "-m", "Run the  build\nfirst", env=env)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "Lesson proposed for human review (1 from this run). It does not change this run."
+    assert flowctl("lesson", "-m", "Not worth keeping", env=env).returncode == 0
+    snapshot = human.task(architect.key)
+    first, second = snapshot["lessons"]
+    assert (first["role"], first["nodeKey"], first["runId"], first["text"], first["status"]) == (
+        "architect", "architect", architect.run_id, "Run the build first", "proposed")
+    golden.check_shape("lesson", first)
+    rejected = flowctl("lesson", "-m", " ", env=env)
+    assert rejected.returncode != 0 and "A lesson needs text" in rejected.stderr
+
+    approved = human.ok("POST", f"/api/tasks/{architect.key}/lessons/{first['uid']}/approve",
+                        json={"text": "Run `make build`\n  before the tests"})
+    path = Path(snapshot["repositoryRoot"]) / ".agentflow-instructions" / "architect.md"
+    assert path.read_bytes() == b"## Lessons from past tasks\n\n- Run `make build` before the tests\n"
+    assert (approved["lesson"]["status"], approved["lesson"]["approvedText"]) == (
+        "approved", "Run `make build` before the tests")
+    assert Path(approved["lesson"]["path"]) == path
+    assert any(".agentflow-instructions" in line for line in approved["dirtyPaths"])  # saved, not committed
+    assert not (Path(snapshot["worktreePath"]) / ".agentflow-instructions").exists()
+
+    dismissed = human.ok("POST", f"/api/tasks/{architect.key}/lessons/{second['uid']}/dismiss")
+    assert dismissed["lesson"]["status"] == "dismissed" and dismissed["dirtyPaths"] == []
+    for uid, action in ((first["uid"], "approve"), (second["uid"], "approve"), (second["uid"], "dismiss")):
+        again = human.post(f"/api/tasks/{architect.key}/lessons/{uid}/{action}", json={})
+        assert again.status_code == 409, (uid, action, again.text)
+    assert path.read_bytes().count(b"- Run") == 1
+    missing = human.post(f"/api/tasks/{architect.key}/lessons/00000000-0000-0000-0000-000000000000/approve", json={})
+    assert missing.status_code == 404
+    assert human.post(f"/api/tasks/{architect.key}/lessons/not-a-uuid/dismiss").status_code == 422
+    assert [lesson["status"] for lesson in human.task(architect.key)["lessons"]] == ["approved", "dismissed"]
 
 
 def test_status_json_prints_the_snapshot(flowctl, architect):

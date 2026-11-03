@@ -11,6 +11,7 @@ import AgentConfigurationDrawer from '@/components/AgentConfigurationDrawer.vue'
 import RequirementsReview from '@/components/RequirementsReview.vue';
 import QuestionModal from '@/components/QuestionModal.vue';
 import FindingList from '@/components/FindingList.vue';
+import LessonList from '@/components/LessonList.vue';
 import FinalAssessment from '@/components/FinalAssessment.vue';
 import EventLog from '@/components/EventLog.vue';
 import ZellijViewer from '@/components/ZellijViewer.vue';
@@ -45,7 +46,8 @@ const operations = useOperationStore();
 const operationRunning = computed(() => !!operations.runningFor(props.jiraKey));
 const configStore = useConfigStore();
 const selected = ref<string | null>(null);
-const tab = ref<'node' | 'requirements' | 'findings' | 'assessment' | 'events'>('node');
+const tab = ref<'node' | 'requirements' | 'findings' | 'assessment' | 'lessons' | 'events'>('node');
+const proposedLessons = computed(() => (task.value?.lessons ?? []).filter((lesson) => lesson.status === 'proposed').length);
 const notice = ref<string | null>(null);
 const error = ref<string | null>(null);
 const confirmingCancel = ref(false);
@@ -478,6 +480,7 @@ watch(() => route.query.node, (key) => {
             <button :class="{ active: tab === 'requirements' }" @click="tab = 'requirements'">Requirements</button>
             <button :class="{ active: tab === 'findings' }" @click="tab = 'findings'">Findings <span v-if="task.findings.length" class="badge">{{ task.findings.length }}</span></button>
             <button :class="{ active: tab === 'assessment' }" @click="tab = 'assessment'">Assessment</button>
+            <button :class="{ active: tab === 'lessons' }" @click="tab = 'lessons'">Lessons <span v-if="proposedLessons" class="badge">{{ proposedLessons }}</span></button>
             <button :class="{ active: tab === 'events' }" @click="tab = 'events'">Events</button>
           </div>
 
@@ -564,6 +567,8 @@ watch(() => route.query.node, (key) => {
           <RequirementsReview v-else-if="tab === 'requirements'" :task="task" />
           <FindingList v-else-if="tab === 'findings'" :findings="task.findings" :task-key="task.jiraKey" :current-sha="task.currentSha" />
           <FinalAssessment v-else-if="tab === 'assessment'" :task="task" />
+          <LessonList v-else-if="tab === 'lessons'" :lessons="task.lessons ?? []" :task-key="task.jiraKey"
+            :repository-root="task.repositoryRoot" />
           <EventLog v-else :events="task.events" />
         </div>
       </aside>

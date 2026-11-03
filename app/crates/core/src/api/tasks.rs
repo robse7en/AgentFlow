@@ -395,6 +395,35 @@ pub async fn recover_node(
 
 /// `POST /api/tasks/{key}/questions/{uid}/answer`: free text (`answer`) or a path of 0-based
 /// choice indexes (`path`, branch then follow-up option), as `QuestionAnswerRequest` accepts them.
+fn lesson_uid(raw: &str) -> Result<String, ApiError> {
+    Ok(uuid::Uuid::parse_str(raw)
+        .map_err(|_| ApiError::new(422, "lesson_uid: Input should be a valid UUID"))?
+        .to_string())
+}
+
+/// Approve a proposed lesson, with the text as the human edited it (`text`; omitted keeps it).
+pub async fn approve_lesson(
+    State(app): State<Arc<App>>,
+    Path((jira_key, uid)): Path<(String, String)>,
+    Body422(body): Body422<Map<String, Value>>,
+) -> ApiResult {
+    let uid = lesson_uid(&uid)?;
+    if let Some(extra) = body.keys().find(|key| key.as_str() != "text") {
+        return Err(ApiError::new(422, format!("{extra}: Extra inputs are not permitted")));
+    }
+    let text = match body.get("text") {
+        None | Some(Value::Null) => None,
+        Some(Value::String(text)) => Some(text.as_str()),
+        Some(_) => return Err(ApiError::new(422, "text: Input should be a valid string")),
+    };
+    Ok(Json(app.engine.decide_lesson(&jira_key, &uid, true, text).await?))
+}
+
+pub async fn dismiss_lesson(State(app): State<Arc<App>>, Path((jira_key, uid)): Path<(String, String)>) -> ApiResult {
+    let uid = lesson_uid(&uid)?;
+    Ok(Json(app.engine.decide_lesson(&jira_key, &uid, false, None).await?))
+}
+
 pub async fn answer_question(
     State(app): State<Arc<App>>,
     Path((jira_key, question_uid)): Path<(String, String)>,

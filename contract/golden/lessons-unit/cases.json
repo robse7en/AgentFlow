@@ -1,0 +1,236 @@
+[
+  {
+    "function": "validate",
+    "text": "Run the build first",
+    "normalized": "Run the build first",
+    "line": "Run the build first"
+  },
+  {
+    "function": "validate",
+    "text": "  padded \t\n line  ",
+    "normalized": "padded line",
+    "line": "padded line"
+  },
+  {
+    "function": "validate",
+    "text": "a\r\nb\rc\nd",
+    "normalized": "a b c d",
+    "line": "a b c d"
+  },
+  {
+    "function": "validate",
+    "text": "x\u001cy\u001dz\u001ew\u001fv",
+    "normalized": "x y z w v",
+    "line": "x y z w v"
+  },
+  {
+    "function": "validate",
+    "text": "nbsp\u00a0here\u3000and\u2028there",
+    "normalized": "nbsp here and there",
+    "line": "nbsp here and there"
+  },
+  {
+    "function": "validate",
+    "text": "\u0085next\u000bvertical\ffeed",
+    "normalized": "next vertical feed",
+    "line": "next vertical feed"
+  },
+  {
+    "function": "validate",
+    "text": "",
+    "normalized": "",
+    "error": "A lesson needs text"
+  },
+  {
+    "function": "validate",
+    "text": " \n\t ",
+    "normalized": "",
+    "error": "A lesson needs text"
+  },
+  {
+    "function": "validate",
+    "text": "# Heading\n- list",
+    "normalized": "# Heading - list",
+    "line": "# Heading - list"
+  },
+  {
+    "function": "validate",
+    "text": "a\u0000b",
+    "normalized": "a\u0000b",
+    "error": "A lesson cannot contain NUL characters"
+  },
+  {
+    "function": "validate",
+    "text": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9",
+    "normalized": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9",
+    "line": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9"
+  },
+  {
+    "function": "validate",
+    "text": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9",
+    "normalized": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9",
+    "error": "A lesson is at most 300 characters (this one has 301)"
+  },
+  {
+    "function": "validate",
+    "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx  y",
+    "normalized": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx y",
+    "error": "A lesson is at most 300 characters (this one has 301)"
+  },
+  {
+    "function": "append_lesson",
+    "existing": null,
+    "line": "Run the build first",
+    "result": "## Lessons from past tasks\n\n- Run the build first\n"
+  },
+  {
+    "function": "append_lesson",
+    "existing": null,
+    "line": "Use `make` \u2013 not ninja",
+    "result": "## Lessons from past tasks\n\n- Use `make` \u2013 not ninja\n"
+  },
+  {
+    "function": "append_lesson",
+    "existing": "",
+    "line": "Run the build first",
+    "result": "## Lessons from past tasks\n\n- Run the build first\n"
+  },
+  {
+    "function": "append_lesson",
+    "existing": "",
+    "line": "Use `make` \u2013 not ninja",
+    "result": "## Lessons from past tasks\n\n- Use `make` \u2013 not ninja\n"
+  },
+  {
+    "function": "append_lesson",
+    "existing": "\n",
+    "line": "Run the build first",
+    "result": "\n\n## Lessons from past tasks\n\n- Run the build first\n"
+  },
+  {
+    "function": "append_lesson",
+    "existing": "\n",
+    "line": "Use `make` \u2013 not ninja",
+    "result": "\n\n## Lessons from past tasks\n\n- Use `make` \u2013 not ninja\n"
+  },
+  {
+    "function": "append_lesson",
+    "existing": "# Implementer\n\nUse tabs.",
+    "line": "Run the build first",
+    "result": "# Implementer\n\nUse tabs.\n\n## Lessons from past tasks\n\n- Run the build first\n"
+  },
+  {
+    "function": "append_lesson",
+    "existing": "# Implementer\n\nUse tabs.",
+    "line": "Use `make` \u2013 not ninja",
+    "result": "# Implementer\n\nUse tabs.\n\n## Lessons from past tasks\n\n- Use `make` \u2013 not ninja\n"
+  },
+  {
+    "function": "append_lesson",
+    "existing": "# Implementer\n\nUse tabs.\n",
+    "line": "Run the build first",
+    "result": "# Implementer\n\nUse tabs.\n\n## Lessons from past tasks\n\n- Run the build first\n"
+  },
+  {
+    "function": "append_lesson",
+    "existing": "# Implementer\n\nUse tabs.\n",
+    "line": "Use `make` \u2013 not ninja",
+    "result": "# Implementer\n\nUse tabs.\n\n## Lessons from past tasks\n\n- Use `make` \u2013 not ninja\n"
+  },
+  {
+    "function": "append_lesson",
+    "existing": "# Reviewer\r\n\r\nBe brief.",
+    "line": "Run the build first",
+    "result": "# Reviewer\r\n\r\nBe brief.\r\n\r\n## Lessons from past tasks\r\n\r\n- Run the build first\r\n"
+  },
+  {
+    "function": "append_lesson",
+    "existing": "# Reviewer\r\n\r\nBe brief.",
+    "line": "Use `make` \u2013 not ninja",
+    "result": "# Reviewer\r\n\r\nBe brief.\r\n\r\n## Lessons from past tasks\r\n\r\n- Use `make` \u2013 not ninja\r\n"
+  },
+  {
+    "function": "append_lesson",
+    "existing": "# Reviewer\r\n\r\nBe brief.\r\n",
+    "line": "Run the build first",
+    "result": "# Reviewer\r\n\r\nBe brief.\r\n\r\n## Lessons from past tasks\r\n\r\n- Run the build first\r\n"
+  },
+  {
+    "function": "append_lesson",
+    "existing": "# Reviewer\r\n\r\nBe brief.\r\n",
+    "line": "Use `make` \u2013 not ninja",
+    "result": "# Reviewer\r\n\r\nBe brief.\r\n\r\n## Lessons from past tasks\r\n\r\n- Use `make` \u2013 not ninja\r\n"
+  },
+  {
+    "function": "append_lesson",
+    "existing": "## Lessons from past tasks\n\n- Old\n",
+    "line": "Run the build first",
+    "result": "## Lessons from past tasks\n\n- Old\n- Run the build first\n"
+  },
+  {
+    "function": "append_lesson",
+    "existing": "## Lessons from past tasks\n\n- Old\n",
+    "line": "Use `make` \u2013 not ninja",
+    "result": "## Lessons from past tasks\n\n- Old\n- Use `make` \u2013 not ninja\n"
+  },
+  {
+    "function": "append_lesson",
+    "existing": "## Lessons from past tasks\n\n- Old\n\n## Testing\n\nRun pytest.\n",
+    "line": "Run the build first",
+    "result": "## Lessons from past tasks\n\n- Old\n\n## Testing\n\nRun pytest.\n\n## Lessons from past tasks\n\n- Run the build first\n"
+  },
+  {
+    "function": "append_lesson",
+    "existing": "## Lessons from past tasks\n\n- Old\n\n## Testing\n\nRun pytest.\n",
+    "line": "Use `make` \u2013 not ninja",
+    "result": "## Lessons from past tasks\n\n- Old\n\n## Testing\n\nRun pytest.\n\n## Lessons from past tasks\n\n- Use `make` \u2013 not ninja\n"
+  },
+  {
+    "function": "append_lesson",
+    "existing": "No headings at all\nsecond line",
+    "line": "Run the build first",
+    "result": "No headings at all\nsecond line\n\n## Lessons from past tasks\n\n- Run the build first\n"
+  },
+  {
+    "function": "append_lesson",
+    "existing": "No headings at all\nsecond line",
+    "line": "Use `make` \u2013 not ninja",
+    "result": "No headings at all\nsecond line\n\n## Lessons from past tasks\n\n- Use `make` \u2013 not ninja\n"
+  },
+  {
+    "function": "append_lesson",
+    "existing": "## Lessons from past tasks\r\n\r\n- Old",
+    "line": "Run the build first",
+    "result": "## Lessons from past tasks\r\n\r\n- Old\r\n- Run the build first\r\n"
+  },
+  {
+    "function": "append_lesson",
+    "existing": "## Lessons from past tasks\r\n\r\n- Old",
+    "line": "Use `make` \u2013 not ninja",
+    "result": "## Lessons from past tasks\r\n\r\n- Old\r\n- Use `make` \u2013 not ninja\r\n"
+  },
+  {
+    "function": "append_lesson",
+    "existing": "#!/bin/sh starts like a heading\n",
+    "line": "Run the build first",
+    "result": "#!/bin/sh starts like a heading\n\n## Lessons from past tasks\n\n- Run the build first\n"
+  },
+  {
+    "function": "append_lesson",
+    "existing": "#!/bin/sh starts like a heading\n",
+    "line": "Use `make` \u2013 not ninja",
+    "result": "#!/bin/sh starts like a heading\n\n## Lessons from past tasks\n\n- Use `make` \u2013 not ninja\n"
+  },
+  {
+    "function": "append_lesson",
+    "existing": "caf\u00e9 \u2615\n## Lessons from past tasks\n",
+    "line": "Run the build first",
+    "result": "caf\u00e9 \u2615\n## Lessons from past tasks\n- Run the build first\n"
+  },
+  {
+    "function": "append_lesson",
+    "existing": "caf\u00e9 \u2615\n## Lessons from past tasks\n",
+    "line": "Use `make` \u2013 not ninja",
+    "result": "caf\u00e9 \u2615\n## Lessons from past tasks\n- Use `make` \u2013 not ninja\n"
+  }
+]

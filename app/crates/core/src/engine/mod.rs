@@ -17,6 +17,7 @@ pub mod heartbeats;
 pub mod instruction_ui;
 mod jira_context;
 pub mod launch;
+pub mod lessons;
 pub mod lifecycle;
 pub mod pr_sync;
 pub mod pr_tracking;

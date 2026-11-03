@@ -283,7 +283,7 @@ pub fn compose(
 ) -> Result<String, WorkflowError> {
     let source = snapshot.files.get(role).ok_or_else(|| failure("Unsupported instruction role"))?;
     let mut briefing = builtin.to_owned();
-    for command in ["question", "running", "complete", "finding", "fail", "status"] {
+    for command in ["question", "running", "complete", "finding", "fail", "status", "lesson"] {
         briefing = briefing.replace(&format!("flowctl {command}"), &format!("flowctl {command} --run {run_id}"));
     }
     briefing += appendix;

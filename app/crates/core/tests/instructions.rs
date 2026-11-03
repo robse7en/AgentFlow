@@ -33,6 +33,9 @@ fn optional_sources_exact_composition_and_role_separation() {
             format!("flowctl complete --run 42\n{}", guidance::RUN_NOTICE)
         );
     }
+    // The briefing's lesson example carries the run id like every other agent command.
+    let lesson = guidance::compose("flowctl lesson --message \"x\"\n", &snapshot, "implementer", 7, "").unwrap();
+    assert!(lesson.starts_with("flowctl lesson --run 7 --message"), "{lesson}");
     sources(root);
     let updated = guidance::capture(&task, root, "revision2", false).unwrap();
     let mut corrupted = updated.clone();

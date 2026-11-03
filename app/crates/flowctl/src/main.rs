@@ -85,6 +85,14 @@ enum Command {
         #[arg(long, default_value = "working", value_parser = ["working", "investigating", "implementing", "testing", "reviewing"])]
         phase: String,
     },
+    /// Propose a lesson for your role's repository guidance; a human reviews it
+    Lesson {
+        #[command(flatten)]
+        common: Common,
+        /// One sentence a later agent in your role should know
+        #[arg(long, short = 'm')]
+        message: String,
+    },
     /// Questions answered; node is RUNNING again
     Running {
         #[command(flatten)]
@@ -380,6 +388,16 @@ fn heartbeat(target: Target, phase: String) -> Result<()> {
     Ok(())
 }
 
+fn lesson(target: Target, message: String) -> Result<()> {
+    target.require()?;
+    let result = target.post("lesson", object([("message", json!(message))]), || {})?;
+    println!(
+        "Lesson proposed for human review ({} from this run). It does not change this run.",
+        text(result.get("count"))
+    );
+    Ok(())
+}
+
 fn running(target: Target) -> Result<()> {
     target.require()?;
     let result = target.post("running", Map::new(), || {})?;
@@ -554,6 +572,7 @@ fn main() -> ExitCode {
         Command::Status { common, json } => status(Target::from(common), json),
         Command::Question { common, message, file, choices } => question(Target::from(common), message, file, choices),
         Command::Heartbeat { common, phase } => heartbeat(Target::from(common), phase),
+        Command::Lesson { common, message } => lesson(Target::from(common), message),
         Command::Running { common } => running(Target::from(common)),
         Command::Complete { common, file, json, summary, sha, verdict } => {
             complete(Target::from(common), Completion { file, json, summary, sha, verdict })

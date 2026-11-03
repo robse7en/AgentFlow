@@ -151,6 +151,7 @@
   "harnessCwd": "str",
   "jiraKey": "str",
   "jiraTitle": "null",
+  "lessons": [],
   "maxRequirementsRevisions": "number",
   "maxReviewIterations": "number",
   "mergedAt": "null",

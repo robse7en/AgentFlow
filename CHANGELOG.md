@@ -15,6 +15,10 @@ shown below. Tags must be pushed separately to share them with other checkouts.
   what the chosen route would cost for one pass, plus what each worker and each fix round adds.
   Subscription harnesses are shown in tokens. Display only: budgets and launch reserves are
   unchanged. See [Cost estimates](README.md#cost-estimates).
+- Reviewed lessons: agents propose lessons for their role with `flowctl lesson`, and every briefing
+  says how. The task's Lessons tab lets you edit, approve or dismiss each one. Approving appends it
+  to the role's `.agentflow-instructions` file in the task's original checkout, uncommitted. No
+  agent sees it until you commit it. See [Reviewed lessons](README.md#reviewed-lessons).
 
 ## 1.1.11 - 2026-11-03
 

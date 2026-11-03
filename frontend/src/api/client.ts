@@ -1,5 +1,6 @@
 import type {
   AgentOverride,
+  LessonDecision,
   RouteEstimate,
   AnswerBody,
   BudgetGroup,
@@ -154,6 +155,10 @@ export const api = {
     post<{ url: string, task: TaskSnapshot }>(`/api/tasks/${encodeURIComponent(key)}/pr/open`),
   retargetPr: (key: string) =>
     post<TaskSnapshot>(`/api/tasks/${encodeURIComponent(key)}/pr/retarget`),
+  approveLesson: (key: string, uid: string, text: string) =>
+    post<LessonDecision>(`/api/tasks/${encodeURIComponent(key)}/lessons/${encodeURIComponent(uid)}/approve`, { text }),
+  dismissLesson: (key: string, uid: string) =>
+    post<LessonDecision>(`/api/tasks/${encodeURIComponent(key)}/lessons/${encodeURIComponent(uid)}/dismiss`),
   /** The server builds the line typed into the agent's pane from the stored question. */
   answerQuestion: (key: string, questionUid: string, body: AnswerBody) =>
     post<TaskSnapshot>(

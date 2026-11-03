@@ -135,6 +135,17 @@ def _describe_error(exc: Exception) -> str:
     return str(exc) if isinstance(exc, JiraError) else f"{type(exc).__name__}: {exc}"
 
 
+def _finding_counts(rows: list[ReviewFinding]) -> tuple[int, int]:
+    """A reviewer's findings and how many block now. Each round stores a row per finding and a
+    re-raised one keeps its id, so each id counts once, as its newest row; it blocks while open."""
+    latest: dict[str, ReviewFinding] = {}
+    for row in rows:
+        current = latest.get(row.finding_id)
+        if current is None or (row.iteration, row.id) > (current.iteration, current.id):
+            latest[row.finding_id] = row
+    return len(latest), sum(1 for row in latest.values() if row.status == "open" and row.blocking)
+
+
 def _iso(value: datetime | None) -> str | None:
     if value is None:
         return None
@@ -3642,7 +3653,8 @@ class WorkflowEngine:
                     caps = self.harnesses.capabilities.get(effective["harness"])
                     effective["harnessDisplayName"] = caps.display_name if caps else effective["harness"]
                     effective["harnessAvailable"] = self.harnesses.is_usable(effective["harness"])
-                node_findings = [f for f in findings if f.node_run_id in {r.id for r in node_runs}]
+                findings_count, blocking_count = _finding_counts(
+                    [f for f in findings if f.node_run_id in {r.id for r in node_runs}])
                 # The Implementer coordinator node has no run of its own while workers are active
                 # (it only goes READY once all of them complete), so its real state sits at PENDING
                 # the whole time - display it as RUNNING whenever a worker is live, so the graph
@@ -3661,7 +3673,7 @@ class WorkflowEngine:
                                 if node.key == wf.IMPLEMENTER and node.state == NodeState.PENDING and items else node.message),
                     "error": node.error, "configOverride": node.config_override or {},
                     "effectiveConfig": effective, "openQuestions": open_questions_by_role.get(node.id, 0) if node.state == NodeState.WAITING_FOR_USER else 0,
-                    "findingsCount": len(node_findings), "blockingCount": sum(1 for f in node_findings if f.blocking),
+                    "findingsCount": findings_count, "blockingCount": blocking_count,
                     "runCount": len(node_runs),
                     "usage": self._usage_summary(node_runs, evidence_by_run),
                     "costEstimate": estimates.estimate(

@@ -34,6 +34,7 @@ async function act(fn: () => Promise<unknown>) {
 
 const openZellij = () => act(() => store.openZellij(props.taskKey, props.node.key))
 const configure = () => window.dispatchEvent(new CustomEvent('agentflow:configure', { detail: props.node.key }))
+const showFindings = () => window.dispatchEvent(new CustomEvent('agentflow:findings', { detail: props.node.key }))
 </script>
 
 <template>
@@ -55,9 +56,10 @@ const configure = () => window.dispatchEvent(new CustomEvent('agentflow:configur
     <span v-if="node.effectiveConfig?.reasoning" class="chip" title="Reasoning">{{ node.effectiveConfig.reasoning }}</span>
     <span v-if="showIteration" class="chip">iter {{ node.iteration }}</span>
     <span v-if="node.checkpointSha" class="chip mono" title="Checkpoint SHA">{{ node.checkpointSha.slice(0, 10) }}</span>
-    <span v-if="node.findingsCount" class="chip" :class="{ warn: node.blockingCount }">
+    <button v-if="node.findingsCount" type="button" class="chip chip-link nodrag nopan" :class="{ warn: node.blockingCount }"
+        title="Show these findings" @click.stop="showFindings">
       {{ node.findingsCount }} finding{{ node.findingsCount === 1 ? '' : 's' }}<template v-if="node.blockingCount"> · {{ node.blockingCount }} blocking</template>
-    </span>
+    </button>
     <span v-if="node.lastRun?.exitCode != null && node.state === 'FAILED'" class="chip danger">exit {{ node.lastRun.exitCode }}</span>
     <span v-if="usage && tokenRuns(usage)" class="chip" :title="usageTitle">
       {{ usage.totalTokens.toLocaleString() }} tok<span v-if="tokenRuns(usage) < usage.runs">*</span>

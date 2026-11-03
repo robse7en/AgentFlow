@@ -9,6 +9,8 @@ const emit = defineEmits<{ close: [] }>()
 // This component's whole lifetime is "open" (the parent mounts it via v-if), so it registers
 // itself with the shared overlay stack unconditionally.
 const { isTop, zIndex } = useOverlayLayer(ref(true))
+// For content with its own keys (e.g. arrow-key paging): act only while this dialog is on top.
+defineExpose({ isTop })
 
 const dialogRef = ref<HTMLElement | null>(null)
 let previouslyFocused: HTMLElement | null = null
@@ -68,7 +70,10 @@ onBeforeUnmount(() => {
             :aria-label="props.title" tabindex="-1">
           <div class="panel-title">
             <h3 style="margin: 0">{{ props.title }}</h3>
-            <button class="sm" @click="emit('close')">Close</button>
+            <div class="modal-dialog__actions">
+              <slot name="actions" />
+              <button class="sm" @click="emit('close')">Close</button>
+            </div>
           </div>
           <div class="modal-dialog__body">
             <slot />
@@ -111,7 +116,9 @@ onBeforeUnmount(() => {
 }
 
 .modal-dialog.narrow { width: min(460px, 100%); }
-.modal-dialog h3 { font-size: 1.2rem; letter-spacing: -0.01em; }
+.modal-dialog h3 { font-size: 1.2rem; letter-spacing: -0.01em; min-width: 0; overflow-wrap: anywhere; }
+.modal-dialog .panel-title { gap: 1rem; align-items: flex-start; }
+.modal-dialog__actions { display: flex; align-items: center; gap: 0.4rem; flex: none; }
 
 .modal-dialog__body {
     overflow: auto;

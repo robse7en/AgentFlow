@@ -96,10 +96,13 @@ Claude Code or Copilot CLI headless, with every tool disabled, on your own login
    commits a checkpoint and records the SHA.
 6. **Run Code Review and Security Review** (both become READY; run them in any order — they execute in parallel and
    both receive the same SHA). Findings are normalised (`CODE-001`, `SEC-001`, severity, blocking) and persisted.
-   The Findings tab shows each finding's code the way GitHub shows a review comment: the flagged lines (`line` to
-   `endLine`) in the file as the reviewer saw it, read from the reviewed commit so it still works after cleanup. Switch to
-   *Diff* for the task's change to that file (or, for a closed finding, what changed since the review) or *Now* for the
-   same place in the task's latest commit. Resolved findings keep their code folded until opened.
+   The Findings tab lists each finding once (a re-raised finding keeps its id), grouped by the iteration that last
+   raised it with blocking ones first, and filters by Open / Blocking / All and by reviewer. A reviewer node's findings
+   chip opens the tab filtered to that reviewer; both count each finding once, and "blocking" means open and blocking.
+   Clicking a finding opens it in a dialog (← / → step through the list) with its earlier rounds and its code the way
+   GitHub shows a review comment: the flagged lines (`line` to `endLine`) in the file as the reviewer saw it, read from
+   the reviewed commit so it still works after cleanup. Switch to *Diff* for the task's change to that file (or, for a
+   closed finding, what changed since the review) or *Now* for the same place in the task's latest commit.
 7. **Consolidation is automatic.** Blocking findings → the Implementer becomes READY again in fix mode with the
    consolidated package; run it, then the reviews again. No blocking findings → *Final Architect Verification* becomes READY.
 8. **Run Final Architect Verification.** A fresh process resumes the exact Architect conversation when supported, or reads a fresh briefing. It writes

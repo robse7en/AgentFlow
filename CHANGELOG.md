@@ -19,6 +19,11 @@ shown below. Tags must be pushed separately to share them with other checkouts.
   says how. The task's Lessons tab lets you edit, approve or dismiss each one. Approving appends it
   to the role's `.agentflow-instructions` file in the task's original checkout, uncommitted. No
   agent sees it until you commit it. See [Reviewed lessons](docs/workflow.md#reviewed-lessons).
+- Findings tab: a compact list showing each finding once, blocking first, with Open / Blocking / All
+  and reviewer filters. A finding opens in a dialog with its code, the implementer's answer, the
+  reviewer's evidence and its earlier rounds, and the arrow keys step through the list. A reviewer
+  node's findings chip opens the tab filtered to that reviewer. The chip now counts each finding once
+  and counts it as blocking only while it is open, where it used to count every round's copy.
 
 ## 1.1.11 - 2026-11-03
 

@@ -10,7 +10,8 @@ import {
   location, shortSha,
 } from '@/findingCode';
 
-const props = defineProps<{ taskKey: string; finding: Finding; currentSha: string | null }>();
+// `wide`: drawn somewhere with room for the whole path (the finding's detail dialog).
+const props = defineProps<{ taskKey: string; finding: Finding; currentSha: string | null; wide?: boolean }>();
 
 const code = ref<FindingCode | null>(null);
 const failed = ref<string | null>(null);
@@ -140,7 +141,7 @@ const reasonFor = (m: CodeMode) => code.value?.unavailable[m] ?? titles[m];
 <template>
   <div class="code-view">
     <div class="code-head">
-      <span class="path" :title="where">{{ shortWhere }}</span>
+      <span class="path" :title="where">{{ wide ? where : shortWhere }}</span>
       <span v-if="code?.reviewedSha" class="sha">@ {{ shortSha(code.reviewedSha) }}</span>
       <span class="spacer" />
       <span v-if="code" class="segmented" role="group" aria-label="Code view">

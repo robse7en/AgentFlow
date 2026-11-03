@@ -36,6 +36,7 @@ import { hasUsage, usageHeadline, useUsdToNzdRate } from '@/usage';
 import { leftoverWorktree, phaseLabel, shortPath, statusTone } from '@/taskPresentation';
 import { projectColor } from '@/projects';
 import type { QuestionDto } from '@/api/types';
+import { type FindingFilter, latestRows, nodeFindingType } from '@/findings';
 
 const props = defineProps<{ jiraKey: string }>();
 const route = useRoute();
@@ -185,6 +186,19 @@ const onConfigure = (event: Event): void => {
     tab.value = key === 'requirements_gate' ? 'requirements' : key === 'ready_for_pr' ? 'assessment' : 'node';
 };
 
+// The Findings tab's filter, kept here so a reviewer node's findings chip can set it. It shows
+// all statuses then, so the list matches the count on the chip (which counts closed ones too).
+const findingsFilter = ref<FindingFilter | null>(null);
+// Each finding once: a re-raised finding adds a row per round but is still the one finding.
+const findingsCount = computed(() => (task.value ? latestRows(task.value.findings).length : 0));
+const onFindings = (event: Event): void => {
+    const key = (event as CustomEvent<string>).detail;
+    detailsOpen.value = true;
+    selected.value = key;
+    tab.value = 'findings';
+    findingsFilter.value = { status: 'all', type: nodeFindingType(key) };
+};
+
 const onOpenTerminal = (event: Event): void => {
     const detail = (event as CustomEvent<{ jiraKey: string; nodeKey?: string | null }>).detail;
     if (!detail || detail.jiraKey !== props.jiraKey) return;
@@ -329,18 +343,20 @@ watch(task, (current, previous) => {
 onMounted(() => {
     void load();
     window.addEventListener('agentflow:configure', onConfigure);
+    window.addEventListener('agentflow:findings', onFindings);
     window.addEventListener('agentflow:open-terminal', onOpenTerminal);
     window.addEventListener('keydown', onTerminalKeydown);
 });
 onUnmounted(() => {
     window.removeEventListener('agentflow:configure', onConfigure);
+    window.removeEventListener('agentflow:findings', onFindings);
     window.removeEventListener('agentflow:open-terminal', onOpenTerminal);
     window.removeEventListener('keydown', onTerminalKeydown);
     window.removeEventListener('pointermove', onResizeMove);
     window.removeEventListener('pointerup', stopResize);
     if (attachCommandCopiedTimer) clearTimeout(attachCommandCopiedTimer);
 });
-watch(() => props.jiraKey, () => void load());
+watch(() => props.jiraKey, () => { findingsFilter.value = null; void load(); });
 watch(() => route.query.node, (key) => {
     if (typeof key !== 'string' || !task.value?.nodes.some((node) => node.key === key)) return;
     selected.value = key;
@@ -478,7 +494,7 @@ watch(() => route.query.node, (key) => {
           <div class="tabs">
             <button :class="{ active: tab === 'node' }" @click="tab = 'node'">Node</button>
             <button :class="{ active: tab === 'requirements' }" @click="tab = 'requirements'">Requirements</button>
-            <button :class="{ active: tab === 'findings' }" @click="tab = 'findings'">Findings <span v-if="task.findings.length" class="badge">{{ task.findings.length }}</span></button>
+            <button :class="{ active: tab === 'findings' }" @click="tab = 'findings'">Findings <span v-if="findingsCount" class="badge">{{ findingsCount }}</span></button>
             <button :class="{ active: tab === 'assessment' }" @click="tab = 'assessment'">Assessment</button>
             <button :class="{ active: tab === 'lessons' }" @click="tab = 'lessons'">Lessons <span v-if="proposedLessons" class="badge">{{ proposedLessons }}</span></button>
             <button :class="{ active: tab === 'events' }" @click="tab = 'events'">Events</button>
@@ -565,7 +581,7 @@ watch(() => route.query.node, (key) => {
           </template>
 
           <RequirementsReview v-else-if="tab === 'requirements'" :task="task" />
-          <FindingList v-else-if="tab === 'findings'" :findings="task.findings" :task-key="task.jiraKey" :current-sha="task.currentSha" />
+          <FindingList v-else-if="tab === 'findings'" :findings="task.findings" :task-key="task.jiraKey" :current-sha="task.currentSha" v-model:filter="findingsFilter" />
           <FinalAssessment v-else-if="tab === 'assessment'" :task="task" />
           <LessonList v-else-if="tab === 'lessons'" :lessons="task.lessons ?? []" :task-key="task.jiraKey"
             :repository-root="task.repositoryRoot" />

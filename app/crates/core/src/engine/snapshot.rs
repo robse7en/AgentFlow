@@ -385,6 +385,7 @@ impl Engine {
             let node_run_ids: HashSet<i64> = node_runs.iter().map(|r| r.id).collect();
             let node_findings: Vec<&ReviewFindingRow> =
                 loaded.findings.iter().filter(|f| f.node_run_id.is_some_and(|id| node_run_ids.contains(&id))).collect();
+            let (findings_count, blocking_count) = finding_counts(&node_findings);
             // The Implementer coordinator node has no run of its own while workers are active, so
             // it shows RUNNING whenever a worker is live (presentation only).
             let coordinating =
@@ -424,7 +425,7 @@ impl Engine {
                 "error": node.error, "configOverride": config_override,
                 "effectiveConfig": effective,
                 "openQuestions": if node.state == NodeState::WaitingForUser.as_str() { open_questions.get(&node.id).copied().unwrap_or(0) } else { 0 },
-                "findingsCount": node_findings.len(), "blockingCount": node_findings.iter().filter(|f| f.blocking).count(),
+                "findingsCount": findings_count, "blockingCount": blocking_count,
                 "runCount": node_runs.len(),
                 "usage": rules::usage_summary(&node_runs, &evidence_by_run),
                 "costEstimate": effective.as_ref().map(|cfg| {
@@ -784,4 +785,71 @@ fn final_blockers(task: &TaskRow, loaded: &Loaded, documents: &indexmap::IndexMa
         blockers.push("Blocking review findings remain".into());
     }
     blockers
+}
+
+/// A reviewer's findings and how many block now. Each round stores a row per finding and a
+/// re-raised one keeps its id, so each id counts once, as its newest row; it blocks while open.
+fn finding_counts(rows: &[&ReviewFindingRow]) -> (usize, usize) {
+    let mut latest: HashMap<&str, &ReviewFindingRow> = HashMap::new();
+    for row in rows {
+        let newer =
+            latest.get(row.finding_id.as_str()).is_none_or(|cur| (row.iteration, row.id) > (cur.iteration, cur.id));
+        if newer {
+            latest.insert(row.finding_id.as_str(), row);
+        }
+    }
+    let blocking = latest.values().filter(|r| r.status == "open" && r.blocking).count();
+    (latest.len(), blocking)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::DbTime;
+
+    fn row(id: i64, finding_id: &str, iteration: i64, status: &str, blocking: bool) -> ReviewFindingRow {
+        ReviewFindingRow {
+            id,
+            task_id: 1,
+            node_run_id: Some(1),
+            finding_id: finding_id.into(),
+            kind: "code-review".into(),
+            iteration,
+            reviewed_sha: None,
+            severity: "medium".into(),
+            blocking,
+            file: None,
+            line: None,
+            title: finding_id.into(),
+            description: None,
+            recommendation: None,
+            status: status.into(),
+            prior_finding_id: None,
+            occurrence: 1,
+            resolution: None,
+            response: None,
+            response_note: None,
+            created_at: DbTime::now(),
+            resolved_at: None,
+            end_line: None,
+        }
+    }
+
+    #[test]
+    fn each_finding_counts_once_and_blocks_only_while_open() {
+        let rows = [
+            row(1, "CODE-001", 1, "superseded", true),
+            row(4, "CODE-001", 2, "open", true),
+            row(2, "CODE-002", 1, "resolved", true),
+            row(3, "SEC-001", 1, "open", false),
+        ];
+        assert_eq!(finding_counts(&rows.iter().collect::<Vec<_>>()), (3, 1));
+    }
+
+    #[test]
+    fn newest_row_wins_whatever_the_order() {
+        let rows = [row(5, "CODE-001", 2, "resolved", true), row(1, "CODE-001", 1, "open", true)];
+        assert_eq!(finding_counts(&rows.iter().collect::<Vec<_>>()), (1, 0));
+        assert_eq!(finding_counts(&[]), (0, 0));
+    }
 }

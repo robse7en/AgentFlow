@@ -14,11 +14,11 @@ shown below. Tags must be pushed separately to share them with other checkouts.
   and 90th percentile of its last 20 runs with the same harness and model). The New Task form shows
   what the chosen route would cost for one pass, plus what each worker and each fix round adds.
   Subscription harnesses are shown in tokens. Display only: budgets and launch reserves are
-  unchanged. See [Cost estimates](README.md#cost-estimates).
+  unchanged. See [Cost estimates](docs/workflow.md#cost-estimates).
 - Reviewed lessons: agents propose lessons for their role with `flowctl lesson`, and every briefing
   says how. The task's Lessons tab lets you edit, approve or dismiss each one. Approving appends it
   to the role's `.agentflow-instructions` file in the task's original checkout, uncommitted. No
-  agent sees it until you commit it. See [Reviewed lessons](README.md#reviewed-lessons).
+  agent sees it until you commit it. See [Reviewed lessons](docs/workflow.md#reviewed-lessons).
 
 ## 1.1.11 - 2026-11-03
 
@@ -28,7 +28,7 @@ Source: the version commit tagged `v1.1.11` on `main`.
   harness exits without reporting completion relaunches by itself after a short pause. It gets a
   fresh conversation and the retry briefing, and runs the same capacity, budget and
   metered-approval checks as a human's Run. It never covers `flowctl fail`, launch failures,
-  interruptions or tasks that aren't Active. See [Automatic retries](README.md#automatic-retries).
+  interruptions or tasks that aren't Active. See [Automatic retries](docs/approvals-and-recovery.md#automatic-retries).
 - A running task's icon in the task list has a loading spinner around it: a faint full ring with an
   arc that spins as it grows and shrinks, so running rows stand out. It holds still when the system
   asks for reduced motion.
@@ -62,7 +62,7 @@ Source: the version commit tagged `v1.1.8` on `main`.
 - A retried stage's briefing now says what the failed attempts did: how the latest ended, its last
   heartbeat, the human's answers to its questions and, for implementers and workers, the files
   committed and left uncommitted since the first failed attempt started. The new conversation
-  continues from that work instead of starting over. See [Retry briefings](README.md#retry-briefings).
+  continues from that work instead of starting over. See [Retry briefings](docs/approvals-and-recovery.md#retry-briefings).
 
 ## 1.1.7 - 2026-11-01
 

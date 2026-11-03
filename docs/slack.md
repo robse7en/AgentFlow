@@ -44,7 +44,7 @@ terminal, and the task's event log records it as answered *via Slack*. Once the 
 answered, from Slack or the UI, its message is edited to show the answer and the buttons go away.
 If the agent stops waiting first, the message says so.
 
-A decision tree (see the README's *Agent questions*) arrives with numbered branch buttons, the
+A decision tree (see [Agent questions](workflow.md#agent-questions)) arrives with numbered branch buttons, the
 agent's pick in green and `›` on a branch with a follow-up, and its risk, context, consequences and
 agent's notes in a line under the question. Clicking a branch with a follow-up swaps the notice's
 buttons for that follow-up's options and **‹ Change branch** (which brings the branches back); nothing

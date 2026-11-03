@@ -1,6 +1,6 @@
 """Jira Cloud REST client for issue search and syncing a ticket's context onto local disk.
 
-AgentFlow otherwise leaves Jira to the harness's own MCP (see README "MCP prerequisites").
+AgentFlow otherwise leaves Jira to the harness's own MCP (see docs/installation.md, "MCP prerequisites").
 This module covers what is worth doing from the backend instead: typeahead search when creating
 a task, and syncing the ticket's description, comments and attachment bytes (plus keyframes of
 video attachments) onto local disk so the Architect can read them directly instead of via its MCP

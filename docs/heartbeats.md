@@ -57,8 +57,8 @@ the server observation time plus monotonic elapsed time to avoid browser/server 
 - Existing terminal/session observations are separate; a live shell cannot prove agent health.
 - Warnings are displayed in task views, not emitted as Slack messages or per-ping history.
 - Silence never terminates an agent, launches a retry, releases a worker slot or approves work.
-  The opt-in automatic retry (`workflow.maxAutomaticRetries`, see the README's
-  [Automatic retries](../README.md#automatic-retries)) reacts only to the harness process exiting
+  The opt-in automatic retry (`workflow.maxAutomaticRetries`, see
+  [Automatic retries](approvals-and-recovery.md#automatic-retries)) reacts only to the harness process exiting
   without reporting completion, never to a quiet or overdue agent.
 - Machine sleep can delay timers and callbacks. On platforms where monotonic browser timers
   pause during sleep, a fresh snapshot/report is needed for an accurate age after waking.

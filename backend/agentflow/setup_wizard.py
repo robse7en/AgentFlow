@@ -357,7 +357,7 @@ async def jira(io, raw: dict, transport: httpx.BaseTransport | None = None) -> N
     section["prCreatedTransitionStatus"] = None if review == "-" else review
     if not cloud:
         io.say("   The official Atlassian MCP is Jira Cloud only: add a Jira MCP to each harness by hand "
-               "(README, \"MCP prerequisites\")")
+               "(docs/installation.md, \"MCP prerequisites\")")
 
 
 async def optional(io, raw: dict) -> None:

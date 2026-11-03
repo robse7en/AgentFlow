@@ -67,8 +67,8 @@ OS permissions; use an isolated account or environment for untrusted repositorie
 a paused node stays Ready and explains why, and starts once a slot is free. Waiting/interrupted runs
 occupy capacity. Run only one backend writer per DB.
 
-An automatic retry (`workflow.maxAutomaticRetries`, off by default; see the README's
-[Automatic retries](../README.md#automatic-retries)) is a new run and is charged like one. It goes
+An automatic retry (`workflow.maxAutomaticRetries`, off by default; see
+[Automatic retries](approvals-and-recovery.md#automatic-retries)) is a new run and is charged like one. It goes
 through the same capacity, budget and metered-approval checks as a human's Run. It never carries an
 approval, so a role that needs metered approval is never retried automatically. A blocked retry
 leaves the stage Failed with the reason, instead of Ready.
@@ -83,7 +83,7 @@ reservation. Warnings default to 80%. Missing completed-run costs pause further 
 when a budget is enabled. A paused stage remains Ready and explains the next action; use Run after
 correcting costs or changing limits. Subscription launches are exempt from API budgets.
 
-Cost estimates (README, [Cost estimates](../README.md#cost-estimates)) are display only. They show
+[Cost estimates](workflow.md#cost-estimates) are display only. They show
 the median and 90th-percentile cost of a stage's last runs on the Run control and in the New Task
 form. They never feed `launchReserveUsd`, a budget check or an approval: the fixed reserve still
 applies to every metered launch.

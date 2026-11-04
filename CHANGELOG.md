@@ -8,7 +8,9 @@ tested. The frontend and Python package versions are independent of desktop vers
 Each version has a local annotated `v<version>` Git tag at the source checkpoint
 shown below. Tags must be pushed separately to share them with other checkouts.
 
-## Unreleased
+## 1.1.12 - 2026-11-04
+
+Source: the version commit tagged `v1.1.12` on `main`.
 
 - Cost estimates from past runs: a stage's Run control shows its typical and high cost (the median
   and 90th percentile of its last 20 runs with the same harness and model). The New Task form shows

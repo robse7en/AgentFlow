@@ -56,7 +56,7 @@ const hasTerminal = (node: WorkflowNodeDto): boolean => props.task.sessions.some
                     @click="action(node, 'terminal')">Show Zellij terminal</button>
                 <RunAgentButton :task-key="task.jiraKey" :node="node" />
                 <template v-if="node.state === 'INTERRUPTED'">
-                    <button :disabled="busy !== null" @click="action(node, 'resume')">
+                    <button v-if="node.resumable !== false" :disabled="busy !== null" @click="action(node, 'resume')">
                         Resume existing agent
                     </button>
                     <button :disabled="busy !== null" @click="action(node, 'restart')">

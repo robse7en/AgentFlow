@@ -119,6 +119,7 @@
       "lastRun": "null",
       "message": "null",
       "openQuestions": "number",
+      "resumable": "bool",
       "role": "null|str",
       "runCount": "number",
       "state": "str",

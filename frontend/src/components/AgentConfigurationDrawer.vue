@@ -134,7 +134,7 @@ async function saveAndRun() {
     </label>
     <div class="row">
       <template v-if="node.state === 'INTERRUPTED'">
-        <button :disabled="busy" @click="recover(false)">Resume existing agent</button>
+        <button v-if="node.resumable !== false" :disabled="busy" @click="recover(false)">Resume existing agent</button>
         <button :disabled="busy" @click="recover(true)">Stop &amp; retry</button>
       </template>
       <button :disabled="busy" @click="save">Save override</button>

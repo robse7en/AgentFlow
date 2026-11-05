@@ -572,6 +572,49 @@ async def test_recover_surfaces_a_completion_saved_to_disk_before_restart(engine
     assert not (run_dir / "pending-complete.json").exists()
 
 
+def resumable(engine, key):
+    return next(n for n in engine.snapshot("TEST-1")["nodes"] if n["key"] == key)["resumable"]
+
+
+def add_agent(engine, role, status, run_id):
+    with engine.db.session() as session:
+        task = engine._load_task(session, "TEST-1")
+        session.add(AgentSession(task_id=task.id, role=role, harness="codex", zellij_tab_name="Agent",
+                                 status=status, current_run_id=run_id))
+
+
+@pytest.mark.parametrize(("role", "status", "expected"), [
+    ("implementer", "running", True), ("implementer", "exited", False), ("code_reviewer", "running", False)])
+def test_snapshot_says_whether_an_interrupted_node_can_be_resumed(engine, role, status, expected):
+    run_id = add_run(engine, wf.IMPLEMENTER, "INTERRUPTED")
+    add_agent(engine, role, status, run_id)
+    assert resumable(engine, wf.IMPLEMENTER) is expected
+
+
+def test_resumable_needs_interruption_and_follows_the_shared_architect_session(engine, tmp_path):
+    run_id = add_run(engine, wf.IMPLEMENTER, "RUNNING")
+    add_agent(engine, "implementer", "running", run_id)
+    assert resumable(engine, wf.IMPLEMENTER) is False
+
+    discovery = add_run(engine, wf.ARCHITECT, "COMPLETED")
+    add_agent(engine, "architect", "running", discovery)
+    add_run(engine, wf.FINAL_ARCHITECT, "INTERRUPTED")
+    assert resumable(engine, wf.FINAL_ARCHITECT) is True
+    add_agent(engine, "code_reviewer", "running", discovery)
+    add_run(engine, wf.CODE_REVIEW, "INTERRUPTED")
+    assert resumable(engine, wf.CODE_REVIEW) is False  # its session sits on another node's run
+
+
+def test_resumable_when_a_result_was_saved_to_disk(engine, tmp_path):
+    run_id = add_run(engine, wf.IMPLEMENTER, "INTERRUPTED")
+    (tmp_path / "run").mkdir()
+    (tmp_path / "run" / "pending-complete.json").write_text(
+        json.dumps({"role": "implementer", "runId": run_id, "result": {"status": "completed"}}), encoding="utf-8")
+    with engine.db.session() as session:
+        session.get(NodeRun, run_id).run_dir = str(tmp_path / "run")
+    assert resumable(engine, wf.IMPLEMENTER) is True
+
+
 @pytest.mark.asyncio
 async def test_human_resume_increments_task_iteration(engine):
     add_run(engine, wf.IMPLEMENTER, "READY")

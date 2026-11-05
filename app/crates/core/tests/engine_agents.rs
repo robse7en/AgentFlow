@@ -521,6 +521,7 @@ async fn test_restart_requires_explicit_resume_without_new_run() {
     tab_seven(&harness);
     harness.engine.recover().await.unwrap();
     assert_eq!(node_state(&harness, spec::IMPLEMENTER), "INTERRUPTED");
+    assert_eq!(resumable(&harness, spec::IMPLEMENTER), json!(true));
     let complete = harness.engine.agent_complete("TEST-1", "implementer", Some(run_id), Default::default()).await;
     assert!(complete.is_err());
     harness.engine.recover_node("TEST-1", spec::IMPLEMENTER, false).await.unwrap();
@@ -584,10 +585,53 @@ async fn retry_after_interruption_fails_the_old_run_and_launches_a_new_one() {
     let run_id = harness.add_run(spec::ARCHITECT, "RUNNING", None);
     harness.engine.recover().await.unwrap();
     assert_eq!(node_state(&harness, spec::ARCHITECT), "INTERRUPTED");
+    assert_eq!(resumable(&harness, spec::ARCHITECT), json!(false), "no agent survived: only retry can work");
     harness.engine.recover_node("TEST-1", spec::ARCHITECT, true).await.unwrap();
     let state = harness.load();
     let old = state.runs.iter().find(|r| r.id == run_id).unwrap();
     assert_eq!((old.state.as_str(), old.error.as_deref()), ("FAILED", Some("Human retried after interruption")));
     assert_eq!(state.runs.len(), 2);
     assert_eq!(node_state(&harness, spec::ARCHITECT), "RUNNING");
+}
+
+fn resumable(harness: &Harness, key: &str) -> Value {
+    let snapshot = harness.engine.snapshot("TEST-1").unwrap();
+    snapshot["nodes"].as_array().unwrap().iter().find(|n| n["key"] == key).unwrap()["resumable"].clone()
+}
+
+/// The UI offers Resume only when it can work: an agent session still recorded running on one of
+/// the node's runs (the Architect's persistent session spans its nodes), or a result saved to disk.
+#[tokio::test]
+async fn snapshot_says_whether_an_interrupted_node_can_be_resumed() {
+    for (role, status, expected) in
+        [("implementer", "running", true), ("implementer", "exited", false), ("code_reviewer", "running", false)]
+    {
+        let harness = engine().await;
+        let run_id = harness.add_run(spec::IMPLEMENTER, "INTERRUPTED", None);
+        old_session(&harness, role, "codex", "s1", status, Some(run_id));
+        assert_eq!(resumable(&harness, spec::IMPLEMENTER), json!(expected), "{role} session {status}");
+    }
+
+    let harness = engine().await;
+    let run_id = harness.add_run(spec::IMPLEMENTER, "RUNNING", None);
+    old_session(&harness, "implementer", "codex", "s1", "running", Some(run_id));
+    assert_eq!(resumable(&harness, spec::IMPLEMENTER), json!(false), "only INTERRUPTED nodes are resumable");
+
+    let harness = engine().await;
+    let discovery = harness.add_run(spec::ARCHITECT, "COMPLETED", None);
+    old_session(&harness, "architect", "codex", "s1", "running", Some(discovery));
+    harness.add_run(spec::FINAL_ARCHITECT, "INTERRUPTED", None);
+    assert_eq!(resumable(&harness, spec::FINAL_ARCHITECT), json!(true), "shared Architect session");
+    old_session(&harness, "implementer", "codex", "s2", "running", Some(discovery));
+    harness.add_run(spec::IMPLEMENTER, "INTERRUPTED", None);
+    assert_eq!(resumable(&harness, spec::IMPLEMENTER), json!(false), "another node's session");
+
+    let harness = engine().await;
+    let run_id = harness.add_run(spec::IMPLEMENTER, "INTERRUPTED", None);
+    let run_dir = harness.tmp().join("run");
+    std::fs::create_dir_all(&run_dir).unwrap();
+    let saved = json!({"role": "implementer", "runId": run_id, "result": {"status": "completed"}});
+    std::fs::write(run_dir.join("pending-complete.json"), saved.to_string()).unwrap();
+    harness.with_task(|state| state.runs[0].run_dir = Some(run_dir.to_string_lossy().into_owned()));
+    assert_eq!(resumable(&harness, spec::IMPLEMENTER), json!(true), "result saved to disk");
 }

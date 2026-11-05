@@ -256,11 +256,28 @@ const detailsOpen = usePersistedFlag('agentflow-task-details', true);
 
 // The first thing waiting on the user, offered as the header's primary button. It goes to where the
 // step is done (node, tab and camera) rather than doing it, since each one needs reading first.
+// The one exception is an interrupted agent that cannot be resumed: retrying is the only way on,
+// so the button does it rather than opening a panel that offers the same single choice.
 const nextStep = computed(() => task.value?.attention?.[0] ?? null);
+const retryOnly = computed(() => nextStep.value?.state === 'INTERRUPTED'
+    && task.value?.nodes.find((node) => node.key === nextStep.value?.nodeKey)?.resumable === false);
+const nextStepLabel = computed(() => (retryOnly.value ? 'Retry agent' : nextStep.value?.action));
 const leftover = computed(() => (task.value ? leftoverWorktree(task.value) : null));
-const goToNextStep = (): void => {
+const goToNextStep = async (): Promise<void> => {
     const key = nextStep.value?.nodeKey;
     if (!key) return;
+    if (retryOnly.value) {
+        actionBusy.value = true;
+        notice.value = null;
+        try {
+            await store.recoverNode(props.jiraKey, key, true);
+        } catch (cause) {
+            notice.value = (cause as Error).message;
+        } finally {
+            actionBusy.value = false;
+        }
+        return;
+    }
     detailsOpen.value = true;
     selected.value = key;
     tab.value = key === 'requirements_gate' ? 'requirements' : key === 'ready_for_pr' ? 'assessment' : 'node';
@@ -401,7 +418,9 @@ watch(() => route.query.node, (key) => {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="4" /><path d="M15 4v16" /></svg>
           Details
         </button>
-        <button v-if="nextStep" type="button" class="primary" @click="goToNextStep">{{ nextStep.action }}</button>
+        <button v-if="nextStep" type="button" class="primary" :disabled="retryOnly && actionBusy"
+          :title="retryOnly ? 'The agent is gone; start a new run of this stage' : undefined"
+          @click="goToNextStep">{{ nextStepLabel }}</button>
         <PrHeaderAction :key="task.jiraKey" :task="task" />
         <ActionMenu :items="taskMenuItems" label="More task actions" />
       </div>

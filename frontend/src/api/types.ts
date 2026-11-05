@@ -106,6 +106,9 @@ export interface WorkflowNodeDto {
   findingsCount: number
   blockingCount: number
   runCount: number
+  /** INTERRUPTED only: an agent session survived or a finished result waits on disk, so Resume can
+   *  work. False means only Stop & retry can. Absent from older backends (offer both). */
+  resumable?: boolean
   lastRun: NodeRunSummary | null
   usage: UsageSummary | null
   /** What one run of this stage usually costs, from past runs (display only); absent from older backends. */

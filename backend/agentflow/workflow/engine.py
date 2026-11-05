@@ -3139,6 +3139,15 @@ class WorkflowEngine:
     def _session_node_ids(task: Task, node: WorkflowNode) -> list[int]:
         return [n.id for n in task.nodes if n.role == Role.ARCHITECT] if node.role == Role.ARCHITECT else [node.id]
 
+    @classmethod
+    def _resumable_session(cls, task: Task, node: WorkflowNode, sessions, runs_by_id) -> bool:
+        """Whether an INTERRUPTED node's agent may still be resumed: a session for its role is still
+        recorded running on one of its runs. Startup recovery marks sessions whose pane is gone as
+        exited, so this reads the database only; Resume itself verifies the pane."""
+        ids = cls._session_node_ids(task, node)
+        return any(s.role == node.role and s.status == "running" and s.current_run_id in runs_by_id
+                   and runs_by_id[s.current_run_id].node_id in ids for s in sessions)
+
     @staticmethod
     def _tab_name(node: WorkflowNode) -> str:
         return f"Worker {node.key[7:]}" if node.key.startswith("worker_") else ROLE_LABELS[Role(node.role)]
@@ -3675,6 +3684,9 @@ class WorkflowEngine:
                     "effectiveConfig": effective, "openQuestions": open_questions_by_role.get(node.id, 0) if node.state == NodeState.WAITING_FOR_USER else 0,
                     "findingsCount": findings_count, "blockingCount": blocking_count,
                     "runCount": len(node_runs),
+                    "resumable": node.state == NodeState.INTERRUPTED and (
+                        self._pending_completion(last) is not None
+                        or self._resumable_session(task, node, sessions, runs_by_id)),
                     "usage": self._usage_summary(node_runs, evidence_by_run),
                     "costEstimate": estimates.estimate(
                         samples.get((estimates.stage_key(node.key), effective["harness"], effective["model"]), []),

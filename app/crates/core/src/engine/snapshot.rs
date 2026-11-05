@@ -210,6 +210,19 @@ struct Loaded {
     items: Vec<ImplementationWorkItemRow>,
 }
 
+/// Whether an INTERRUPTED node's agent may still be resumed: a session for its role is still
+/// recorded running on one of its runs. Startup recovery marks sessions whose pane is gone as
+/// exited, so this reads the database only; Resume itself verifies the pane.
+fn resumable_session(loaded: &Loaded, node: &WorkflowNodeRow, runs_by_id: &HashMap<i64, &NodeRunRow>) -> bool {
+    let Some(index) = loaded.state.nodes.iter().position(|n| n.id == node.id) else { return false };
+    let ids = super::launch::session_node_ids(&loaded.state, index);
+    loaded.sessions.iter().any(|session| {
+        node.role.as_deref() == Some(session.role.as_str())
+            && session.status == "running"
+            && session.current_run_id.and_then(|id| runs_by_id.get(&id)).is_some_and(|run| ids.contains(&run.node_id))
+    })
+}
+
 impl Engine {
     pub(crate) fn current_final_blockers(&self, key: &str) -> Result<Vec<String>, WorkflowError> {
         let loaded = self.load_snapshot(key)?;
@@ -417,6 +430,9 @@ impl Engine {
                     self.heartbeat_snapshot(run.id, since)
                 })
                 .transpose()?;
+            let resumable = node.state == NodeState::Interrupted.as_str()
+                && (super::recovery::pending_completion(last.copied()).is_some()
+                    || resumable_session(&loaded, node, &runs_by_id));
             node_values.push(json!({
                 "key": node.key, "kind": node.kind, "label": node.label, "role": node.role, "state": node.state,
                 "displayState": display_state,
@@ -427,6 +443,7 @@ impl Engine {
                 "openQuestions": if node.state == NodeState::WaitingForUser.as_str() { open_questions.get(&node.id).copied().unwrap_or(0) } else { 0 },
                 "findingsCount": findings_count, "blockingCount": blocking_count,
                 "runCount": node_runs.len(),
+                "resumable": resumable,
                 "usage": rules::usage_summary(&node_runs, &evidence_by_run),
                 "costEstimate": effective.as_ref().map(|cfg| {
                     let group = (

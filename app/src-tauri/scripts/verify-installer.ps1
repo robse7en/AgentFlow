@@ -175,9 +175,9 @@ try {
     Assert-True ((Run-Installer $previousPath) -eq 0) 'Could not install the 0.1.0 validation fixture.'
     $binaryVersion = (Get-Item (Join-Path $installation 'agentflow-installer-validation.exe')).VersionInfo.FileVersion
     Assert-True ($binaryVersion -match '^0\.1\.0') 'The previous fixture did not install version 0.1.0.'
-    Assert-True ((Run-Installer) -eq 0) 'The 0.1.0 to 1.1.12 installer upgrade failed.'
+    Assert-True ((Run-Installer) -eq 0) 'The 0.1.0 to 1.1.13 installer upgrade failed.'
     $binaryVersion = (Get-Item (Join-Path $installation 'agentflow-installer-validation.exe')).VersionInfo.FileVersion
-    Assert-True ($binaryVersion -match '^1\.1\.12') 'The upgrade did not install version 1.1.12.'
+    Assert-True ($binaryVersion -match '^1\.1\.13') 'The upgrade did not install version 1.1.13.'
     $versionUpgrade = Run-Smoke '--smoke-test' 'after-version-upgrade'
     Assert-True ($versionUpgrade.tasks -eq 1) 'Version upgrade lost the historical task.'
     Assert-True ((Run-Installer $previousPath) -ne 0) 'An installer downgrade was allowed.'

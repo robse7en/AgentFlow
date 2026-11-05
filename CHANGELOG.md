@@ -8,6 +8,16 @@ tested. The frontend and Python package versions are independent of desktop vers
 Each version has a local annotated `v<version>` Git tag at the source checkpoint
 shown below. Tags must be pushed separately to share them with other checkouts.
 
+## 1.1.13 - 2026-11-06
+
+Source: the version commit tagged `v1.1.13` on `main`.
+
+- Updates come from this repository's GitHub releases. `build-desktop-installer.ps1 -GitHubRepo
+  owner/name` points a build at the latest release's `latest.json`; `-UpdateUrl` remains for a
+  self-hosted server. Installers 1.1.6 to 1.1.12 have no updater and must install 1.1.13 once.
+  Copies that update from the LAN server move to GitHub on this release. See
+  [Over-the-air updates](app/src-tauri/README.md#over-the-air-updates).
+
 ## 1.1.12 - 2026-11-04
 
 Source: the version commit tagged `v1.1.12` on `main`.

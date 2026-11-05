@@ -1,5 +1,5 @@
-//! Over-the-air updates from the update server a release build was configured with
-//! (`build-desktop-installer.ps1 -UpdateUrl`). Builds without one never check.
+//! Over-the-air updates from the source a release build was configured with
+//! (`build-desktop-installer.ps1 -GitHubRepo` or `-UpdateUrl`). Builds without one never check.
 use crate::desktop_controls::{self, Purpose};
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -12,7 +12,7 @@ const FIRST_CHECK: Duration = Duration::from_secs(60);
 /// How often a running desktop checks again.
 const CHECK_INTERVAL: Duration = Duration::from_secs(6 * 60 * 60);
 
-/// Whether this build was packaged with an update server.
+/// Whether this build was packaged with an update source.
 pub fn configured<R: tauri::Runtime>(context: &tauri::Context<R>) -> bool {
     context.config().plugins.0.contains_key("updater")
 }
@@ -53,7 +53,7 @@ pub fn check_now(handle: &tauri::AppHandle) {
             desktop_controls::tell(
                 desktop_controls::owner(&app),
                 Purpose::Update,
-                "This build of AgentFlow has no update server configured.",
+                "This build of AgentFlow has no update source configured.",
             );
         });
         return;

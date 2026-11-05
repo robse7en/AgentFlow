@@ -14,7 +14,7 @@ const isDesktop = (window as Window & { __AGENTFLOW_DESKTOP__?: boolean })
     .__AGENTFLOW_DESKTOP__ === true
 // The desktop asks for confirmation, then restarts into setup to choose another config.json.
 const changeInstance = () => window.location.assign('/__desktop/change-instance')
-// The desktop checks its update server and offers to install a newer version.
+// The desktop checks its update source and offers to install a newer version.
 const checkForUpdates = () => window.location.assign('/__desktop/check-updates')
 
 async function reload() {

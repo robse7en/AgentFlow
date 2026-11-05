@@ -68,19 +68,17 @@ release `flowctl` inputs while still compiling the desktop and packaging it.
 
 ## Over-the-air updates
 
-A build packaged with an update server checks it a minute after an instance opens and every six
+A build packaged with an update source checks it a minute after an instance opens and every six
 hours, and from **Check for updates…** in Settings. A newer version is downloaded and its signature
 checked, then AgentFlow asks before installing. Accepting it goes through the same "active work"
 confirmation as closing the window. AgentFlow then stops agents, closes, runs the installer
 (passive, with a progress bar) and reopens. A session restarted by **Change instance…** is not
-reopened automatically, because it would return to setup. Builds without an update server never check.
+reopened automatically, because it would return to setup. Builds without an update source never check.
 
-The update server is static files: `latest.json` and the installers. `deploy/update-server` runs one
-with Docker on port 8080 (`AGENTFLOW_UPDATE_PORT`), serving `./releases` (`AGENTFLOW_RELEASES_DIR`):
-
-```powershell
-cd deploy\update-server; docker compose up -d
-```
+Official releases update from this repository's GitHub releases: the app reads `latest.json` from
+the release marked Latest (`releases/latest/download/latest.json`), and that file points at the
+installer under its own tag. Published installers from 1.1.13 on are built this way. The public
+installers 1.1.6 to 1.1.12 have no updater, so install 1.1.13 or later from the releases page once.
 
 Once, generate the updater signing key. It is separate from Windows code signing, and updates
 require it. Keep the private key and its password out of the repository and backed up: without
@@ -90,23 +88,51 @@ them, installed copies can never update again.
 .\.desktop-tools\node_modules\.bin\tauri.cmd signer generate -w $HOME\.tauri\agentflow.key
 ```
 
-For each release, bump the version as usual, then build against the server address and publish
-into its releases folder:
+For each release, bump the version, tag it, push the commit and tag, then build against the
+repository:
 
 ```powershell
 $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = '<key password>'
+.\scripts\build-desktop-installer.ps1 -GitHubRepo robse7en/AgentFlow -ReleaseNotes 'What changed'
+```
+
+This writes the installer, its `.sig` and `.sha256`, and `latest.json` into the bundle folder.
+Publish them as a draft first, and publish the release as Latest only once every file is attached:
+
+```powershell
+gh release create v<version> --verify-tag --draft --title 'AgentFlow <version>' --notes-file <notes>
+gh release upload v<version> <bundle folder>\AgentFlow_<version>_x64-setup.exe `
+    <bundle folder>\AgentFlow_<version>_x64-setup.exe.sig `
+    <bundle folder>\AgentFlow_<version>_x64-setup.exe.sha256 <bundle folder>\latest.json
+gh release edit v<version> --draft=false --latest
+```
+
+Every release marked Latest must carry `latest.json`. If it does not, every installed copy reports that
+it could not check for updates until a release that does becomes Latest. Pre-releases and drafts are
+never offered.
+
+The update source is a build setting merged over `tauri.conf.json`, so the checked-in configuration
+names none, and a build from a fork never checks this repository. The key defaults to
+`$HOME\.tauri\agentflow.key` and its `.pub` (`-UpdateSigningKey`, `-UpdatePublicKey`, or
+`TAURI_SIGNING_PRIVATE_KEY`). The installer refuses downgrades.
+
+### Self-hosted update server
+
+`-UpdateUrl` (or `AGENTFLOW_UPDATE_URL`) points a build at your own static server instead. That
+server serves `latest.json` and the installers. `deploy/update-server` runs one with Docker on
+port 8080 (`AGENTFLOW_UPDATE_PORT`), serving `./releases` (`AGENTFLOW_RELEASES_DIR`):
+
+```powershell
+cd deploy\update-server; docker compose up -d
 .\scripts\build-desktop-installer.ps1 -UpdateUrl http://<server>:8080 `
     -ReleaseNotes 'What changed' -PublishTo <releases folder>
 ```
 
-`-UpdateUrl` (or `AGENTFLOW_UPDATE_URL`) is a build setting merged over `tauri.conf.json`, so the
-checked-in configuration names no server. The key defaults to `$HOME\.tauri\agentflow.key` and
-its `.pub` (`-UpdateSigningKey`, `-UpdatePublicKey`, or `TAURI_SIGNING_PRIVATE_KEY`).
-`latest.json` is written next to the installer. `-PublishTo` copies the installer there first and
-replaces `latest.json` last. Plain `http` is meant for a trusted local network: the signature still
-rejects a tampered installer, and the installer refuses downgrades. For a public release, serve the
-same folder over `https` and build with that address. Installed copies keep the address they were
-built with, so publish one release built with the new address to the old server.
+`-PublishTo` copies the installer there first and replaces `latest.json` last. Plain `http` is meant
+for a trusted local network: the signature still rejects a tampered installer. Installed copies
+keep the source they were built with. To move them to a different source, including from a server
+to GitHub, publish one release built for the new source to the old one. AgentFlow 1.1.13 moved the
+LAN installs to GitHub this way.
 Copies installed before the updater was added (0.1.2 and earlier) must install the first updater
 build by hand.
 

@@ -3,8 +3,11 @@ param(
     [switch]$SkipBuild,
     [switch]$ValidationPackage,
     [switch]$PreviousValidationVersion,
-    # Update server the installed app checks, e.g. http://192.168.1.20:8080. Without it (and
-    # without AGENTFLOW_UPDATE_URL) the build has no updater and never checks.
+    # GitHub repository (owner/name) whose releases the installed app updates from: it checks the
+    # latest release's latest.json asset. The alternative to -UpdateUrl.
+    [string]$GitHubRepo,
+    # Self-hosted update server the installed app checks, e.g. http://192.168.1.20:8080. Without it,
+    # AGENTFLOW_UPDATE_URL or -GitHubRepo the build has no updater and never checks.
     [string]$UpdateUrl = $env:AGENTFLOW_UPDATE_URL,
     # Public half of the updater signing key (`tauri signer generate`).
     [string]$UpdatePublicKey = $(if ($env:AGENTFLOW_UPDATE_PUBLIC_KEY) { $env:AGENTFLOW_UPDATE_PUBLIC_KEY } else { Join-Path $HOME '.tauri/agentflow.key.pub' }),
@@ -19,14 +22,31 @@ $ErrorActionPreference = 'Stop'
 if ($PreviousValidationVersion -and -not $ValidationPackage) {
     throw '-PreviousValidationVersion is only for the isolated validation package.'
 }
+if ($GitHubRepo) {
+    if ($GitHubRepo -notmatch '^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$') {
+        throw "-GitHubRepo must be owner/name, not '$GitHubRepo'."
+    }
+    if ($PSBoundParameters.ContainsKey('UpdateUrl') -and $UpdateUrl) { throw '-GitHubRepo and -UpdateUrl are alternatives; pass one.' }
+    # A GitHub build's latest.json names GitHub download addresses, so it never goes to a server folder.
+    if ($PublishTo) { throw '-PublishTo is for -UpdateUrl. Upload a -GitHubRepo build to its GitHub release instead.' }
+    $UpdateUrl = $null
+}
 if ($PublishTo -and -not $UpdateUrl) { throw '-PublishTo needs -UpdateUrl.' }
+# The manifest the installed app checks.
+$updateEndpoint = $null
 $updateBase = $null
-if ($UpdateUrl) {
+if ($GitHubRepo) {
+    $updateEndpoint = "https://github.com/$GitHubRepo/releases/latest/download/latest.json"
+}
+elseif ($UpdateUrl) {
     $uri = $null
     if (-not [Uri]::TryCreate($UpdateUrl.TrimEnd('/'), [UriKind]::Absolute, [ref]$uri) -or $uri.Scheme -notin @('http', 'https')) {
         throw "-UpdateUrl must be an http or https address, not '$UpdateUrl'."
     }
     $updateBase = $uri.AbsoluteUri.TrimEnd('/')
+    $updateEndpoint = $updateBase + '/latest.json'
+}
+if ($updateEndpoint) {
     if (-not (Test-Path -LiteralPath $UpdatePublicKey)) {
         throw "Updater public key not found at $UpdatePublicKey. Run 'tauri signer generate' first, or pass -UpdatePublicKey."
     }
@@ -83,8 +103,8 @@ try {
             [IO.File]::WriteAllText($config, ($validation | ConvertTo-Json -Depth 10))
         }
     }
-    if ($updateBase) {
-        # The update server is a build setting, merged over tauri.conf.json (and any validation
+    if ($updateEndpoint) {
+        # The update source is a build setting, merged over tauri.conf.json (and any validation
         # settings) so the checked-in configuration stays free of it.
         $overlay = if ($config) { Get-Content -LiteralPath $config -Raw | ConvertFrom-Json } else { [pscustomobject]@{} }
         $bundle = if ($overlay.bundle) { $overlay.bundle } else { [pscustomobject]@{} }
@@ -92,9 +112,9 @@ try {
         $overlay | Add-Member -NotePropertyName bundle -NotePropertyValue $bundle -Force
         $updater = [pscustomobject]@{
             pubkey = $updatePublicKeyText
-            endpoints = @($updateBase + '/latest.json')
+            endpoints = @($updateEndpoint)
             # Plain http is for a trusted local network; the signature still protects the installer.
-            dangerousInsecureTransportProtocol = ($updateBase -like 'http:*')
+            dangerousInsecureTransportProtocol = ($updateEndpoint -like 'http:*')
             windows = [pscustomobject]@{ installMode = 'passive' }
         }
         $overlay | Add-Member -NotePropertyName plugins -NotePropertyValue ([pscustomobject]@{ updater = $updater }) -Force
@@ -118,12 +138,15 @@ try {
         [IO.File]::WriteAllText($package.FullName + '.sha256', $hash + '  ' + $package.Name + "`n")
         Write-Output $package.FullName
     }
-    if ($updateBase) {
+    if ($updateEndpoint) {
         $settings = Get-Content -LiteralPath (Join-Path $workspace 'app/src-tauri/tauri.conf.json') -Raw | ConvertFrom-Json
         $overlay = Get-Content -LiteralPath $config -Raw | ConvertFrom-Json
         $version = if ($overlay.version) { $overlay.version } else { $settings.version }
         $product = if ($overlay.productName) { $overlay.productName } else { $settings.productName }
         $package = Get-Item -LiteralPath (Join-Path $bundleDir ($product + '_' + $version + '_x64-setup.exe'))
+        # A GitHub installer is addressed by its tag, not latest/download, so this manifest stays
+        # valid after a newer release.
+        $downloadBase = if ($GitHubRepo) { "https://github.com/$GitHubRepo/releases/download/v$version" } else { $updateBase }
         $manifest = [ordered]@{
             version = $version
             notes = $ReleaseNotes
@@ -131,7 +154,7 @@ try {
             platforms = [ordered]@{
                 'windows-x86_64' = [ordered]@{
                     signature = (Get-Content -LiteralPath ($package.FullName + '.sig') -Raw).Trim()
-                    url = $updateBase + '/' + [Uri]::EscapeDataString($package.Name)
+                    url = $downloadBase + '/' + [Uri]::EscapeDataString($package.Name)
                 }
             }
         }

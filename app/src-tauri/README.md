@@ -1,7 +1,7 @@
 The Windows desktop uses the shared Rust core, an ephemeral loopback API, the existing Vue UI,
 single-instance focus and embedded terminals. It remains a separate Cargo workspace.
 
-Run the Windows installer `AgentFlow_1.1.13_x64-setup.exe`. It installs for the current user,
+Run the Windows installer `AgentFlow_1.1.14_x64-setup.exe`. It installs for the current user,
 adds Start menu integration and includes the UI, `flowctl` and Microsoft's WebView2 bootstrapper.
 When WebView2 is absent, its bootstrapper downloads the runtime. This build is unsigned.
 Python, Node.js and Zellij are not needed on a user's machine. Git and an installed, signed-in
@@ -152,7 +152,7 @@ installs into a GUID-named workspace folder with shortcuts disabled and a distin
 binary and application identity. It uses placeholder CLIs and Jira settings; it makes no live
 provider calls. It checks installed resource bytes, fresh setup, rejection of invalid token/origin/
 Host requests, existing config selection with relative paths, historical task visibility, restart,
-same-version reinstall, a 0.1.0-to-1.1.13 upgrade, downgrade refusal, refusal to force-close a running
+same-version reinstall, a 0.1.0-to-1.1.14 upgrade, downgrade refusal, refusal to force-close a running
 app, and uninstall with `/UPDATE` data retention. It leaves JSON reports under `.installer-test-tmp`.
 Temporary validation registry entries are scoped to the validation product. The normal AgentFlow
 desktop remains independent.

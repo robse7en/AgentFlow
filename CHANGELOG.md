@@ -8,6 +8,14 @@ tested. The frontend and Python package versions are independent of desktop vers
 Each version has a local annotated `v<version>` Git tag at the source checkpoint
 shown below. Tags must be pushed separately to share them with other checkouts.
 
+## 1.1.14 - 2026-11-06
+
+Source: the version commit tagged `v1.1.14` on `main`.
+
+- An agent interrupted by a restart only offers Resume when Resume can work: its session is
+  still recorded running, or it saved a finished result to disk. When the agent is gone, the
+  task header's button reads "Retry agent" and starts a new run instead of only opening the node.
+
 ## 1.1.13 - 2026-11-06
 
 Source: the version commit tagged `v1.1.13` on `main`.

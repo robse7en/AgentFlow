@@ -6,16 +6,19 @@ import { mapWidth } from '@/activity/geometry'
 import { deriveMap, shortModel } from '@/activity/mapModel'
 import { callCount, formatTokens } from '@/activity/runs'
 import { stationInfo } from '@/activity/stations'
+import type { Wait } from '@/activity/tapeModel'
 import { formatNzd } from '@/currency'
 import { parseTimestamp, useNow } from '@/now'
 import { useActivityStore } from '@/stores/activity'
 import { useUsdToNzdRate } from '@/usage'
 import ActivityMap from './ActivityMap.vue'
+import ActivityRun from './ActivityRun.vue'
+import ActivityTape from './ActivityTape.vue'
 import HarnessLogo from './HarnessLogo.vue'
 
 // The activity panel beside the canvas: one agent's header, what it is doing now, its vitals, the
-// hull-and-docks map and its latest calls (spec §3). With no transcript data it says so and keeps
-// the header. The tape and Run so far come in slice 5.
+// hull-and-docks map or the tape, the whole run squeezed into one strip, and its latest calls (spec §3).
+// With no transcript data it says so and keeps the header.
 const props = defineProps<{ task: TaskSnapshot; selected: string | null }>()
 const activity = useActivityStore()
 const usdToNzdRate = useUsdToNzdRate()
@@ -137,9 +140,15 @@ onBeforeUnmount(() => reducedQuery?.removeEventListener('change', onReduced))
 
 const vizEl = ref<HTMLElement | null>(null)
 const width = ref(450)
+/** The panel's own width: the tape and Run so far fill it (the map stops growing at 560). */
+const fullWidth = ref(450)
 // The map is drawn at the panel's width, so follow the container (it comes and goes with the data).
 let observer: ResizeObserver | null = null
-const measure = () => { if (vizEl.value) width.value = mapWidth(vizEl.value.clientWidth) }
+const measure = () => {
+  if (!vizEl.value) return
+  width.value = mapWidth(vizEl.value.clientWidth)
+  fullWidth.value = Math.max(250, Math.round(vizEl.value.clientWidth) || 450)
+}
 watch(vizEl, (el) => {
   observer?.disconnect()
   observer = null
@@ -214,7 +223,34 @@ watch(spoken, (text) => {
 }, { immediate: true })
 onBeforeUnmount(() => clearTimeout(announceTimer))
 
-const view = ref<'map' | 'tape'>('map')
+// The Map | Tape switch is remembered for this viewer.
+const VIEW_KEY = 'agentflow.activityView'
+const readView = (): 'map' | 'tape' => {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'tape' ? 'tape' : 'map'
+  } catch {
+    return 'map'
+  }
+}
+const view = ref<'map' | 'tape'>(readView())
+watch(view, (value) => {
+  try {
+    localStorage.setItem(VIEW_KEY, value)
+  } catch { /* A private window or blocked storage: the choice just is not remembered. */ }
+})
+
+// When this run waited on the person: each of its questions, to the minute it was answered (open ones run on).
+const waits = computed<Wait[]>(() => {
+  const current = run.value
+  if (!current) return []
+  return activity.waitsFor(current, props.task.questions).flatMap((wait) => {
+    const from = parseTimestamp(wait.from)
+    if (from === null) return []
+    return [{ from, to: wait.to === null ? null : parseTimestamp(wait.to) }]
+  })
+})
+const runLabel = computed(() => `Whole run so far for ${runName.value}`)
+const tapeLabel = computed(() => `Activity tape for ${runName.value}`)
 const glyph = (id: string) => stationInfo(id).icon
 </script>
 
@@ -271,6 +307,7 @@ const glyph = (id: string) => stationInfo(id).icon
 
       <div class="cap">
         <span>Activity</span>
+        <span v-if="view === 'tape'" class="hintline">Hover a bar for the call</span>
         <div class="seg" role="group" aria-label="Activity view">
           <button type="button" :aria-pressed="view === 'map'" @click="view = 'map'">Map</button>
           <button type="button" :aria-pressed="view === 'tape'" @click="view = 'tape'">Tape</button>
@@ -278,7 +315,14 @@ const glyph = (id: string) => stationInfo(id).icon
       </div>
       <div ref="vizEl" class="viz">
         <ActivityMap v-if="view === 'map'" :model="model" :name="hullName" :model-name="shortModel(modelChip)" :label="mapLabel" />
-        <p v-else class="muted small tape-later">The tape arrives in the next update. The map shows the same calls.</p>
+        <ActivityTape v-else :W="fullWidth" :entries="run.entries" :spans="run.spans" :summary="run.summary" :waits="waits"
+          :waiting="waiting" :still="reduced" :clock="clock" :label="tapeLabel" />
+      </div>
+
+      <div class="cap"><span>Run so far</span><span class="sub">every call by kind, context % beneath</span></div>
+      <div class="viz">
+        <ActivityRun :W="fullWidth" :entries="run.entries" :spans="run.spans" :context-steps="run.contextSteps" :summary="run.summary"
+          :waits="waits" :waiting="waiting" :window="view === 'tape'" :clock="clock" :label="runLabel" />
       </div>
 
       <div class="cap"><span>Latest calls</span></div>
@@ -359,7 +403,8 @@ const glyph = (id: string) => stationInfo(id).icon
 .seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-strong); font-weight: 600; }
 .viz { margin-inline: calc(var(--pad) * -1); min-width: 0; overflow: hidden; }
 .viz :deep(svg) { display: block; margin: 0 auto; }
-.tape-later { margin: 0; padding: 1rem var(--pad); }
+.cap .hintline, .cap .sub { letter-spacing: 0; text-transform: none; font-weight: 400; font-size: 11.5px; color: var(--dim); }
+.cap .hintline { margin-right: auto; }
 
 .feed { list-style: none; margin: 0; padding: 0; font-family: var(--mono); font-size: 12px; display: flex; flex-direction: column; gap: 3px; }
 .feed li { display: grid; grid-template-columns: 1.4ch 10ch minmax(0, 1fr) auto; gap: 8px; color: var(--dim); }

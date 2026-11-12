@@ -14,7 +14,7 @@ model-free code decides what happens next, and nothing reaches a pull request wi
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 ![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 
-[Quick start](#quick-start) · [Deterministic by design](#deterministic-by-design) · [Ticket as contract](#the-ticket-is-the-contract) · [How it works](#how-it-works) · [Documentation](#documentation) · [Releases](https://github.com/robse7en/AgentFlow/releases)
+[Quick start](#quick-start) · [Deterministic by design](#deterministic-by-design) · [Ticket as contract](#the-ticket-is-the-contract) · [How it works](#how-it-works) · [Common concerns](#common-concerns) · [Documentation](#documentation) · [Releases](https://github.com/robse7en/AgentFlow/releases)
 
 <img src="docs/assets/agentflow-demo.gif" alt="A task moving through AgentFlow: the Architect asks a question, requirements are approved, the implementer and both reviewers run, and the task reaches Ready for PR" width="900">
 
@@ -24,8 +24,8 @@ model-free code decides what happens next, and nothing reaches a pull request wi
 
 ## Why AgentFlow?
 
-Coding agents are good at writing code and bad at knowing when to stop and ask. AgentFlow puts a
-workflow around them instead of replacing them:
+Coding agents keep improving. AgentFlow puts a human-gated engineering workflow around the coding
+CLIs you already use:
 
 - **You approve the plan and the result.** Requirements and final readiness always need a human.
   Failed tests, open questions, high risk and unresolved review findings block approval. Overriding
@@ -128,6 +128,69 @@ AgentFlow owns the workflow state, Git worktrees and terminal sessions. The harn
 interaction, including their own Jira and Git MCP servers. Agents talk to AgentFlow only through
 `flowctl` and structured JSON, never through terminal scraping. See
 [How the workflow runs](docs/workflow.md) for the full walkthrough.
+
+## Common concerns
+
+### Won't better models and coding agents make this obsolete?
+
+AgentFlow runs your installed coding CLI. When you upgrade Claude Code, for example, improvements
+to its reasoning, code editing and tools remain available inside AgentFlow, subject to your model,
+CLI configuration and permissions. AgentFlow does not implement a competing coding agent or freeze
+the CLI's toolset. Its responsibility is coordinating stages, approvals, worktrees and evidence.
+Breaking changes to a CLI's launch flags or session handling can still require compatibility updates.
+
+### Does orchestration turn an interactive session into a one-shot?
+
+Agents can ask for clarification during a run with `flowctl question`. AgentFlow marks the stage
+**WAITING_FOR_USER** and shows the question on the task page and in the **Decisions** inbox; configured
+Slack actions can answer it too. Your choice or free-text answer is sent to the waiting agent's
+terminal, and the stage returns to running after its last question is answered. You can also attach
+to the live terminal for discussion. See [agent questions](docs/workflow.md#agent-questions).
+
+### Do I need a complete specification before I start?
+
+Start with a prompt or Jira ticket. The Architect explores the repository, asks questions and writes
+requirements, acceptance criteria, assumptions and a plan for you to review. Implementers are also
+instructed to ask when requirements prove impossible or contradictory. This provides a clarification
+path; it cannot guarantee an agent will notice every ambiguity. Approval freezes the agreed documents:
+changed scope currently requires a new task. See [requirements snapshots](docs/security-and-efficiency.md#routes-and-quality).
+
+### Why trust one agent saying another agent's code is correct?
+
+Code and security reviewers inspect the same checkpoint in fresh conversations. You can configure
+verification commands that AgentFlow runs against that checkpoint, recording exit codes and output;
+the implementer's own test summary is labelled unverified. Missing or failed verification blocks
+ordinary final approval. Reviews and tests provide evidence, not a guarantee of correctness, and you
+approve the final result. See [independent verification](docs/security-and-efficiency.md#independent-verification).
+
+### Can agents keep fixing and retrying forever?
+
+AgentFlow counts fix rounds and stops for human review at the configured limit, when a blocking
+finding is raised a third time, or when a reviewer upholds a disputed finding. Automatic retries are
+off by default and bounded when enabled; interrupted runs need human recovery after a restart.
+Optional budgets and metered-launch approvals control new launches, but cannot cap what an already
+running agent spends. See [recovery](docs/approvals-and-recovery.md) and
+[usage controls](docs/security-and-efficiency.md#usage-and-monitoring).
+
+### Am I locked into one agent vendor or Jira?
+
+Choose a harness per role: for example, a Claude Code Architect and a Codex Implementer. Agents use
+your existing CLI login; AgentFlow does not hold your model credentials. Jira is optional: a local
+prompt task follows the same workflow. See [supported harnesses](#supported-harnesses).
+
+### Is the full workflow worth it for every change?
+
+The workflow has overhead. Direct implementation is the default; parallel workers are optional.
+Both routes retain discovery, requirements approval, code and security review, and final verification
+and approval. For a tiny edit, a normal coding-agent session may be quicker. AgentFlow is useful when
+explicit approvals, independent checks and a durable task history justify those stages.
+
+### Do isolated worktrees sandbox the agents?
+
+Worktrees separate task changes from your original checkout. Scoped agent credentials prevent agents
+from approving their own work through AgentFlow's API. Neither provides OS isolation: coding agents
+still run with your account's permissions. See the
+[security model](docs/security-and-efficiency.md) before working with untrusted code.
 
 ## Quick start
 

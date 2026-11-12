@@ -136,13 +136,14 @@ onNodeDragStop(({ node }) => {
 
 // Camera framing ("spotlight"). Fit-all clamps at MIN_ZOOM on windows narrower than ~1600px,
 // leaving node text around 5px, so instead the view opens at FOCUS_ZOOM on the node(s) that need
-// attention: their left edge sits a short lead in from the left of the canvas (the steps that
-// follow stay in view to the right), vertically centred. Neither axis pans past the ends of the
-// graph, and an axis the whole graph fits along is centred instead.
+// attention: their centre sits in the middle of the canvas, vertically centred too. Neither axis
+// pans past the ends of the graph, so the first and last stages sit against their edge and the
+// ones between are centred; an axis the whole graph fits along is centred instead.
 //
 // The camera follows the workflow (re-frames when the focused nodes change or the canvas
-// resizes) until the user pans or zooms; "Focus active", a task switch or a new deep link hands
-// control back to it. "Fit all" counts as a user move.
+// resizes). A pan or zoom by the user holds the view until the focus moves to other nodes (the
+// next stage starts), a task switch or a new deep link; "Focus active" and F hand control back at
+// once, and "Fit all" shows the whole graph and keeps it until the focus moves on.
 const FOCUS_ZOOM = 1
 // A focused group taller than the canvas (e.g. a node showing the CLI sign-in steps) shrinks to
 // fit only down to this zoom, then shows from its top edge instead, so text stays legible.
@@ -151,8 +152,6 @@ const MIN_ZOOM = 0.4
 const MAX_ZOOM = 1.5
 const FIT_ALL_PADDING = 0.15
 const EDGE_PAD = 24
-const MIN_LEAD = 48
-const LEAD_FRACTION = 0.08
 const FRAME_ANIMATION_MS = 300
 
 // Highest priority first; every node in the first non-empty tier is framed together, so the two
@@ -209,11 +208,16 @@ const spotlightViewport = (width: number, height: number): ViewportTransform | n
   )
   const groupFits = group.height * zoom + 2 * EDGE_PAD <= height
   const groupY = groupFits ? height / 2 - (group.y + group.height / 2) * zoom : EDGE_PAD - group.y * zoom
-  const lead = Math.max(MIN_LEAD, width * LEAD_FRACTION)
+  // The group's centre goes to the middle of the canvas; the clamp stops the pan at the graph's
+  // ends, so the first and last stages sit against their edge instead of leaving empty space.
   const x =
     all.width * zoom + 2 * EDGE_PAD <= width
       ? (width - all.width * zoom) / 2 - all.x * zoom
-      : clamp(lead - group.x * zoom, width - EDGE_PAD - (all.x + all.width) * zoom, EDGE_PAD - all.x * zoom)
+      : clamp(
+          width / 2 - (group.x + group.width / 2) * zoom,
+          width - EDGE_PAD - (all.x + all.width) * zoom,
+          EDGE_PAD - all.x * zoom,
+        )
   const y =
     all.height * zoom + 2 * EDGE_PAD <= height
       ? (height - all.height * zoom) / 2 - all.y * zoom
@@ -229,6 +233,8 @@ const revealed = ref(false)
 const framed = ref(false)
 let nodesReady = false
 let userMoved = false
+// "Fit all" is showing: the whole graph stays framed (and re-fits on a resize) until the focus moves on.
+let fitted = false
 // Set while our own setViewport runs, so its move events aren't taken for the user's. A user
 // gesture that interrupts the animation still counts (it carries a DOM source event). The minimap
 // pans programmatically (no source event), which is why the flag is needed at all.
@@ -238,8 +244,8 @@ let autoMovingTimer: ReturnType<typeof setTimeout> | undefined
 const frame = async (animate: boolean): Promise<void> => {
   const { width, height } = dimensions.value
   if (!nodesReady || !width || !height) return
-  const viewport = spotlightViewport(width, height)
-  if (!viewport) return
+  const viewport = fitted ? null : spotlightViewport(width, height)
+  if (!fitted && !viewport) return
   const duration = animate && framed.value && !prefersReducedMotion() ? FRAME_ANIMATION_MS : 0
   autoMoving = true
   clearTimeout(autoMovingTimer)
@@ -247,17 +253,20 @@ const frame = async (animate: boolean): Promise<void> => {
   autoMovingTimer = setTimeout(() => (autoMoving = false), duration + 50)
   framed.value = true
   revealed.value = true
-  await setViewport(viewport, { duration })
+  if (viewport) await setViewport(viewport, { duration })
+  else await fitView({ padding: FIT_ALL_PADDING, duration })
 }
 
 const focusActive = (): void => {
   userMoved = false
+  fitted = false
   void frame(true)
 }
 
 const fitAll = (): void => {
-  userMoved = true
-  void fitView({ padding: FIT_ALL_PADDING, duration: prefersReducedMotion() ? 0 : FRAME_ANIMATION_MS })
+  userMoved = false
+  fitted = true
+  void frame(true)
 }
 
 onMoveStart(({ event }) => {
@@ -288,9 +297,14 @@ watch(
 
 watch(
   [() => props.task.jiraKey, () => focusKeys.value.join(','), () => props.focusKey],
-  ([jiraKey, , link], [prevJiraKey, , prevLink]) => {
+  ([jiraKey, focus, link], [prevJiraKey, prevFocus, prevLink]) => {
     const switched = jiraKey !== prevJiraKey
-    if (switched || (link && link !== prevLink)) userMoved = false
+    // A pan holds the view only until the focus moves to other nodes (the next stage starts), the
+    // task changes or a deep link arrives.
+    if (switched || focus !== prevFocus || (link && link !== prevLink)) {
+      userMoved = false
+      fitted = false
+    }
     if (userMoved) return
     // On a task switch the new nodes render first, then the camera jumps without animating.
     if (switched) void nextTick().then(() => frame(false))
@@ -324,7 +338,7 @@ const minimapNodeClass = (node: GraphNode): string => `wf-minimap-node ${node.da
 </script>
 
 <template>
-  <div class="canvas-wrap theme-dark" :class="{ 'canvas-wrap--unframed': !revealed }">
+  <div class="canvas-wrap" :class="{ 'canvas-wrap--unframed': !revealed }">
     <VueFlow
       :nodes="nodes"
       :edges="edges"
@@ -334,7 +348,7 @@ const minimapNodeClass = (node: GraphNode): string => `wf-minimap-node ${node.da
       :max-zoom="MAX_ZOOM"
       :inert="locked"
     >
-      <Background pattern-color="var(--border-strong)" :gap="18" :size="2.5" />
+      <Background pattern-color="var(--canvas-dots)" :gap="18" :size="2.5" />
       <Panel position="top-right" class="canvas-actions">
         <button class="sm" title="Zoom to the node that needs attention (F)" @click="focusActive">Focus active</button>
         <button class="sm" title="Zoom out to show the whole workflow" @click="fitAll">Fit all</button>

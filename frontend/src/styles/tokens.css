@@ -37,10 +37,15 @@
   --live: #1f5fbf;
   --live-soft: #e9f0fb;
   --live-glow: #7fb0ee;
-  /* Edge flow-animation colours (the ".wf-edge-flow" dash animation) — a fixed grey/white pair,
-     independent of the theme. */
-  --edge-flow-mid: #9a9a9a;
-  --edge-flow-light: #f5f5f5;
+  /* For the activity panel's HTML parts and the "how to read it" legend (design-spec section 8). */
+  --raised: #f6f4ee;
+  --dim: #8f8a7a;
+  --warn-hot: #b36b00;
+  --live-hot: #2f74db;
+  /* Edge flow-animation colours (the ".wf-edge-flow" dash animation): the dash and its glow. Blue on
+     the light canvas; the dark theme keeps its grey and white. */
+  --edge-flow-mid: rgba(127, 176, 238, 0.6);
+  --edge-flow-light: #1f5fbf;
   --info-soft: #efece3;
   --shadow-1: rgba(70, 60, 30, 0.12);
   --shadow-2: rgba(70, 60, 30, 0.07);
@@ -143,6 +148,12 @@
   --live: #7db4f0;
   --live-soft: rgba(125, 180, 240, 0.16);
   --live-glow: #c3dcf8;
+  --raised: #1b1b18;
+  --dim: #6f6b60;
+  --warn-hot: #ffce8a;
+  --live-hot: #c3dcf8;
+  --edge-flow-mid: #9a9a9a;
+  --edge-flow-light: #f5f5f5;
   --info-soft: #1d1d1a;
   --shadow-1: rgba(0, 0, 0, 0.5);
   --shadow-2: rgba(0, 0, 0, 0.35);

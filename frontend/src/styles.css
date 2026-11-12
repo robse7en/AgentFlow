@@ -173,23 +173,24 @@ tr.clickable:hover td { background: var(--hover); }
   min-height: calc(100vh - 1.5rem - var(--peek));
   min-height: calc(100dvh - 1.5rem - var(--peek));
 }
+/* The canvas on the left and the activity panel on the right, at equal height. The panel fills its
+   column exactly and scrolls inside it, so it never stretches the row. The width is dragged at the
+   split handle (380 to 640px, 450px by default). */
 .task-layout {
-  display: grid; grid-template-columns: minmax(0, 1fr) 450px; gap: 1rem; flex: 1 0 520px;
-  transition: grid-template-columns 0.45s var(--spring), column-gap 0.45s var(--spring);
+  position: relative; display: grid; grid-template-columns: minmax(0, 1fr) var(--side-w, 450px); gap: 1rem; flex: 1 0 520px;
 }
-.task-layout .side { min-width: 0; transition: opacity 0.3s; }
-.task-layout .side > .panel { min-width: 450px; }
-/* Collapsed: the side panel gives its column back to the canvas. */
-.task-layout.side-collapsed { grid-template-columns: minmax(0, 1fr) 0; column-gap: 0; }
-.task-layout.side-collapsed .side { opacity: 0; visibility: hidden; pointer-events: none; overflow: hidden; transition: opacity 0.2s, visibility 0s 0.45s; }
+.task-layout .side { position: relative; min-width: 0; }
+.task-layout .side > .panel { position: absolute; inset: 0; margin: 0; overflow: auto; overscroll-behavior: contain; }
+.split-handle { position: absolute; top: 0; bottom: 0; left: -0.75rem; width: 0.5rem; cursor: col-resize; touch-action: none; border-radius: 4px; z-index: 2; }
+.split-handle:hover, .split-handle.resizing, .split-handle:focus-visible { background: var(--border-strong); outline: none; }
 @media (max-width: 1100px) {
-  /* The side panel stacks under the canvas, so the canvas keeps its own height instead. */
+  /* The panel stacks under the canvas, so the canvas keeps its own height instead. */
   .task-fold { min-height: 0; }
-  .task-layout, .task-layout.side-collapsed { grid-template-columns: 1fr; flex: none; }
+  .task-layout { grid-template-columns: 1fr; flex: none; }
   .task-layout .canvas-wrap { height: clamp(520px, 72vh, 820px); }
-  .task-layout.side-collapsed .side { display: none; }
+  .task-layout .side > .panel { position: static; overflow: visible; }
+  .split-handle { display: none; }
 }
-@media (prefers-reduced-motion: reduce) { .task-layout, .task-layout .side { transition: none; } }
 /* Budget, evidence and PR tracking sit under the canvas as a responsive row of cards. */
 .task-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: 1rem; align-items: start; margin-top: 1rem; }
 .task-strip > .panel { margin-bottom: 0; }
@@ -199,14 +200,17 @@ tr.clickable:hover td { background: var(--hover); }
 .strip-card p { font-size: 13px; line-height: 1.5; }
 @media (prefers-reduced-motion: reduce) { .strip-card { transition: none; } .strip-card:hover { transform: none; } }
 button.active { color: var(--accent-strong); background: var(--accent-soft); border-color: var(--accent-border); }
-/* The canvas is dark in both themes (it carries .theme-dark), so the black node cards always
-   float on a near-black ground. Set here, after tokens.css, so it wins over the shared dark --panel. */
+/* The canvas follows the app theme: a paper ground with warm dots in light, the near-black ground
+   of old in dark. Set here, after tokens.css, so --panel wins over the shared one. */
 .canvas-wrap {
-  --panel: #0a0a09;
-  color: var(--text); color-scheme: dark;
+  --panel: #f8f6f0; --canvas-glow: rgba(79, 122, 0, 0.07); --canvas-card: #ffffff; --canvas-dots: #e2ddcf;
+  color: var(--text);
   background: radial-gradient(120% 90% at 50% -10%, var(--canvas-glow), transparent 65%), var(--panel);
   border: 1px solid var(--border); border-radius: var(--radius-lg); min-height: 520px; position: relative; overflow: hidden;
   isolation: isolate;
+}
+:root[data-theme="dark"] .canvas-wrap {
+  --panel: #0a0a09; --canvas-glow: rgba(198, 241, 74, 0.1); --canvas-card: #0a0a09; --canvas-dots: #46443d; color-scheme: dark;
 }
 /* Hidden until WorkflowCanvas.vue lands its first camera frame, so the graph never flashes at
    vue-flow's default viewport before jumping to the focused node. */
@@ -216,7 +220,7 @@ button.active { color: var(--accent-strong); background: var(--accent-soft); bor
    glance while the camera is zoomed in on it. (styles.css loads before the vue-flow sheets, hence
    the doubled class.) */
 .vue-flow__minimap.wf-minimap {
-  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden;
+  background: var(--canvas-card); border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden;
   box-shadow: 0 2px 6px var(--shadow-1);
 }
 .wf-minimap .vue-flow__minimap-mask {
@@ -263,7 +267,6 @@ button.active { color: var(--accent-strong); background: var(--accent-soft); bor
   .question-dot { transition: none; }
   .question-overlay-leave-active .question-dialog { transform: none; }
 }
-.side { overflow: auto; }
 
 /* Running edges (".wf-edge-flow", set in WorkflowCanvas.vue): short dashes travel along the
    rendered path itself via stroke-dashoffset, so it stays correct on any edge shape — the
@@ -277,11 +280,67 @@ button.active { color: var(--accent-strong); background: var(--accent-soft); bor
 }
 @keyframes wf-edge-flow-dash { to { stroke-dashoffset: -36px; } }
 
-/* Nodes always render with a fixed black-card palette internally, regardless of the app theme, so
-   they read as black cards floating on the canvas (which follows the theme itself). Text/border/
-   status colors below are the light-on-black side of that pairing, not the app's dark theme
-   (which is tuned for a dark-gray panel, not true black). */
+/* Nodes carry their own palette so the cards read well on the canvas, which follows the theme: white
+   cards on paper in light (the default here), the black cards of old in dark. The names after
+   --run-soft are the ones the state rules below read (sweep, waiting, chips, footer). */
 .wf-node {
+  --bg: #ffffff;
+  --panel: #ffffff;
+  --border: #e3dfd3;
+  --border-strong: #c9c4b4;
+  --hover: #f1eee5;
+  --text: #1c1b17;
+  --muted: #6b675a;
+  --accent: #4f7a00;
+  --accent-soft: #eef3dc;
+  --accent-border: #cddba0;
+  --accent-strong: #3a5a00;
+  --accent-glow: rgba(79, 122, 0, 0.3);
+  --on-ok: #ffffff;
+  --ok: #0b7560;
+  --ok-soft: #dff3ee;
+  --ok-border: #a9dccf;
+  --warn: #8f5500;
+  --warn-soft: #fff2dc;
+  --warn-border: #f0d49c;
+  --warn-ink: #8f5500;
+  --warn-glow: #f0b04a;
+  --danger: #c4372f;
+  --danger-soft: #fdecea;
+  --danger-border: #f0b9b4;
+  --danger-glow: #d9483f;
+  --run: #436800;
+  --run-soft: #eef3dc;
+  --sweep-1: #5f9400;
+  --sweep-2: #0b7560;
+  --sweep-3: #b36b00;
+  --wait-1: #b36b00;
+  --wait-2: #f0b04a;
+  --run-shadow: rgba(79, 122, 0, 0.2);
+  --wait-shadow: rgba(179, 107, 0, 0.22);
+  --wait-p0: rgba(179, 107, 0, 0.28);
+  --wait-p1: rgba(179, 107, 0, 0.42);
+  --fail-shadow: rgba(196, 55, 47, 0.22);
+  --fail-p0: rgba(196, 55, 47, 0.28);
+  --fail-p1: rgba(196, 55, 47, 0.42);
+  --chip-bg: #f6f4ee;
+  --chip-border: #e3dfd3;
+  --chip-text: #4a473d;
+  --chip-hover-border: #c9c4b4;
+  --foot-bg: #faf8f3;
+  --foot-border: #e3dfd3;
+  --foot-text: #3d3a31;
+  --logo-ring: #c9c4b4;
+  --pending-border: #c9c4b4;
+  --info-soft: #efece3;
+  --shadow-1: rgba(70, 60, 30, 0.1);
+  --shadow-2: rgba(70, 60, 30, 0.07);
+  --elev-2: 0 8px 18px rgba(70, 60, 30, 0.07);
+  /* System fonts, as before the app moved to Inter: the 262px cards are laid out for them. */
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+:root[data-theme="dark"] .wf-node {
   --bg: #000000;
   --panel: #1a1a1a;
   --border: #3a3a3a;
@@ -302,6 +361,7 @@ button.active { color: var(--accent-strong); background: var(--accent-soft); bor
   --warn: #f0b04a;
   --warn-soft: rgba(240, 176, 74, 0.16);
   --warn-border: rgba(240, 176, 74, 0.45);
+  --warn-ink: #ffce8a;
   --warn-glow: #ffce8a;
   --danger: #ef6b63;
   --danger-soft: rgba(239, 107, 99, 0.16);
@@ -312,17 +372,36 @@ button.active { color: var(--accent-strong); background: var(--accent-soft); bor
   --run-glow: #dcf77a;
   --run-purple: #3ec9a7;
   --run-red: #f0b04a;
+  --sweep-1: #c6f04a;
+  --sweep-2: #3ec9a7;
+  --sweep-3: #f0b04a;
+  --wait-1: #f0b04a;
+  --wait-2: #ffce8a;
+  --run-shadow: rgba(198, 241, 74, 0.26);
+  --wait-shadow: rgba(230, 171, 74, 0.35);
+  --wait-p0: rgba(230, 171, 74, 0.6);
+  --wait-p1: rgba(230, 171, 74, 0.75);
+  --fail-shadow: rgba(234, 107, 107, 0.35);
+  --fail-p0: rgba(234, 107, 107, 0.6);
+  --fail-p1: rgba(234, 107, 107, 0.75);
+  --chip-bg: #26262b;
+  --chip-border: #333338;
+  --chip-text: #d6d9e0;
+  --chip-hover-border: #4a4a52;
+  --foot-bg: #121214;
+  --foot-border: #2c2c31;
+  --foot-text: #d6d9e0;
+  --logo-ring: transparent;
+  --pending-border: #3a3a3a;
   --info-soft: #1a1a1a;
   --shadow-1: rgba(0, 0, 0, 0.6);
   --shadow-2: rgba(0, 0, 0, 0.4);
-  /* System fonts, as before the app moved to Inter: the 262px cards are laid out for them. */
-  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --elev-2: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 /* Shadow is composed from two layers so the selection ring and elevation stack independently. */
 .wf-node {
   --ring: 0 0 0 0 transparent;
-  --elev: 0 2px 6px var(--shadow-1), 0 1px 2px var(--shadow-2);
+  --elev: 0 2px 6px var(--shadow-1), var(--elev-2);
   /* Border width, also read by the footer to fit its corners inside the border. */
   --bw: 1.5px;
   width: 262px; background: var(--panel); border: var(--bw) solid var(--border); border-radius: var(--radius-lg);
@@ -338,47 +417,38 @@ button.active { color: var(--accent-strong); background: var(--accent-soft); bor
 @property --wf-angle { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
 /* RUNNING cycles through blue/purple/red for extra visibility instead of a single hue. */
 .wf-node.RUNNING {
-  --elev: 0 10px 26px rgba(198,241,74,0.26), 0 3px 8px var(--shadow-1);
+  --elev: 0 10px 26px var(--run-shadow), 0 3px 8px var(--shadow-1);
   /* Whole px: Chrome floors fractional border widths, so 2.5px would draw as 2px. */
   border-color: transparent; --bw: 3px; border-width: var(--bw);
   background:
     linear-gradient(var(--panel), var(--panel)) padding-box,
     conic-gradient(from var(--wf-angle),
-      var(--run) 0deg, var(--run-purple) 60deg, var(--run-red) 120deg,
-      var(--run) 180deg, var(--run-purple) 240deg, var(--run-red) 300deg,
-      var(--run) 360deg) border-box;
+      var(--sweep-1) 0deg, var(--sweep-2) 60deg, var(--sweep-3) 120deg,
+      var(--sweep-1) 180deg, var(--sweep-2) 240deg, var(--sweep-3) 300deg,
+      var(--sweep-1) 360deg) border-box;
   animation: wf-node-running 2.4s linear infinite;
 }
-/* Waiting for a human: same animated-border technique as RUNNING, in a red hue so it reads as
-   "needs you", distinct from the blue "in progress" running state. */
-.wf-node.WAITING_FOR_USER {
-  --elev: 0 10px 24px rgba(234,107,107,0.35), 0 3px 8px var(--shadow-1);
+/* Waiting for the person, for an answer or an approval: the same animated border in amber, which
+   matches the activity panel and leaves red for failures. (A question showed red before.) The
+   approval gate adds a pulsing glow on top, since it blocks the whole run. */
+.wf-node.WAITING_FOR_USER, .wf-node.WAITING_FOR_APPROVAL {
+  --elev: 0 10px 24px var(--wait-shadow), 0 3px 8px var(--shadow-1);
   border-color: transparent; --bw: 3px; border-width: var(--bw);
   background:
     linear-gradient(var(--panel), var(--panel)) padding-box,
-    conic-gradient(from var(--wf-angle), var(--danger) 0deg, var(--danger-glow) 90deg, var(--danger) 180deg, var(--danger-glow) 270deg, var(--danger) 360deg) border-box;
+    conic-gradient(from var(--wf-angle), var(--wait-1) 0deg, var(--wait-2) 90deg, var(--wait-1) 180deg, var(--wait-2) 270deg, var(--wait-1) 360deg) border-box;
   animation: wf-node-running 2.4s linear infinite;
 }
+.wf-node.WAITING_FOR_APPROVAL { animation: wf-node-running 2.4s linear infinite, wf-node-approval-pulse 1.6s ease-in-out infinite; }
 @keyframes wf-node-running { to { --wf-angle: 360deg; } }
-/* Waiting for approval is a stronger ask than waiting-for-user (a gate that blocks the whole
-   run): same spinning-border technique, but in orange with a pulsing glow layered on top so it
-   stands out from both the red "needs a reply" and blue "in progress" states. */
-.wf-node.WAITING_FOR_APPROVAL {
-  --elev: 0 10px 24px rgba(230,171,74,0.35), 0 3px 8px var(--shadow-1);
-  border-color: transparent; --bw: 3px; border-width: var(--bw);
-  background:
-    linear-gradient(var(--panel), var(--panel)) padding-box,
-    conic-gradient(from var(--wf-angle), var(--warn) 0deg, var(--warn-glow) 90deg, var(--warn) 180deg, var(--warn-glow) 270deg, var(--warn) 360deg) border-box;
-  animation: wf-node-running 2.4s linear infinite, wf-node-approval-pulse 1.6s ease-in-out infinite;
-}
 @keyframes wf-node-approval-pulse {
-  0%, 100% { box-shadow: var(--ring), 0 0 0 0 rgba(230, 171, 74, 0.6), var(--elev); }
-  50% { box-shadow: var(--ring), 0 0 24px 8px rgba(230, 171, 74, 0.75), var(--elev); }
+  0%, 100% { box-shadow: var(--ring), 0 0 0 0 var(--wait-p0), var(--elev); }
+  50% { box-shadow: var(--ring), 0 0 24px 8px var(--wait-p1), var(--elev); }
 }
 /* Failed: same spinning-border technique in red, plus a pulsing red glow so a failure keeps
    demanding attention rather than sitting as a static border color. */
 .wf-node.FAILED {
-  --elev: 0 10px 24px rgba(234,107,107,0.35), 0 3px 8px var(--shadow-1);
+  --elev: 0 10px 24px var(--fail-shadow), 0 3px 8px var(--shadow-1);
   border-color: transparent; --bw: 3px; border-width: var(--bw);
   background:
     linear-gradient(var(--panel), var(--panel)) padding-box,
@@ -386,8 +456,8 @@ button.active { color: var(--accent-strong); background: var(--accent-soft); bor
   animation: wf-node-running 2.4s linear infinite, wf-node-failed-pulse 1.6s ease-in-out infinite;
 }
 @keyframes wf-node-failed-pulse {
-  0%, 100% { box-shadow: var(--ring), 0 0 0 0 rgba(234, 107, 107, 0.6), var(--elev); }
-  50% { box-shadow: var(--ring), 0 0 24px 8px rgba(234, 107, 107, 0.75), var(--elev); }
+  0%, 100% { box-shadow: var(--ring), 0 0 0 0 var(--fail-p0), var(--elev); }
+  50% { box-shadow: var(--ring), 0 0 24px 8px var(--fail-p1), var(--elev); }
 }
 /* Ready to run: a pulsing green glow invites action without the busy sweep of RUNNING. */
 .wf-node.READY {
@@ -401,14 +471,15 @@ button.active { color: var(--accent-strong); background: var(--accent-soft); bor
 .wf-node.COMPLETED { border-color: var(--ok); }
 .wf-node.INTERRUPTED { border-color: var(--warn); border-style: dashed; }
 /* Not-yet-reachable / terminal-inactive nodes are de-emphasized and sit flat (no elevation). */
-.wf-node.PENDING, .wf-node.SKIPPED, .wf-node.CANCELLED { --elev: 0 0 0 0 transparent; opacity: 0.85; border-style: dashed; }
+.wf-node.PENDING, .wf-node.SKIPPED, .wf-node.CANCELLED { --elev: 0 0 0 0 transparent; opacity: 0.85; border-style: dashed; border-color: var(--pending-border); }
 .wf-node.PENDING .title, .wf-node.SKIPPED .title, .wf-node.CANCELLED .title { color: var(--muted); }
 .wf-node .head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
 .wf-node .harness-logo {
   width: 26px; height: 26px; border-radius: 10px; flex-shrink: 0;
   display: inline-flex; align-items: center; justify-content: center;
 }
-.wf-node .harness-logo.gate { background: var(--warn-soft); color: var(--warn-glow); }
+.wf-node .harness-logo { box-shadow: inset 0 0 0 1px var(--logo-ring); }
+.wf-node .harness-logo.gate { background: var(--warn-soft); color: var(--warn-ink); box-shadow: none; }
 .wf-node .titles { display: flex; flex-direction: column; min-width: 0; flex: 1; }
 .wf-node .title {
   font-weight: 600; font-size: 13px; color: var(--text);
@@ -420,19 +491,19 @@ button.active { color: var(--accent-strong); background: var(--accent-soft); bor
 .wf-node .chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .wf-node .chip {
   font-size: 11px; padding: 2px 9px; border-radius: var(--radius-pill);
-  background: #26262b; border: 1px solid #333338; color: #d6d9e0;
+  background: var(--chip-bg); border: 1px solid var(--chip-border); color: var(--chip-text);
 }
 .wf-node .chip.mono { font-family: var(--mono); }
-.wf-node .chip.warn { background: var(--warn-soft); border-color: var(--warn-border); color: var(--warn-glow); }
+.wf-node .chip.warn { background: var(--warn-soft); border-color: var(--warn-border); color: var(--warn-ink); }
 .wf-node button.chip-link { font: inherit; font-size: 11px; line-height: inherit; cursor: pointer; }
-.wf-node button.chip-link:hover:not(:disabled) { transform: none; background: #26262b; border-color: #4a4a52; text-decoration: underline; }
+.wf-node button.chip-link:hover:not(:disabled) { transform: none; background: var(--chip-bg); border-color: var(--chip-hover-border); text-decoration: underline; }
 .wf-node button.chip-link.warn:hover:not(:disabled) { background: var(--warn-soft); border-color: var(--warn-glow); }
 .wf-node .chip.danger { background: var(--danger-soft); border-color: var(--danger-border); color: var(--danger-glow); }
 .wf-node .wf-foot {
   display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
-  padding: 0.5rem 1rem 0.55rem; background: #121214; border-top: 1px solid #2c2c31;
+  padding: 0.5rem 1rem 0.55rem; background: var(--foot-bg); border-top: 1px solid var(--foot-border);
   border-radius: 0 0 calc(var(--radius-lg) - var(--bw)) calc(var(--radius-lg) - var(--bw));
-  font-family: var(--mono); font-size: 11.5px; color: #d6d9e0; white-space: nowrap;
+  font-family: var(--mono); font-size: 11.5px; color: var(--foot-text); white-space: nowrap;
 }
 .wf-node .wf-foot .elapsed { display: inline-flex; align-items: center; gap: 0.35rem; }
 .wf-node .wf-foot .cost { overflow: hidden; text-overflow: ellipsis; }

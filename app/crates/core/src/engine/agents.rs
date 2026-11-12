@@ -766,6 +766,7 @@ impl Engine {
             state.agents[agent].status = "exited".into();
             state.agents[agent].ended_at = Some(DbTime::now());
             self.screen_trackers.cancel(state.agents[agent].id);
+            self.activity_trackers.cancel(state.agents[agent].id);
             // A persistent session may be serving a later run than the one it was launched for.
             if let Some(current) = state.agents[agent].current_run_id.filter(|&id| id != launch_run_id)
                 && let Some(later) = state.runs.iter().position(|r| r.id == current)

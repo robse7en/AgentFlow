@@ -161,6 +161,11 @@ pub async fn get_task(State(app): State<Arc<App>>, Path(jira_key): Path<String>)
     Ok(Json(app.engine.snapshot(&jira_key)?))
 }
 
+/// Live activity of every run held for the task (the websocket carries only what changes).
+pub async fn task_activity(State(app): State<Arc<App>>, Path(jira_key): Path<String>) -> ApiResult {
+    Ok(Json(app.engine.task_activity(&jira_key)?))
+}
+
 pub async fn approve_node(
     State(app): State<Arc<App>>,
     Path((key, node)): Path<(String, String)>,

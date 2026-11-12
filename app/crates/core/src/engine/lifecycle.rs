@@ -563,6 +563,7 @@ impl Engine {
         agent.status = "stopped".into();
         agent.ended_at = Some(DbTime::now());
         self.screen_trackers.cancel(agent.id);
+        self.activity_trackers.cancel(agent.id);
     }
 
     /// Align agent rows with the panes positively identified by id before cleanup
@@ -1138,6 +1139,7 @@ impl Engine {
             details[k] = v.clone();
         }
         crate::diagnostics::event("task.deleted", details);
+        self.activity_trackers.forget_task(&key);
         self.broadcaster.broadcast(&json!({"type": "task.deleted", "jiraKey": key}));
         Ok(json!({"jiraKey": key, "deleted": true, "removed": removed}))
     }

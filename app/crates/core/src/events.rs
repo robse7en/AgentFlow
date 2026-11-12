@@ -70,6 +70,12 @@ impl Broadcaster {
         let _ = self.sender.send(Arc::from(pyjson::dumps_compact(&event)));
     }
 
+    /// Send one run's activity update to WebSocket clients only. In-process listeners (Slack, chat)
+    /// follow workflow state, and an update arrives several times a second.
+    pub fn activity(&self, message: &Value) {
+        let _ = self.sender.send(Arc::from(pyjson::dumps_compact(message)));
+    }
+
     pub fn client_count(&self) -> usize {
         self.sender.receiver_count()
     }

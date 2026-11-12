@@ -5,6 +5,7 @@
 //! Ported from `backend/agentflow/workflow` in slices.
 
 pub mod activity;
+pub mod activity_trackers;
 pub mod agents;
 pub mod approvals;
 pub mod assessment;
@@ -118,6 +119,8 @@ pub struct Engine {
     /// The flowctl executable (launchers report a harness's exit through it).
     pub flowctl: PathBuf,
     pub screen_trackers: screen::ScreenTrackers,
+    /// Live activity of each running agent, from its transcript.
+    pub activity_trackers: activity_trackers::ActivityTrackers,
     /// Background collections of usage a provider had not finished writing, by run id.
     usage_retries: agents::UsageRetries,
     /// Pending automatic retries after a harness exit, by the failed run's id.
@@ -171,7 +174,7 @@ impl Engine {
             terminals: setup.terminals,
             leftover_zellij: setup.leftover_zellij,
             worktree_killer: setup.worktree_killer,
-            broadcaster: setup.broadcaster,
+            broadcaster: setup.broadcaster.clone(),
             api_base_url: setup.api_base_url,
             locks: Mutex::new(HashMap::new()),
             launch_lock: tokio::sync::Mutex::new(()),
@@ -179,6 +182,7 @@ impl Engine {
             bin_dir,
             flowctl,
             screen_trackers: screen::ScreenTrackers::default(),
+            activity_trackers: activity_trackers::ActivityTrackers::new(setup.broadcaster.clone()),
             usage_retries: Mutex::new(HashMap::new()),
             automatic_retries: Mutex::new(HashMap::new()),
             automatic_retry_delay: RwLock::new(std::time::Duration::from_secs(agents::AUTOMATIC_RETRY_DELAY_SECONDS)),
@@ -275,6 +279,34 @@ impl Engine {
         );
     }
 
+    /// Every run's live activity held for a task, for `GET /api/tasks/{key}/activity`.
+    pub fn task_activity(&self, jira_key: &str) -> Result<serde_json::Value, WorkflowError> {
+        let task = self.db.session(|tx| {
+            crate::db::table::select_one::<crate::db::TaskRow>(tx, "WHERE jira_key = ?1", [jira_key.to_uppercase()])
+        })?;
+        task.ok_or_else(|| WorkflowError::not_found(format!("Task {jira_key} not found")))?;
+        Ok(serde_json::json!({"runs": self.activity_trackers.runs_for(jira_key)}))
+    }
+
+    /// Start (or confirm) following a running session's transcript for the activity map.
+    pub(crate) fn ensure_activity_tracker(&self, state: &store::TaskState, agent_index: usize) {
+        let agent = &state.agents[agent_index];
+        let Some(run) = agent.current_run_id.and_then(|id| state.runs.iter().find(|run| run.id == id)) else { return };
+        let Some(node) = state.nodes.iter().find(|node| node.id == run.node_id) else { return };
+        let Ok(adapter) = self.harnesses().get(&agent.harness).cloned() else { return };
+        self.activity_trackers.start(activity_trackers::TrackerSpec {
+            jira_key: state.task.jira_key.clone(),
+            node_key: node.key.clone(),
+            session_id: agent.id,
+            run_id: run.id,
+            run_number: u32::try_from(run.run_number).unwrap_or(0),
+            harness: adapter.config.kind.clone(),
+            harness_session_id: agent.harness_session_id.clone(),
+            home: adapter.home().to_path_buf(),
+            run_dir: run.run_dir.as_deref().filter(|dir| !dir.is_empty()).map(PathBuf::from),
+        });
+    }
+
     /// Tasks with live sessions or running work. Hold launch_lock while confirming shutdown.
     pub fn active_work_labels(&self) -> Result<Vec<String>, WorkflowError> {
         let mut labels = self.db.session(|tx| -> Result<Vec<String>, WorkflowError> {
@@ -308,6 +340,7 @@ impl Engine {
             retry.abort();
         }
         self.screen_trackers.stop_all();
+        self.activity_trackers.stop_all();
     }
 
     /// Cancel background work and wait for verification processes to finish stopping.

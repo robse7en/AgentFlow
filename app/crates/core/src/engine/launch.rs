@@ -762,6 +762,7 @@ impl Engine {
             // later run of this role can resume.
             state.agents[agent_index].harness_session_id = adapter.capture_session_id(&cwd, launch_started_at).await;
         }
+        self.ensure_activity_tracker(state, agent_index);
         let label = state.nodes[index].label.clone();
         state.log(
             format!("{label} started: {harness_key} in zellij tab '{tab}' (cwd {})", py_str(&cwd)),
@@ -812,6 +813,7 @@ impl Engine {
             agent.status = "exited".into();
             agent.ended_at = Some(DbTime::now());
             self.screen_trackers.cancel(agent.id);
+            self.activity_trackers.cancel(agent.id);
             return Ok(None);
         }
         Ok(Some(index))

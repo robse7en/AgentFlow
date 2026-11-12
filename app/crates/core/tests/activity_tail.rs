@@ -571,3 +571,82 @@ fn the_launch_offset_names_the_transcript_and_how_much_was_written() {
     assert_eq!(transcript_start(home.path(), "claude", None).path, None);
     assert_eq!(transcript_start(home.path(), "claude", Some("../etc")).path, None);
 }
+
+// ---- updates ----
+
+#[test]
+fn a_delta_has_only_what_changed_since_the_last_one() {
+    let mut run = run(None);
+    let first = run.take_delta().expect("the first delta tells a client the run exists");
+    assert!(first.entries.is_empty() && first.summary.available);
+    assert!(run.take_delta().is_none(), "nothing changed");
+
+    run.apply(start("a", Station::Shell, 0));
+    run.apply(start("b", Station::Files, 10));
+    let delta = run.take_delta().unwrap();
+    assert_eq!(delta.entries.iter().map(|e| e.id.as_str()).collect::<Vec<_>>(), ["a", "b"]);
+    assert!(run.take_delta().is_none());
+
+    run.apply(end("a", 50, false));
+    let delta = run.take_delta().unwrap();
+    assert_eq!(delta.entries.len(), 1);
+    assert_eq!((delta.entries[0].id.as_str(), delta.entries[0].status), ("a", CallStatus::Ok));
+
+    // A change to the summary alone is still news.
+    run.note_write(at(1_000));
+    let delta = run.take_delta().unwrap();
+    assert!(delta.entries.is_empty());
+    assert_eq!(delta.summary.last_write_at, Some(at(1_000)));
+
+    // The message names the run and carries no history.
+    run.apply(start("c", Station::Git, 60));
+    let delta = run.take_delta().unwrap();
+    let message = run.message(&delta);
+    assert_eq!(message["type"], "activity");
+    assert_eq!(message["runNumber"], 1);
+    assert_eq!(message["sessionId"], 3);
+    assert_eq!(message["entries"][0]["id"], "c");
+    assert!(message.get("spans").is_none() && message.get("contextSteps").is_none());
+}
+
+#[test]
+fn a_backlog_longer_than_the_list_sends_only_the_newest_entries() {
+    let mut run = run(None);
+    for n in 0..1_000 {
+        run.apply(start(&format!("c{n}"), Station::Shell, n));
+    }
+    let delta = run.take_delta().unwrap();
+    assert_eq!(delta.entries.len(), MAX_ENTRIES);
+    assert_eq!(delta.entries.last().unwrap().id, "c999");
+}
+
+#[test]
+fn reset_forgets_the_history_but_not_who_the_run_is() {
+    let mut run = run(Some(catalog()));
+    run.apply(start("a", Station::Shell, 0));
+    run.apply(step(Some("s:m1"), 10, 100));
+    run.take_delta();
+    run.reset();
+    assert!(run.entries.is_empty() && run.spans.is_empty() && run.context_steps.is_empty());
+    assert_eq!((run.run_id, run.node_key.as_str()), (7, "architect"));
+    assert_eq!(run.summary.steps, 0);
+    assert_eq!(run.summary.cost_usd, Some(0.0), "prices are kept");
+    assert!(run.take_delta().is_some(), "a client is told again");
+    // The same message counts again after a reset.
+    run.apply(step(Some("s:m1"), 10, 100));
+    assert_eq!(run.summary.steps, 1);
+}
+
+#[test]
+fn a_shrunken_file_is_announced_before_its_lines() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("t.jsonl");
+    append(&path, "aaaa\nbbbb\n");
+    let mut tail = Tail::new(&path, 0);
+    poll(&mut tail);
+    std::fs::write(&path, "c\n").unwrap();
+    let order = std::cell::RefCell::new(Vec::new());
+    tail.poll_with(|| order.borrow_mut().push("restart".to_string()), |line| order.borrow_mut().push(line.to_string()))
+        .unwrap();
+    assert_eq!(*order.borrow(), ["restart", "c"]);
+}

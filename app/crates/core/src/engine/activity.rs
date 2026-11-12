@@ -143,6 +143,11 @@ pub fn parse_line(harness: &str, line: &str) -> Vec<Parsed> {
     }
 }
 
+/// Whether this harness's transcripts are understood yet. The others show no live activity.
+pub fn parses(harness: &str) -> bool {
+    harness == "claude"
+}
+
 /// Counts each assistant message's usage once, however many lines it was written as.
 #[derive(Clone, Debug, Default)]
 pub struct StepDedup {
@@ -209,7 +214,13 @@ impl Tail {
     /// Hands each new complete line to `each` (without its line ending; blank lines are skipped).
     /// Only bytes already in the file when the poll starts are read, so a busy writer cannot keep
     /// it looping.
-    pub fn poll(&mut self, mut each: impl FnMut(&str)) -> io::Result<Poll> {
+    pub fn poll(&mut self, each: impl FnMut(&str)) -> io::Result<Poll> {
+        self.poll_with(|| {}, each)
+    }
+
+    /// Like [`poll`](Self::poll), calling `on_restart` first if the file shrank, before any line of
+    /// the new reading is handed out (so the caller can drop what it built from the old one).
+    pub fn poll_with(&mut self, on_restart: impl FnOnce(), mut each: impl FnMut(&str)) -> io::Result<Poll> {
         let mut file = match File::open(&self.path) {
             Ok(file) => file,
             Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(Poll::default()),
@@ -221,6 +232,7 @@ impl Tail {
             (self.read, poll.restarted) = (0, true);
             self.partial.clear();
             self.skipping = false;
+            on_restart();
         }
         if length == self.read {
             return Ok(poll);
@@ -405,6 +417,20 @@ pub struct RunActivity {
     catalog: Option<Arc<Map<String, Value>>>,
     #[serde(skip)]
     cost_lost: bool,
+    /// Entries added or changed since the last [`take_delta`](Self::take_delta).
+    #[serde(skip)]
+    dirty: HashSet<String>,
+    /// The summary as last sent.
+    #[serde(skip)]
+    sent: Option<ActivitySummary>,
+}
+
+/// What changed in a run since the last [`RunActivity::take_delta`]: the new or changed entries
+/// that are still in the newest 80, and the summary.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ActivityDelta {
+    pub entries: Vec<ActivityEntry>,
+    pub summary: ActivitySummary,
 }
 
 impl RunActivity {
@@ -439,7 +465,59 @@ impl RunActivity {
             anonymous_steps: 0,
             catalog,
             cost_lost: false,
+            dirty: HashSet::new(),
+            sent: None,
         }
+    }
+
+    /// Starts over, keeping who the run is and its prices: for a transcript that was replaced.
+    pub fn reset(&mut self) {
+        *self = RunActivity::new(
+            &self.jira_key,
+            &self.node_key,
+            self.run_id,
+            self.session_id,
+            self.run_number,
+            &self.harness,
+            self.catalog.clone(),
+        );
+    }
+
+    /// Sets the price catalog, which may arrive after the run began. It prices the steps that
+    /// follow; a run with no steps yet starts its cost at 0.
+    pub fn set_catalog(&mut self, catalog: Option<Arc<Map<String, Value>>>) {
+        if self.summary.steps == 0 && !self.cost_lost {
+            self.summary.cost_usd = catalog.as_ref().map(|_| 0.0);
+        }
+        self.catalog = catalog;
+    }
+
+    /// What changed since the last call, or None when nothing did. The first call always gives
+    /// something, so a client learns the run exists.
+    pub fn take_delta(&mut self) -> Option<ActivityDelta> {
+        let entries: Vec<ActivityEntry> =
+            self.entries.iter().filter(|entry| self.dirty.contains(&entry.id)).cloned().collect();
+        self.dirty.clear();
+        if entries.is_empty() && self.sent.as_ref() == Some(&self.summary) {
+            return None;
+        }
+        self.sent = Some(self.summary.clone());
+        Some(ActivityDelta { entries, summary: self.summary.clone() })
+    }
+
+    /// The `activity` websocket message for a delta.
+    pub fn message(&self, delta: &ActivityDelta) -> Value {
+        serde_json::json!({
+            "type": "activity",
+            "jiraKey": self.jira_key,
+            "nodeKey": self.node_key,
+            "runId": self.run_id,
+            "sessionId": self.session_id,
+            "runNumber": self.run_number,
+            "harness": self.harness,
+            "entries": delta.entries,
+            "summary": delta.summary,
+        })
     }
 
     /// Takes in one event from the run's own transcript.
@@ -476,6 +554,11 @@ impl RunActivity {
     /// Marks that no transcript data can be had for this run.
     pub fn mark_unavailable(&mut self) {
         self.summary.available = false;
+    }
+
+    /// Marks that transcript data is coming after all.
+    pub fn mark_available(&mut self) {
+        self.summary.available = true;
     }
 
     /// Calls that have begun and not ended.
@@ -595,6 +678,12 @@ impl RunActivity {
     /// Lists a call that has begun. An entry with an end time (a prompt, a model step) is already
     /// finished; any other stays open until its `End`.
     fn add(&mut self, entry: ActivityEntry, source: &Source) {
+        if self.dirty.len() > 4 * MAX_ENTRIES {
+            // A long backlog touches far more entries than are kept; drop the ids that left the list.
+            let kept: HashSet<&str> = self.entries.iter().map(|entry| entry.id.as_str()).collect();
+            self.dirty.retain(|id| kept.contains(id.as_str()));
+        }
+        self.dirty.insert(entry.id.clone());
         *self.summary.counts.entry(entry.station).or_insert(0) += 1;
         if entry.ended_at.is_none() {
             let call = OpenCall {
@@ -630,6 +719,7 @@ impl RunActivity {
     /// Ends an open call. Its entry may have left the newest 80 and its span the newest 2000; the
     /// totals still count it.
     fn close(&mut self, id: &str, call: OpenCall, at: DateTime<Utc>, is_error: bool) {
+        self.dirty.insert(id.to_string());
         let ended_at = at.max(call.started_at);
         let status = if is_error { CallStatus::Err } else { CallStatus::Ok };
         if let Some(entry) = self.entries.iter_mut().rev().find(|entry| entry.id == id) {

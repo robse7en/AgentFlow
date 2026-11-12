@@ -332,8 +332,8 @@ fn model_entries_are_named_by_their_message_not_by_arrival_order() {
     let mut one = run(None);
     let mut other = run(None);
     one.apply(step(Some("s:main"), 10, 1));
-    one.apply_subagent(Some("agent"), step(Some("s:sub"), 20, 1));
-    other.apply_subagent(Some("agent"), step(Some("s:sub"), 20, 1));
+    one.apply_subagent("agent-1", Some("agent"), step(Some("s:sub"), 20, 1));
+    other.apply_subagent("agent-1", Some("agent"), step(Some("s:sub"), 20, 1));
     other.apply(step(Some("s:main"), 10, 1));
     let ids = |run: &RunActivity| {
         let mut ids: Vec<String> = run.entries.iter().map(|e| e.id.clone()).collect();
@@ -426,13 +426,13 @@ fn subagent_calls_are_marked_and_their_steps_are_not_the_runs_own() {
     run.apply(start("agent", Station::Agents, 100));
     assert_eq!(run.summary.subagents_in_flight, 1);
 
-    run.apply_subagent(Some("agent"), step(Some("s:sub"), 150, 50_000));
-    run.apply_subagent(Some("agent"), start("sub-read", Station::Files, 160));
-    run.apply_subagent(Some("agent"), end("sub-read", 200, false));
+    run.apply_subagent("agent-1", Some("agent"), step(Some("s:sub"), 150, 50_000));
+    run.apply_subagent("agent-1", Some("agent"), start("sub-read", Station::Files, 160));
+    run.apply_subagent("agent-1", Some("agent"), end("sub-read", 200, false));
     // A subagent's own `Agent` call is not one of the run's subagents.
-    run.apply_subagent(Some("agent"), start("nested", Station::Agents, 210));
+    run.apply_subagent("agent-1", Some("agent"), start("nested", Station::Agents, 210));
     assert_eq!(run.summary.subagents_in_flight, 1);
-    run.apply_subagent(Some("agent"), end("nested", 220, false));
+    run.apply_subagent("agent-1", Some("agent"), end("nested", 220, false));
     assert_eq!(run.summary.subagents_in_flight, 1);
 
     let read = run.entries.iter().find(|e| e.id == "sub-read").unwrap();
@@ -454,7 +454,7 @@ fn subagent_calls_are_marked_and_their_steps_are_not_the_runs_own() {
     assert_eq!(run.summary.subagents_in_flight, 0);
 
     // The meta file may not be read yet: the calls have no parent for now.
-    run.apply_subagent(None, start("orphan", Station::Shell, 400));
+    run.apply_subagent("agent-orphan", None, start("orphan", Station::Shell, 400));
     let orphan = run.entries.iter().find(|e| e.id == "orphan").unwrap();
     assert!(orphan.by_subagent && orphan.parent_id.is_none());
 }
@@ -560,16 +560,70 @@ fn the_launch_offset_names_the_transcript_and_how_much_was_written() {
     assert_eq!((resumed.path.as_deref(), resumed.offset), (Some(file.as_path()), 6));
     assert_eq!(launch_offset(&resumed)["offset"], 6);
     assert_eq!(launch_offset(&resumed)["path"], json!(file.to_string_lossy()));
+    assert_eq!(launch_offset(&resumed)["subagents"], json!({}), "no subagent transcripts yet");
+
+    // Subagent transcripts already there are recorded by name with their length; the meta files
+    // and strays are not.
+    let subagents = project.join("abc-123").join("subagents");
+    std::fs::create_dir_all(&subagents).unwrap();
+    std::fs::write(subagents.join("agent-a1.jsonl"), "1234567\n").unwrap();
+    std::fs::write(subagents.join("agent-a1.meta.json"), "{}").unwrap();
+    std::fs::write(subagents.join("notes.jsonl"), "x\n").unwrap();
+    std::fs::write(subagents.join("agent-.jsonl"), "x\n").unwrap();
+    let with_subagents = transcript_start(home.path(), "claude", Some("abc-123"));
+    assert_eq!(launch_offset(&with_subagents)["subagents"], json!({"agent-a1.jsonl": 8}));
 
     // Copilot's path is known before it exists.
     let events = home.path().join(".copilot").join("session-state").join("sess-1").join("events.jsonl");
     let copilot = transcript_start(home.path(), "copilot", Some("sess-1"));
     assert_eq!((copilot.path.as_deref(), copilot.offset), (Some(events.as_path()), 0));
+    assert!(launch_offset(&copilot).get("subagents").is_none(), "only Claude has subagent transcripts");
 
     // Codex has no path until the tracker finds the rollout; an unsafe id names nothing.
     assert_eq!(transcript_start(home.path(), "codex", Some("abc-123")).path, None);
     assert_eq!(transcript_start(home.path(), "claude", None).path, None);
     assert_eq!(transcript_start(home.path(), "claude", Some("../etc")).path, None);
+}
+
+// ---- subagents ----
+
+#[test]
+fn a_subagents_parent_can_arrive_after_its_calls() {
+    let mut run = run(None);
+    run.apply(start("agent-call", Station::Agents, 100));
+    run.apply_subagent("agent-a", None, start("a-1", Station::Shell, 110));
+    run.apply_subagent("agent-b", None, start("b-1", Station::Files, 120));
+    assert_eq!(run.summary.subagents_in_flight, 1, "only the run's own Agent call is counted");
+    run.take_delta();
+
+    run.set_subagent_parent("agent-a", "agent-call");
+    let delta = run.take_delta().expect("the backfilled entry is announced");
+    let ids: Vec<&str> = delta.entries.iter().map(|entry| entry.id.as_str()).collect();
+    assert_eq!(ids, ["a-1"]);
+    let parent = |run: &RunActivity, id: &str| run.entries.iter().find(|e| e.id == id).unwrap().parent_id.clone();
+    assert_eq!(parent(&run, "a-1").as_deref(), Some("agent-call"));
+    assert_eq!(parent(&run, "b-1"), None, "another subagent's calls are left alone");
+    // The same parent again changes nothing; later calls take it without being told again.
+    run.set_subagent_parent("agent-a", "agent-call");
+    assert!(run.take_delta().is_none());
+    run.apply_subagent("agent-a", None, start("a-2", Station::Files, 130));
+    assert_eq!(parent(&run, "a-2").as_deref(), Some("agent-call"));
+
+    // A call that was open when its parent arrived still ends normally, and one subagent's turn
+    // is not closed by another's.
+    run.apply_subagent("agent-a", None, end("a-2", 135, false));
+    run.apply_subagent("agent-a", None, end("a-1", 140, false));
+    run.apply_subagent("agent-b", None, start("b-2", Station::Network, 150));
+    let thinking = run.entries.iter().find(|e| e.id == "think-a-1").unwrap();
+    assert_eq!(thinking.status, CallStatus::Run);
+    assert!(thinking.by_subagent && thinking.parent_id.as_deref() == Some("agent-call"));
+    let a1 = run.entries.iter().find(|e| e.id == "a-1").unwrap();
+    assert_eq!((a1.status, a1.parent_id.as_deref()), (CallStatus::Ok, Some("agent-call")));
+
+    // The Agent call ends: nothing of the run's own is in flight, and the totals are unchanged.
+    run.apply(end("agent-call", 300, false));
+    assert_eq!(run.summary.subagents_in_flight, 0);
+    assert_eq!(run.summary.steps, 0);
 }
 
 // ---- updates ----

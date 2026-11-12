@@ -295,12 +295,45 @@ pub struct TranscriptStart {
     /// None while the file is not there (a fresh conversation) or cannot be named yet (Codex).
     pub path: Option<PathBuf>,
     pub offset: u64,
+    /// Claude only: the subagent transcripts that already existed, by file name, with their length.
+    /// None when this is not known (a launch recorded before subagents were followed): every
+    /// subagent file is then read whole.
+    pub subagents: Option<BTreeMap<String, u64>>,
+}
+
+/// The folder a Claude session keeps its subagents' transcripts in: `<session id>/subagents/`
+/// beside the session's own `<session id>.jsonl`.
+pub fn subagents_dir(transcript: &Path) -> Option<PathBuf> {
+    Some(transcript.parent()?.join(transcript.file_stem()?).join("subagents"))
+}
+
+/// A subagent transcript's file name is `agent-<id>.jsonl`; this gives `agent-<id>` for it, and
+/// `None` for any other name (the `.meta.json` files, strays, and names with odd characters).
+pub fn subagent_key(file_name: &str) -> Option<&str> {
+    let key = file_name.strip_suffix(".jsonl")?;
+    let id = key.strip_prefix("agent-")?;
+    (!id.is_empty() && id.len() <= 128 && id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_'))
+        .then_some(key)
+}
+
+/// The subagent transcripts in `dir` with their length now, by file name.
+pub fn subagent_files(dir: &Path) -> BTreeMap<String, u64> {
+    let Ok(listing) = std::fs::read_dir(dir) else { return BTreeMap::new() };
+    listing
+        .filter_map(Result::ok)
+        .filter_map(|item| {
+            let name = item.file_name().into_string().ok()?;
+            subagent_key(&name)?;
+            let meta = item.metadata().ok().filter(|meta| meta.is_file())?;
+            Some((name, meta.len()))
+        })
+        .collect()
 }
 
 /// The transcript's place at launch. A resumed conversation appends to its old file, so the run
 /// starts reading at that file's length; a fresh one has no file yet and starts at 0.
 pub fn transcript_start(home: &Path, harness: &str, session_id: Option<&str>) -> TranscriptStart {
-    let none = TranscriptStart { path: None, offset: 0 };
+    let none = TranscriptStart { path: None, offset: 0, subagents: None };
     let Some(session_id) = session_id.filter(|id| crate::collectors::safe_session_id(id)) else { return none };
     let path = match harness {
         "claude" => {
@@ -312,13 +345,21 @@ pub fn transcript_start(home: &Path, harness: &str, session_id: Option<&str>) ->
     };
     let Some(path) = path else { return none };
     let offset = std::fs::metadata(&path).map_or(0, |meta| meta.len());
-    TranscriptStart { path: Some(path), offset }
+    // Only Claude has subagent transcripts. A resumed conversation may already hold some, and
+    // they are not this run's.
+    let subagents =
+        (harness == "claude").then(|| subagents_dir(&path).map(|dir| subagent_files(&dir)).unwrap_or_default());
+    TranscriptStart { path: Some(path), offset, subagents }
 }
 
-/// The `activity-offset.json` body: `{"path": …, "offset": …}`.
+/// The `activity-offset.json` body: `{"path": …, "offset": …, "subagents": {file: length}}`.
 pub fn launch_offset(start: &TranscriptStart) -> Value {
     let path = start.path.as_ref().map(|path| path.to_string_lossy().into_owned());
-    serde_json::json!({ "path": path, "offset": start.offset })
+    let mut body = serde_json::json!({ "path": path, "offset": start.offset });
+    if let Some(subagents) = &start.subagents {
+        body["subagents"] = serde_json::json!(subagents);
+    }
+    body
 }
 
 // ---- the run summary -------------------------------------------------------------------------
@@ -372,8 +413,9 @@ struct OpenCall {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 enum Source {
     Main,
-    /// A subagent, and the `Agent` call that started it when that is known.
-    Subagent(Option<String>),
+    /// One subagent's transcript, by its file's key (`agent-<id>`). The `Agent` call that started it
+    /// is looked up in [`RunActivity::parents`], since it can become known after its lines.
+    Subagent(String),
 }
 
 /// Everything the activity map knows about one run, built by feeding it parsed transcript lines.
@@ -423,6 +465,12 @@ pub struct RunActivity {
     /// The summary as last sent.
     #[serde(skip)]
     sent: Option<ActivitySummary>,
+    /// The `Agent` call that started each subagent, by the subagent's file key, once known.
+    #[serde(skip)]
+    parents: HashMap<String, String>,
+    /// Which subagent file each listed subagent entry came from (only the entries still listed).
+    #[serde(skip)]
+    origins: HashMap<String, String>,
 }
 
 /// What changed in a run since the last [`RunActivity::take_delta`]: the new or changed entries
@@ -467,6 +515,8 @@ impl RunActivity {
             cost_lost: false,
             dirty: HashSet::new(),
             sent: None,
+            parents: HashMap::new(),
+            origins: HashMap::new(),
         }
     }
 
@@ -525,12 +575,32 @@ impl RunActivity {
         self.apply_from(Source::Main, parsed);
     }
 
-    /// Takes in one event from a subagent's transcript. `parent_id` is the `Agent` call in the main
-    /// transcript that started it, or None while that is not known. Its calls are marked
-    /// `by_subagent`; its steps are not the run's own, so they leave steps, model, context, tokens
-    /// and cost alone (the after-run usage reads only the main transcript).
-    pub fn apply_subagent(&mut self, parent_id: Option<&str>, parsed: Parsed) {
-        self.apply_from(Source::Subagent(parent_id.map(str::to_string)), parsed);
+    /// Takes in one event from a subagent's transcript. `file` names that transcript (two
+    /// subagents never share a model's turn); `parent_id` is the `Agent` call in the main transcript
+    /// that started it, or None while that is not known (it changes nothing already known). Its
+    /// calls are marked `by_subagent`; its steps are not the run's own, so they leave steps, model,
+    /// context, tokens and cost alone (the after-run usage reads only the main transcript).
+    pub fn apply_subagent(&mut self, file: &str, parent_id: Option<&str>, parsed: Parsed) {
+        if let Some(parent) = parent_id {
+            self.set_subagent_parent(file, parent);
+        }
+        self.apply_from(Source::Subagent(file.to_string()), parsed);
+    }
+
+    /// Learns which `Agent` call started a subagent. The calls already read from its transcript
+    /// take the parent, and are listed as changed. (Spans carry no parent; a call still open is
+    /// found by its transcript, so it needs nothing.)
+    pub fn set_subagent_parent(&mut self, file: &str, parent_id: &str) {
+        if self.parents.get(file).is_some_and(|known| known == parent_id) {
+            return;
+        }
+        self.parents.insert(file.to_string(), parent_id.to_string());
+        for entry in self.entries.iter_mut() {
+            if self.origins.get(&entry.id).is_some_and(|origin| origin == file) {
+                entry.parent_id = Some(parent_id.to_string());
+                self.dirty.insert(entry.id.clone());
+            }
+        }
     }
 
     /// Records that the run's files grew at `at` (the latest time wins).
@@ -639,7 +709,7 @@ impl RunActivity {
     fn entry(&self, source: &Source, id: String, station: Station, label: String, at: DateTime<Utc>) -> ActivityEntry {
         let (by_subagent, parent_id) = match source {
             Source::Main => (false, None),
-            Source::Subagent(parent) => (true, parent.clone()),
+            Source::Subagent(file) => (true, self.parents.get(file).cloned()),
         };
         ActivityEntry {
             id,
@@ -684,6 +754,9 @@ impl RunActivity {
             self.dirty.retain(|id| kept.contains(id.as_str()));
         }
         self.dirty.insert(entry.id.clone());
+        if let Source::Subagent(file) = source {
+            self.origins.insert(entry.id.clone(), file.clone());
+        }
         *self.summary.counts.entry(entry.station).or_insert(0) += 1;
         if entry.ended_at.is_none() {
             let call = OpenCall {
@@ -711,8 +784,10 @@ impl RunActivity {
             self.spans.pop_front();
         }
         self.entries.push_back(entry);
-        if self.entries.len() > MAX_ENTRIES {
-            self.entries.pop_front();
+        if self.entries.len() > MAX_ENTRIES
+            && let Some(gone) = self.entries.pop_front()
+        {
+            self.origins.remove(&gone.id);
         }
     }
 

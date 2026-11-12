@@ -9,7 +9,7 @@
 //! Nothing here logs or keeps tool input; see `activity.rs` for what a label may hold.
 
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock, RwLock};
 use std::time::{Duration, Instant};
@@ -17,7 +17,10 @@ use std::time::{Duration, Instant};
 use chrono::Utc;
 use serde_json::{Map, Value};
 
-use super::activity::{RunActivity, Tail, TranscriptStart, parse_line, parses, transcript_start};
+use super::activity::{
+    RunActivity, Tail, TranscriptStart, parse_line, parses, subagent_files, subagent_key, subagents_dir,
+    transcript_start,
+};
 use crate::collectors::{CollectorEnv, pricing};
 use crate::events::Broadcaster;
 
@@ -62,10 +65,29 @@ pub struct TrackerSpec {
     pub run_dir: Option<PathBuf>,
 }
 
+/// The most subagent transcripts followed for one run; any more are left unread.
+const MAX_SUBAGENT_FILES: usize = 256;
+
+/// One Claude subagent's transcript being followed.
+struct Subagent {
+    /// The file's name without its extension, `agent-<id>`.
+    key: String,
+    tail: Tail,
+    /// `agent-<id>.meta.json`, which names the `Agent` call that started it (and may come later).
+    meta: PathBuf,
+    /// That `Agent` call's id, once the meta file said.
+    parent: Option<String>,
+    seen: Instant,
+    /// The meta file is no longer waited for: its calls stay without a parent.
+    settled: bool,
+}
+
 /// One run being followed.
 struct RunTracker {
     run: RunActivity,
     tail: Option<Tail>,
+    /// Claude subagent transcripts, by file name.
+    subagents: BTreeMap<String, Subagent>,
     spec: TrackerSpec,
     /// Where the transcript stood when the run launched.
     recorded: TranscriptStart,
@@ -88,7 +110,15 @@ impl RunTracker {
             run.mark_unavailable();
         }
         let recorded = read_recorded(spec.run_dir.as_deref());
-        RunTracker { run, tail: None, spec, recorded, started: Instant::now(), last_sent: None }
+        RunTracker {
+            run,
+            tail: None,
+            subagents: BTreeMap::new(),
+            spec,
+            recorded,
+            started: Instant::now(),
+            last_sent: None,
+        }
     }
 
     /// The transcript file, once it exists.
@@ -125,8 +155,14 @@ impl RunTracker {
         true
     }
 
-    /// Reads what the transcript gained since the last read.
-    fn read(&mut self) {
+    /// Reads what the transcript and its subagents' transcripts gained since the last read. A
+    /// subagent whose meta file is still missing after `give_up` goes without a parent for good.
+    fn read(&mut self, give_up: Duration) {
+        self.read_main();
+        self.read_subagents(give_up);
+    }
+
+    fn read_main(&mut self) {
         let harness = self.spec.harness.as_str();
         let run = RefCell::new(&mut self.run);
         let Some(tail) = self.tail.as_mut() else { return };
@@ -145,6 +181,64 @@ impl RunTracker {
         }
     }
 
+    /// Lists the session's `subagents/` folder, follows any transcript not followed yet, and reads
+    /// what each gained. A file that was there at launch is read from its length then; one that
+    /// appeared later, from its start.
+    fn read_subagents(&mut self, give_up: Duration) {
+        if self.spec.harness != "claude" {
+            return;
+        }
+        let Some(dir) = self.tail.as_ref().and_then(|tail| subagents_dir(tail.path())) else { return };
+        for (name, _) in subagent_files(&dir) {
+            if self.subagents.len() >= MAX_SUBAGENT_FILES {
+                break;
+            }
+            let Some(key) = subagent_key(&name).map(str::to_string) else { continue };
+            if self.subagents.contains_key(&name) {
+                continue;
+            }
+            // Without a record (an older launch, or a fresh conversation) every file is this run's.
+            let offset = self.recorded.subagents.as_ref().and_then(|known| known.get(&name)).copied().unwrap_or(0);
+            self.subagents.insert(
+                name.clone(),
+                Subagent {
+                    meta: dir.join(format!("{key}.meta.json")),
+                    tail: Tail::new(dir.join(&name), offset),
+                    key,
+                    parent: None,
+                    seen: Instant::now(),
+                    settled: false,
+                },
+            );
+        }
+        let harness = self.spec.harness.as_str();
+        let run = &mut self.run;
+        for subagent in self.subagents.values_mut() {
+            // The meta file can come after the transcript: keep looking, and give the calls read so
+            // far their parent when it appears.
+            if subagent.parent.is_none() && !subagent.settled {
+                match read_tool_use_id(&subagent.meta) {
+                    Some(parent) => {
+                        run.set_subagent_parent(&subagent.key, &parent);
+                        subagent.parent = Some(parent);
+                    }
+                    None => subagent.settled = subagent.seen.elapsed() >= give_up,
+                }
+            }
+            let (key, parent) = (subagent.key.clone(), subagent.parent.clone());
+            let poll = subagent.tail.poll(|line| {
+                for event in parse_line(harness, line) {
+                    run.apply_subagent(&key, parent.as_deref(), event);
+                }
+            });
+            if poll.is_ok_and(|poll| poll.grew)
+                && let Ok(modified) = std::fs::metadata(subagent.tail.path()).and_then(|meta| meta.modified())
+            {
+                run.note_write(modified.into());
+            }
+        }
+    }
+
     /// The update to send now, if anything changed and the last one is not too recent.
     fn message(&mut self, force: bool) -> Option<Value> {
         if !force && self.last_sent.is_some_and(|sent| sent.elapsed() < MIN_SEND_GAP) {
@@ -158,7 +252,7 @@ impl RunTracker {
 
 /// The offset recorded at launch, or the start of an unnamed file.
 fn read_recorded(run_dir: Option<&Path>) -> TranscriptStart {
-    let none = TranscriptStart { path: None, offset: 0 };
+    let none = TranscriptStart { path: None, offset: 0, subagents: None };
     let Some(text) = run_dir.and_then(|dir| std::fs::read_to_string(dir.join("activity-offset.json")).ok()) else {
         return none;
     };
@@ -166,7 +260,28 @@ fn read_recorded(run_dir: Option<&Path>) -> TranscriptStart {
     TranscriptStart {
         path: recorded.get("path").and_then(Value::as_str).map(PathBuf::from),
         offset: recorded.get("offset").and_then(Value::as_u64).unwrap_or(0),
+        subagents: recorded
+            .get("subagents")
+            .and_then(Value::as_object)
+            .map(|known| known.iter().filter_map(|(name, length)| Some((name.clone(), length.as_u64()?))).collect()),
     }
+}
+
+/// The `Agent` call a subagent's meta file names (`toolUseId`), when the file is there and says.
+/// Only the id is taken: the rest of the file holds the subagent's description and settings.
+fn read_tool_use_id(meta: &Path) -> Option<String> {
+    // A meta file is a few hundred bytes.
+    if std::fs::metadata(meta).ok()?.len() > 64 * 1024 {
+        return None;
+    }
+    let Value::Object(body) = serde_json::from_str::<Value>(&std::fs::read_to_string(meta).ok()?).ok()? else {
+        return None;
+    };
+    let id = body.get("toolUseId")?.as_str()?;
+    let plain = !id.is_empty()
+        && id.len() <= 200
+        && id.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b':' | b'.'));
+    plain.then(|| id.to_string())
 }
 
 fn locked<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -312,7 +427,8 @@ impl Inner {
         }
         // Prices are not fetched here: this can run under the task lock.
         tracker.locate(Duration::MAX);
-        tracker.read();
+        let give_up = self.settings.read().unwrap_or_else(|p| p.into_inner()).give_up;
+        tracker.read(give_up);
         tracker.run.finish(Utc::now());
         if let Some(message) = tracker.message(true) {
             self.broadcaster.activity(&message);
@@ -338,7 +454,7 @@ async fn track(inner: Arc<Inner>, tracker: Arc<Mutex<RunTracker>>) {
             if let Some(prices) = prices {
                 tracker.run.set_catalog(prices);
             }
-            tracker.read();
+            tracker.read(give_up);
             tracker.message(false)
         })
         .await;

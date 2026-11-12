@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useActivityStore } from '@/stores/activity';
 import { useTaskStore } from '@/stores/tasks';
 import { useConfigStore } from '@/stores/config';
 import { useOperationStore } from '@/stores/operations';
@@ -42,6 +43,7 @@ const props = defineProps<{ jiraKey: string }>();
 const route = useRoute();
 const router = useRouter();
 const store = useTaskStore();
+const activity = useActivityStore();
 const operations = useOperationStore();
 // A background cleanup or delete holds the task's lock; other task actions would only queue behind it.
 const operationRunning = computed(() => !!operations.runningFor(props.jiraKey));
@@ -168,6 +170,7 @@ const overrideReviews = async (): Promise<void> => {
 const load = async (): Promise<void> => {
     error.value = null;
     try {
+        void activity.load(props.jiraKey);
         await store.loadTask(props.jiraKey);
         const key = route.query.node;
         if (typeof key === 'string' && task.value?.nodes.some((node) => node.key === key)) {

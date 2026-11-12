@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { ApiError, api, connectEvents } from '@/api/client'
+import { useActivityStore } from './activity'
 import { useOperationStore } from './operations'
 import { useProjectStore } from './projects'
 import type {
@@ -10,6 +11,7 @@ import type {
 export const useTaskStore = defineStore('tasks', () => {
   const operations = useOperationStore()
   const projects = useProjectStore()
+  const activity = useActivityStore()
   const tasks = ref<TaskSummary[]>([])
   const snapshots = ref<Record<string, TaskSnapshot>>({})
   const connected = ref(false)
@@ -43,6 +45,7 @@ export const useTaskStore = defineStore('tasks', () => {
     delete rest[key]
     snapshots.value = rest
     tasks.value = tasks.value.filter((t) => t.jiraKey !== key)
+    activity.forgetTask(key)
   }
 
   function connect() {
@@ -56,10 +59,12 @@ export const useTaskStore = defineStore('tasks', () => {
         for (const key of Object.keys(snapshots.value)) {
           // A 404 means it was deleted while the socket was down.
           void loadTask(key).catch((e) => { if (e instanceof ApiError && e.status === 404) removeTask(key) });
+          // Updates sent while the socket was down were never pushed either.
+          void activity.load(key);
         }
       }
     }, removeTask, (event) => operations.progress(event.operation, event.jiraKey, event.message),
-    (list) => projects.apply(list));
+    (list) => projects.apply(list), (message) => activity.apply(message));
   }
 
   const stopConnection = () => {

@@ -6,6 +6,7 @@ import AgentHeartbeat from '@/components/AgentHeartbeat.vue';
 import { useTaskStore } from '@/stores/tasks'
 import { hasUsage, tokenRuns, usageDetail, useUsdToNzdRate } from '@/usage'
 import HarnessLogo from './HarnessLogo.vue'
+import NodeNow from './NodeNow.vue'
 import QuestionIndicator from './QuestionIndicator.vue'
 
 const props = defineProps<{ node: WorkflowNodeDto; taskKey: string }>()
@@ -49,7 +50,7 @@ const showFindings = () => window.dispatchEvent(new CustomEvent('agentflow:findi
     </div>
     <span class="badge" :class="node.displayState">{{ node.displayState.replaceAll('_', ' ') }}</span>
   </div>
-  <AgentHeartbeat :node="node" />
+  <AgentHeartbeat :node="node" :task-key="taskKey" />
   <QuestionIndicator v-if="node.state === 'WAITING_FOR_USER'" :count="node.openQuestions" />
   <div class="chips">
     <span class="chip mono" title="Model">{{ node.effectiveConfig?.model ?? 'harness default' }}</span>
@@ -65,6 +66,7 @@ const showFindings = () => window.dispatchEvent(new CustomEvent('agentflow:findi
       {{ usage.totalTokens.toLocaleString() }} tok<span v-if="tokenRuns(usage) < usage.runs">*</span>
     </span>
   </div>
+  <NodeNow :node="node" :task-key="taskKey" />
   <div v-if="node.message && node.state !== 'WAITING_FOR_USER'" class="message" :title="node.message">{{ node.message }}</div>
   <p v-if="node.effectiveConfig?.routingReason" class="small muted">{{ node.effectiveConfig.routingReason }}</p>
   <div v-if="error" class="alert error small" style="margin-top: 0.4rem">{{ error }}</div>

@@ -439,6 +439,11 @@ button.active { color: var(--accent-strong); background: var(--accent-soft); bor
 .wf-node .wf-foot .dim { color: var(--muted); }
 .wf-node .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--run); animation: wf-live-dot 1.4s ease-in-out infinite; }
 @keyframes wf-live-dot { 50% { opacity: 0.35; } }
+/* The call the agent is on now (NodeNow.vue). Nothing is drawn when there is no activity data. */
+.wf-node .wf-now { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.5rem; min-height: 16px; font-family: var(--mono); font-size: 11px; color: var(--text); white-space: nowrap; overflow: hidden; }
+.wf-node .wf-now .act-glyph { flex: none; width: 13px; height: 13px; }
+.wf-node .wf-now .lb { overflow: hidden; text-overflow: ellipsis; }
+.wf-node .wf-now.dim { color: var(--muted); }
 .wf-node .actions { display: flex; gap: 0.35rem; margin-top: 0.5rem; flex-wrap: wrap; }
 .wf-node .input-required {
   margin-top: 0.4rem; padding: 0.3rem 0.5rem; border-radius: var(--radius-sm);

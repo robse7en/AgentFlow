@@ -1,8 +1,9 @@
 //! Agent activity: one line of a harness transcript becomes a few small events, and each tool
 //! call is sorted into one of nine stations with a short label.
 //!
-//! This slice is pure: no files, no clock, no threads. Later slices tail the transcripts, keep a
-//! per-run summary and send it to the UI. See `notes/agent-activity-map-plan.md`.
+//! Parsing and classifying are pure: no files, no clock, no threads. [`Tail`] reads the new lines of
+//! a transcript, and [`RunActivity`] keeps the per-run summary the UI shows. Trackers and the
+//! transport come in later slices. See `notes/agent-activity-map-plan.md`.
 //!
 //! **Labels carry names, never content.** A label may be a file's last two path parts, a web
 //! host, a command name, a subcommand or Claude's own short description. It never holds a command
@@ -10,12 +11,17 @@
 //!
 //! Only Claude Code lines are understood so far; Copilot and Codex return no events.
 
-use std::collections::HashSet;
-use std::sync::LazyLock;
+use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
+use std::fs::File;
+use std::io::{self, Read, Seek, SeekFrom};
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, LazyLock};
 
 use chrono::{DateTime, SecondsFormat, Utc};
 use serde::{Serialize, Serializer};
-use serde_json::Value;
+use serde_json::{Map, Value};
+
+use crate::collectors::pricing;
 
 /// Times go to the UI as ISO strings with milliseconds, like the transcripts write them.
 fn iso(at: &DateTime<Utc>) -> String {
@@ -109,6 +115,9 @@ pub enum Parsed {
     Start { id: String, station: Station, label: String, at: DateTime<Utc>, inbound: bool },
     /// A call finished.
     End { id: String, at: DateTime<Utc>, is_error: bool },
+    /// The agent's turn is over, so the model is no longer working on it: Claude Code wrote a
+    /// `turn_duration` line, an interruption, or an error message in place of an answer.
+    TurnEnd { at: DateTime<Utc> },
     /// One assistant line. A turn written as several lines repeats the same usage on each of them:
     /// count it once per `message_id` with [`StepDedup`].
     Step {
@@ -135,7 +144,7 @@ pub fn parse_line(harness: &str, line: &str) -> Vec<Parsed> {
 }
 
 /// Counts each assistant message's usage once, however many lines it was written as.
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct StepDedup {
     seen: HashSet<String>,
 }
@@ -151,11 +160,566 @@ impl StepDedup {
     }
 }
 
+// ---- tailing ---------------------------------------------------------------------------------
+
+/// The longest line kept. A longer one (a huge tool result) is dropped, not buffered.
+const MAX_LINE_BYTES: usize = 32 * 1024 * 1024;
+const READ_CHUNK: usize = 256 * 1024;
+
+/// Reads the complete lines a growing transcript gains, from a byte offset on.
+///
+/// A partial last line (the writer is mid-line) is held back until its newline arrives. A missing
+/// file reads as no lines, and a file that shrank is read again from the start.
+#[derive(Debug)]
+pub struct Tail {
+    path: PathBuf,
+    /// How far into the file has been read, whole lines or not.
+    read: u64,
+    /// The bytes after the last newline read so far.
+    partial: Vec<u8>,
+    /// The current line is over [`MAX_LINE_BYTES`] and is being thrown away up to its newline.
+    skipping: bool,
+}
+
+/// What one [`Tail::poll`] saw.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Poll {
+    /// New bytes were read (even if no line is complete yet).
+    pub grew: bool,
+    /// The file was shorter than the offset, so reading started over: the caller's summary is stale
+    /// and should be rebuilt.
+    pub restarted: bool,
+}
+
+impl Tail {
+    pub fn new(path: impl Into<PathBuf>, offset: u64) -> Tail {
+        Tail { path: path.into(), read: offset, partial: Vec::new(), skipping: false }
+    }
+
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
+    /// Where a new reader resumes to see the same lines from here on: the start of the first line
+    /// not yet handed out.
+    pub fn offset(&self) -> u64 {
+        self.read.saturating_sub(self.partial.len() as u64)
+    }
+
+    /// Hands each new complete line to `each` (without its line ending; blank lines are skipped).
+    /// Only bytes already in the file when the poll starts are read, so a busy writer cannot keep
+    /// it looping.
+    pub fn poll(&mut self, mut each: impl FnMut(&str)) -> io::Result<Poll> {
+        let mut file = match File::open(&self.path) {
+            Ok(file) => file,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(Poll::default()),
+            Err(error) => return Err(error),
+        };
+        let length = file.metadata()?.len();
+        let mut poll = Poll::default();
+        if length < self.read {
+            (self.read, poll.restarted) = (0, true);
+            self.partial.clear();
+            self.skipping = false;
+        }
+        if length == self.read {
+            return Ok(poll);
+        }
+        file.seek(SeekFrom::Start(self.read))?;
+        let mut chunk = vec![0u8; READ_CHUNK];
+        let mut remaining = length - self.read;
+        while remaining > 0 {
+            let wanted = remaining.min(READ_CHUNK as u64) as usize;
+            let got = file.read(&mut chunk[..wanted])?;
+            if got == 0 {
+                break;
+            }
+            remaining -= got as u64;
+            self.read += got as u64;
+            poll.grew = true;
+            self.consume(&chunk[..got], &mut each);
+        }
+        Ok(poll)
+    }
+
+    fn consume<F: FnMut(&str)>(&mut self, mut bytes: &[u8], each: &mut F) {
+        while !bytes.is_empty() {
+            let Some(end) = bytes.iter().position(|byte| *byte == b'\n') else {
+                if !self.skipping {
+                    if self.partial.len() + bytes.len() > MAX_LINE_BYTES {
+                        self.partial.clear();
+                        self.skipping = true;
+                    } else {
+                        self.partial.extend_from_slice(bytes);
+                    }
+                }
+                return;
+            };
+            let (head, rest) = (&bytes[..end], &bytes[end + 1..]);
+            if self.skipping {
+                self.skipping = false;
+            } else if self.partial.is_empty() {
+                emit(head, each);
+            } else if self.partial.len() + head.len() <= MAX_LINE_BYTES {
+                self.partial.extend_from_slice(head);
+                emit(&self.partial, each);
+            }
+            self.partial.clear();
+            bytes = rest;
+        }
+    }
+}
+
+fn emit<F: FnMut(&str)>(line: &[u8], each: &mut F) {
+    let line = line.strip_suffix(b"\r").unwrap_or(line);
+    if !line.iter().all(u8::is_ascii_whitespace) {
+        each(&String::from_utf8_lossy(line));
+    }
+}
+
+/// Where a run's transcript is, and how much of it was already written when the run launched.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TranscriptStart {
+    /// None while the file is not there (a fresh conversation) or cannot be named yet (Codex).
+    pub path: Option<PathBuf>,
+    pub offset: u64,
+}
+
+/// The transcript's place at launch. A resumed conversation appends to its old file, so the run
+/// starts reading at that file's length; a fresh one has no file yet and starts at 0.
+pub fn transcript_start(home: &Path, harness: &str, session_id: Option<&str>) -> TranscriptStart {
+    let none = TranscriptStart { path: None, offset: 0 };
+    let Some(session_id) = session_id.filter(|id| crate::collectors::safe_session_id(id)) else { return none };
+    let path = match harness {
+        "claude" => {
+            let env = crate::collectors::CollectorEnv::at(home.to_path_buf(), None, std::sync::Arc::new(|| None));
+            crate::collectors::claude::find_transcript(&env, session_id)
+        }
+        "copilot" => Some(home.join(".copilot").join("session-state").join(session_id).join("events.jsonl")),
+        _ => None,
+    };
+    let Some(path) = path else { return none };
+    let offset = std::fs::metadata(&path).map_or(0, |meta| meta.len());
+    TranscriptStart { path: Some(path), offset }
+}
+
+/// The `activity-offset.json` body: `{"path": …, "offset": …}`.
+pub fn launch_offset(start: &TranscriptStart) -> Value {
+    let path = start.path.as_ref().map(|path| path.to_string_lossy().into_owned());
+    serde_json::json!({ "path": path, "offset": start.offset })
+}
+
+// ---- the run summary -------------------------------------------------------------------------
+
+/// The newest calls a run keeps with their labels.
+pub const MAX_ENTRIES: usize = 80;
+pub const MAX_SPANS: usize = 2000;
+pub const MAX_CONTEXT_STEPS: usize = 500;
+
+/// Totals for a run, small enough to send with every update.
+#[derive(Clone, Debug, Default, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ActivitySummary {
+    /// Calls begun per station, subagents' and prompts included.
+    pub counts: BTreeMap<Station, u32>,
+    /// Milliseconds spent in finished calls per station: a plain sum, so parallel calls add up.
+    /// Inbound prompts are left out.
+    pub busy_ms: BTreeMap<Station, u64>,
+    pub errors: u32,
+    /// `Agent` calls of the run itself that have not ended.
+    pub subagents_in_flight: u32,
+    pub model: Option<String>,
+    /// The run's own assistant messages (a subagent's are not counted).
+    pub steps: u32,
+    /// The last step's prompt size against the model's window, 0 to 100; None when the window is
+    /// not known.
+    pub context_percent: Option<f64>,
+    /// Input, output and cache tokens of the run's own steps.
+    pub tokens: u64,
+    /// List-price estimate for the same steps; None once a step's model has no known prices.
+    pub cost_usd: Option<f64>,
+    #[serde(serialize_with = "time_opt")]
+    pub last_write_at: Option<DateTime<Utc>>,
+    /// False: no transcript data for this run.
+    pub available: bool,
+    pub ended: bool,
+}
+
+/// A call that has begun and not ended.
+#[derive(Debug)]
+struct OpenCall {
+    station: Station,
+    started_at: DateTime<Utc>,
+    by_subagent: bool,
+    source: Source,
+    /// Its place in the run's span history, counted from the first span ever made.
+    span: u64,
+}
+
+/// Which transcript a line came from.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+enum Source {
+    Main,
+    /// A subagent, and the `Agent` call that started it when that is known.
+    Subagent(Option<String>),
+}
+
+/// Everything the activity map knows about one run, built by feeding it parsed transcript lines.
+///
+/// It reads no clock: times come from the transcript, and the caller supplies the rest
+/// ([`note_write`](Self::note_write), [`finish`](Self::finish)). Feeding the same lines in the same
+/// order always gives the same summary.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RunActivity {
+    pub jira_key: String,
+    /// A worker run uses its `worker_<uid>` node key.
+    pub node_key: String,
+    pub run_id: i64,
+    pub session_id: i64,
+    pub run_number: u32,
+    pub harness: String,
+    /// The newest [`MAX_ENTRIES`] calls, oldest first.
+    pub entries: VecDeque<ActivityEntry>,
+    pub summary: ActivitySummary,
+    /// Every call without its label, newest [`MAX_SPANS`] (GET only).
+    #[serde(skip_serializing_if = "VecDeque::is_empty")]
+    pub spans: VecDeque<Span>,
+    /// The context fill at each of the newest [`MAX_CONTEXT_STEPS`] steps (GET only).
+    #[serde(skip_serializing_if = "VecDeque::is_empty")]
+    pub context_steps: VecDeque<ContextStep>,
+    #[serde(skip)]
+    open: HashMap<String, OpenCall>,
+    #[serde(skip)]
+    dedup: StepDedup,
+    /// The open "model is working" entry of each transcript, by its id.
+    #[serde(skip)]
+    thinking: HashMap<Source, String>,
+    /// Spans ever made, so an evicted span's place can be told from a held one's.
+    #[serde(skip)]
+    spans_made: u64,
+    /// Model steps that came with no message id, to name them.
+    #[serde(skip)]
+    anonymous_steps: u32,
+    #[serde(skip)]
+    catalog: Option<Arc<Map<String, Value>>>,
+    #[serde(skip)]
+    cost_lost: bool,
+}
+
+impl RunActivity {
+    /// `catalog` is the models.dev price catalog (never loaded here: it may need a download). Without
+    /// one, or for a model it does not list, there is no cost, and no context percentage.
+    pub fn new(
+        jira_key: &str,
+        node_key: &str,
+        run_id: i64,
+        session_id: i64,
+        run_number: u32,
+        harness: &str,
+        catalog: Option<Arc<Map<String, Value>>>,
+    ) -> RunActivity {
+        let summary =
+            ActivitySummary { available: true, cost_usd: catalog.as_ref().map(|_| 0.0), ..ActivitySummary::default() };
+        RunActivity {
+            jira_key: jira_key.to_string(),
+            node_key: node_key.to_string(),
+            run_id,
+            session_id,
+            run_number,
+            harness: harness.to_string(),
+            entries: VecDeque::new(),
+            summary,
+            spans: VecDeque::new(),
+            context_steps: VecDeque::new(),
+            open: HashMap::new(),
+            dedup: StepDedup::default(),
+            thinking: HashMap::new(),
+            spans_made: 0,
+            anonymous_steps: 0,
+            catalog,
+            cost_lost: false,
+        }
+    }
+
+    /// Takes in one event from the run's own transcript.
+    pub fn apply(&mut self, parsed: Parsed) {
+        self.apply_from(Source::Main, parsed);
+    }
+
+    /// Takes in one event from a subagent's transcript. `parent_id` is the `Agent` call in the main
+    /// transcript that started it, or None while that is not known. Its calls are marked
+    /// `by_subagent`; its steps are not the run's own, so they leave steps, model, context, tokens
+    /// and cost alone (the after-run usage reads only the main transcript).
+    pub fn apply_subagent(&mut self, parent_id: Option<&str>, parsed: Parsed) {
+        self.apply_from(Source::Subagent(parent_id.map(str::to_string)), parsed);
+    }
+
+    /// Records that the run's files grew at `at` (the latest time wins).
+    pub fn note_write(&mut self, at: DateTime<Utc>) {
+        if self.summary.last_write_at.is_none_or(|last| at > last) {
+            self.summary.last_write_at = Some(at);
+        }
+    }
+
+    /// The run is over: every call still open ends `ok` at `at`.
+    pub fn finish(&mut self, at: DateTime<Utc>) {
+        let open: Vec<(String, OpenCall)> = self.open.drain().collect();
+        for (id, call) in open {
+            self.close(&id, call, at, false);
+        }
+        self.thinking.clear();
+        self.summary.subagents_in_flight = 0;
+        self.summary.ended = true;
+    }
+
+    /// Marks that no transcript data can be had for this run.
+    pub fn mark_unavailable(&mut self) {
+        self.summary.available = false;
+    }
+
+    /// Calls that have begun and not ended.
+    pub fn open_calls(&self) -> usize {
+        self.open.len()
+    }
+
+    fn apply_from(&mut self, source: Source, parsed: Parsed) {
+        match parsed {
+            Parsed::Start { id, station, label, at, inbound } => {
+                if self.open.contains_key(&id) || self.entries.iter().any(|entry| entry.id == id) {
+                    return;
+                }
+                // The model has made its call, or the person has spoken: either way its turn is over.
+                self.stop_thinking(&source, at, None);
+                let entry = self.entry(&source, id, station, label, at);
+                let entry = ActivityEntry {
+                    ended_at: inbound.then_some(at),
+                    status: if inbound { CallStatus::Ok } else { CallStatus::Run },
+                    inbound,
+                    ..entry
+                };
+                let id = entry.id.clone();
+                self.add(entry, &source);
+                if inbound {
+                    self.start_thinking(&source, &id, at);
+                }
+            }
+            Parsed::TurnEnd { at } => {
+                self.stop_thinking(&source, at, None);
+            }
+            Parsed::End { id, at, is_error } => {
+                if let Some(call) = self.open.remove(&id) {
+                    self.close(&id, call, at, is_error);
+                    // With nothing left running, the agent is back with the model.
+                    if !self.open.values().any(|call| call.source == source) {
+                        self.start_thinking(&source, &id, at);
+                    }
+                }
+            }
+            Parsed::Step {
+                message_id,
+                model,
+                at,
+                input_tokens,
+                output_tokens,
+                cache_read,
+                cache_write,
+                cache_write_1h,
+            } => {
+                if !self.dedup.counts(message_id.as_deref()) {
+                    return;
+                }
+                let label = clean_label(model.as_deref().unwrap_or("Model"));
+                // A line closes the model's work that began at the last call end or prompt. With
+                // none open (a harness wake-up the parser skipped, say) the step takes no time:
+                // reaching back to the previous turn would count the idle gap as work.
+                if !self.stop_thinking(&source, at, Some(&label)) {
+                    let id = match message_id.as_deref() {
+                        Some(key) => format!("model-{key}"),
+                        None => {
+                            self.anonymous_steps += 1;
+                            format!("model-{}", self.anonymous_steps)
+                        }
+                    };
+                    let entry = self.entry(&source, id, Station::Model, label, at);
+                    self.add(ActivityEntry { ended_at: Some(at), status: CallStatus::Ok, ..entry }, &source);
+                }
+                if source == Source::Main {
+                    let tokens = StepTokens { input_tokens, output_tokens, cache_read, cache_write, cache_write_1h };
+                    self.count_step(model.as_deref(), at, tokens);
+                }
+            }
+        }
+    }
+
+    /// A new entry for a call of `source`, running.
+    fn entry(&self, source: &Source, id: String, station: Station, label: String, at: DateTime<Utc>) -> ActivityEntry {
+        let (by_subagent, parent_id) = match source {
+            Source::Main => (false, None),
+            Source::Subagent(parent) => (true, parent.clone()),
+        };
+        ActivityEntry {
+            id,
+            station,
+            label,
+            started_at: at,
+            ended_at: None,
+            status: CallStatus::Run,
+            by_subagent,
+            parent_id,
+            inbound: false,
+        }
+    }
+
+    /// The model starts working on what just happened (a prompt, or the end of its last call).
+    fn start_thinking(&mut self, source: &Source, trigger: &str, at: DateTime<Utc>) {
+        let id = format!("think-{trigger}");
+        let entry = self.entry(source, id.clone(), Station::Model, "Model".to_string(), at);
+        self.add(entry, source);
+        self.thinking.insert(source.clone(), id);
+    }
+
+    /// Ends the model's open work in `source`, if any (naming its model when known).
+    fn stop_thinking(&mut self, source: &Source, at: DateTime<Utc>, label: Option<&str>) -> bool {
+        let Some(id) = self.thinking.remove(source) else { return false };
+        let Some(call) = self.open.remove(&id) else { return false };
+        if let Some(label) = label
+            && let Some(entry) = self.entries.iter_mut().rev().find(|entry| entry.id == id)
+        {
+            entry.label = label.to_string();
+        }
+        self.close(&id, call, at, false);
+        true
+    }
+
+    /// Lists a call that has begun. An entry with an end time (a prompt, a model step) is already
+    /// finished; any other stays open until its `End`.
+    fn add(&mut self, entry: ActivityEntry, source: &Source) {
+        *self.summary.counts.entry(entry.station).or_insert(0) += 1;
+        if entry.ended_at.is_none() {
+            let call = OpenCall {
+                station: entry.station,
+                started_at: entry.started_at,
+                by_subagent: entry.by_subagent,
+                source: source.clone(),
+                span: self.spans_made,
+            };
+            self.open.insert(entry.id.clone(), call);
+            if entry.station == Station::Agents && !entry.by_subagent {
+                self.summary.subagents_in_flight += 1;
+            }
+        }
+        self.spans.push_back(Span {
+            station: entry.station,
+            started_at: entry.started_at,
+            ended_at: entry.ended_at,
+            status: entry.status,
+            by_subagent: entry.by_subagent,
+            inbound: entry.inbound,
+        });
+        self.spans_made += 1;
+        if self.spans.len() > MAX_SPANS {
+            self.spans.pop_front();
+        }
+        self.entries.push_back(entry);
+        if self.entries.len() > MAX_ENTRIES {
+            self.entries.pop_front();
+        }
+    }
+
+    /// Ends an open call. Its entry may have left the newest 80 and its span the newest 2000; the
+    /// totals still count it.
+    fn close(&mut self, id: &str, call: OpenCall, at: DateTime<Utc>, is_error: bool) {
+        let ended_at = at.max(call.started_at);
+        let status = if is_error { CallStatus::Err } else { CallStatus::Ok };
+        if let Some(entry) = self.entries.iter_mut().rev().find(|entry| entry.id == id) {
+            entry.ended_at = Some(ended_at);
+            entry.status = status;
+        }
+        let first_held = self.spans_made - self.spans.len() as u64;
+        if let Some(span) = call.span.checked_sub(first_held).and_then(|index| self.spans.get_mut(index as usize)) {
+            span.ended_at = Some(ended_at);
+            span.status = status;
+        }
+        self.add_busy(call.station, call.started_at, ended_at);
+        if is_error {
+            self.summary.errors += 1;
+        }
+        if call.station == Station::Agents && !call.by_subagent {
+            self.summary.subagents_in_flight = self.summary.subagents_in_flight.saturating_sub(1);
+        }
+    }
+
+    fn add_busy(&mut self, station: Station, from: DateTime<Utc>, to: DateTime<Utc>) {
+        let millis = (to - from).num_milliseconds().max(0) as u64;
+        *self.summary.busy_ms.entry(station).or_insert(0) += millis;
+    }
+
+    /// One of the run's own assistant messages: steps, tokens, cost and context.
+    fn count_step(&mut self, model: Option<&str>, at: DateTime<Utc>, tokens: StepTokens) {
+        self.summary.steps += 1;
+        self.summary.model = model.map(str::to_string).or_else(|| self.summary.model.take());
+        self.summary.tokens += tokens.input_tokens + tokens.output_tokens + tokens.cache_read + tokens.cache_write;
+        let catalog = self.catalog.clone();
+        let catalog = catalog.as_deref();
+        let Some(model) = model else { return };
+        self.price(catalog, model, &tokens);
+        let window = pricing::context_window_for_name(catalog, model);
+        self.summary.context_percent = window.map(|window| {
+            let used = (tokens.input_tokens + tokens.cache_read + tokens.cache_write) as f64;
+            ((used / window as f64 * 100.0).min(100.0) * 10.0).round() / 10.0
+        });
+        if let Some(percent) = self.summary.context_percent {
+            self.context_steps.push_back(ContextStep { at, percent });
+            if self.context_steps.len() > MAX_CONTEXT_STEPS {
+                self.context_steps.pop_front();
+            }
+        }
+    }
+
+    /// Adds the step to the cost, priced like the usage collector prices a request. A model without
+    /// prices leaves the cost unknown for the rest of the run.
+    fn price(&mut self, catalog: Option<&Map<String, Value>>, model: &str, tokens: &StepTokens) {
+        if self.cost_lost {
+            return;
+        }
+        let priced = pricing::rates_for_name(catalog, model).ok().flatten().and_then(|rates| {
+            let tokens = pricing::Tokens {
+                uncached: tokens.input_tokens as i64,
+                cache_read: tokens.cache_read as i64,
+                cache_write: tokens.cache_write.saturating_sub(tokens.cache_write_1h) as i64,
+                cache_write_1h: tokens.cache_write_1h as i64,
+                output: tokens.output_tokens as i64,
+            };
+            pricing::price(rates, tokens, true).ok()
+        });
+        match (priced, self.summary.cost_usd) {
+            (Some(cost), Some(total)) => self.summary.cost_usd = Some(total + cost),
+            _ => {
+                self.cost_lost = true;
+                self.summary.cost_usd = None;
+            }
+        }
+    }
+}
+
+struct StepTokens {
+    input_tokens: u64,
+    output_tokens: u64,
+    cache_read: u64,
+    cache_write: u64,
+    cache_write_1h: u64,
+}
+
 // ---- Claude lines ----------------------------------------------------------------------------
 
 fn parse_claude_line(line: &str) -> Vec<Parsed> {
     let Ok(Value::Object(entry)) = serde_json::from_str::<Value>(line) else { return Vec::new() };
     let Some(at) = entry.get("timestamp").and_then(Value::as_str).and_then(parse_time) else { return Vec::new() };
+    if entry.get("type").and_then(Value::as_str) == Some("system") {
+        let ended = entry.get("subtype").and_then(Value::as_str) == Some("turn_duration");
+        return if ended { vec![Parsed::TurnEnd { at }] } else { Vec::new() };
+    }
     let Some(Value::Object(message)) = entry.get("message") else { return Vec::new() };
     match entry.get("type").and_then(Value::as_str) {
         Some("assistant") => claude_assistant(message, at),
@@ -175,7 +739,11 @@ fn claude_assistant(message: &Object, at: DateTime<Utc>) -> Vec<Parsed> {
     let mut events = Vec::new();
     let model = message.get("model").and_then(Value::as_str).filter(|model| !model.is_empty());
     let usage = message.get("usage").and_then(Value::as_object).filter(|usage| !usage.is_empty());
-    // Like the usage collector: no usage, no model or a synthetic message is not a step.
+    // Like the usage collector: no usage, no model or a synthetic message is not a step. A synthetic
+    // message is Claude Code's own text in place of an answer (an API error, a limit): the turn is over.
+    if model == Some("<synthetic>") {
+        events.push(Parsed::TurnEnd { at });
+    }
     if let (Some(usage), Some(model)) = (usage, model)
         && model != "<synthetic>"
     {
@@ -246,6 +814,9 @@ fn claude_user(entry: &Object, message: &Object, at: DateTime<Utc>) -> Vec<Parse
         _ => None,
     };
     let Some(text) = text else { return Vec::new() };
+    if text.trim_start().starts_with("[Request interrupted") {
+        return vec![Parsed::TurnEnd { at }];
+    }
     if !is_from_the_person(entry, text) {
         return Vec::new();
     }

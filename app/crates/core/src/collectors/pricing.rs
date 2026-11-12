@@ -188,6 +188,30 @@ pub fn price(rates: &Map<String, Value>, tokens: Tokens, per_request: bool) -> P
     Ok(total / 1_000_000.0)
 }
 
+/// The model's context window in tokens (`limit.context`), found the way [`rates_for`] finds
+/// prices. None when the catalog has no usable entry.
+pub fn context_window_for_name(catalog: Option<&Map<String, Value>>, model: &str) -> Option<u64> {
+    let catalog = catalog.filter(|c| !c.is_empty())?;
+    let mut providers: Vec<&str> = PREFERRED_PROVIDERS.iter().copied().filter(|p| catalog.contains_key(*p)).collect();
+    providers.extend(catalog.keys().map(String::as_str).filter(|p| !PREFERRED_PROVIDERS.contains(p)));
+    for name in candidates(model) {
+        for provider in &providers {
+            let window = catalog
+                .get(*provider)
+                .and_then(|p| p.get("models"))
+                .and_then(|models| models.get(&name))
+                .and_then(|entry| entry.get("limit"))
+                .and_then(|limit| limit.get("context"))
+                .and_then(Value::as_u64)
+                .filter(|window| *window > 0);
+            if window.is_some() {
+                return window;
+            }
+        }
+    }
+    None
+}
+
 /// `rates_for` on a model given as text (the collectors' common case).
 pub fn rates_for_name<'a>(catalog: Option<&'a Map<String, Value>>, model: &str) -> Py<Option<&'a Map<String, Value>>> {
     rates_for(catalog, &Value::String(model.to_string()))

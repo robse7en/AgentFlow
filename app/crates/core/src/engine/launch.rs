@@ -16,6 +16,7 @@ use rusqlite::OptionalExtension;
 use serde::Deserialize;
 use serde_json::{Map, Value, json};
 
+use super::activity;
 use super::lifecycle::{AgentOverride, untracked_tab};
 use super::prompts::{self, PromptContext};
 use super::rules;
@@ -700,6 +701,11 @@ impl Engine {
         )
         .await;
         files::write_json(&run_dir.join("usage-baseline.json"), &baseline).map_err(io_error)?;
+        // Where the activity map starts reading the transcript. It is display-only, so a failure
+        // to write it never stops the launch.
+        let start =
+            activity::transcript_start(adapter.home(), &adapter.config.kind, launch.harness_session_id.as_deref());
+        let _ = files::write_json(&run_dir.join("activity-offset.json"), &activity::launch_offset(&start));
         adapter.prepare_workspace(&cwd, Some(Path::new(&state.task.repository_root)));
         let script = self.write_launcher(&run_dir, &launch, &cwd, state, role.as_str(), run_id).map_err(io_error)?;
         let mut command = self.terminals.shell_command();

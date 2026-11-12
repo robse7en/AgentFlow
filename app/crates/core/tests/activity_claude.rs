@@ -394,7 +394,7 @@ fn each_exclusion_rule_holds_on_its_own() {
         ("system-reminder", human.clone(), json!("<system-reminder>x</system-reminder>")),
         ("leading space then tag", human.clone(), json!("  \n<command-name>x</command-name>")),
         ("local-command", json!({}), json!("<local-command-stdout>x")),
-        ("bracketed notice", human.clone(), json!("[Request interrupted by user]")),
+        ("bracketed notice", human.clone(), json!("[Image #1]")),
         ("bracket in a text block", json!({}), json!([{"type": "text", "text": " [Image #1]"}])),
         ("empty", human.clone(), json!("   ")),
         ("no text block", json!({}), json!([{"type": "image"}])),
@@ -404,6 +404,22 @@ fn each_exclusion_rule_holds_on_its_own() {
     }
     // A false flag is no flag.
     assert!(inbound(&parse(&user_line(json!({"isMeta": false, "origin": {"kind": "human"}}), json!("hello")))));
+}
+
+#[test]
+fn turns_end_on_a_turn_duration_line_an_interruption_or_an_error_message() {
+    let ended = |events: Vec<Parsed>| matches!(&events[..], [Parsed::TurnEnd { .. }]);
+    assert!(ended(parse(&json!({"type": "system", "subtype": "turn_duration", "timestamp": NOW}).to_string())));
+    assert!(ended(parse(&user_line(json!({"origin": {"kind": "human"}}), json!("[Request interrupted by user]")))));
+    assert!(ended(parse(
+        &json!({"type": "assistant", "timestamp": NOW, "message": {"id": "a", "model": "<synthetic>", "content": [{"type": "text"}]}})
+            .to_string()
+    )));
+    // Other system lines say nothing about the turn.
+    for subtype in ["informational", "local_command", "compact_boundary"] {
+        assert!(parse(&json!({"type": "system", "subtype": subtype, "timestamp": NOW}).to_string()).is_empty());
+    }
+    assert!(parse(&json!({"type": "system", "subtype": "turn_duration"}).to_string()).is_empty(), "no timestamp");
 }
 
 // ---- results and usage -----------------------------------------------------------------------
@@ -521,7 +537,8 @@ fn a_step_needs_usage_and_a_real_model() {
     assert!(step(json!({"id": "a", "model": "claude-opus-5-5"})).is_empty(), "no usage");
     assert!(step(json!({"id": "a", "model": "claude-opus-5-5", "usage": {}})).is_empty(), "empty usage");
     assert!(step(json!({"id": "a", "usage": usage()})).is_empty(), "no model");
-    assert!(step(json!({"id": "a", "model": "<synthetic>", "usage": usage()})).is_empty(), "synthetic");
+    let synthetic = step(json!({"id": "a", "model": "<synthetic>", "usage": usage()}));
+    assert!(matches!(&synthetic[..], [Parsed::TurnEnd { .. }]), "synthetic: no step, but the turn is over");
     assert_eq!(step(json!({"id": "a", "model": "claude-opus-5-5", "usage": usage()})).len(), 1);
     // The one-hour cache write is part of the cache write.
     let events = step(json!({"id": "a", "model": "m", "usage": {

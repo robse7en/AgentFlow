@@ -180,7 +180,7 @@ tr.clickable:hover td { background: var(--hover); }
   position: relative; display: grid; grid-template-columns: minmax(0, 1fr) var(--side-w, 450px); gap: 1rem; flex: 1 0 520px;
 }
 .task-layout .side { position: relative; min-width: 0; }
-.task-layout .side > .panel { position: absolute; inset: 0; margin: 0; overflow: auto; overscroll-behavior: contain; }
+.task-layout .side > .panel { position: absolute; inset: 0; margin: 0; padding: 0; overflow: auto; overscroll-behavior: contain; }
 .split-handle { position: absolute; top: 0; bottom: 0; left: -0.75rem; width: 0.5rem; cursor: col-resize; touch-action: none; border-radius: 4px; z-index: 2; }
 .split-handle:hover, .split-handle.resizing, .split-handle:focus-visible { background: var(--border-strong); outline: none; }
 @media (max-width: 1100px) {

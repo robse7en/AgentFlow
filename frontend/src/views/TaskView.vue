@@ -50,6 +50,14 @@ const operations = useOperationStore();
 const operationRunning = computed(() => !!operations.runningFor(props.jiraKey));
 const configStore = useConfigStore();
 const selected = ref<string | null>(null);
+// A click on a canvas node pins that agent in the activity panel (and turns its Follow off). Other
+// things that set `selected` (Configure, a deep link, a findings chip) do not.
+const activityPanel = ref<InstanceType<typeof AgentActivity> | null>(null);
+const onCanvasSelect = (key: string | null): void => {
+    selected.value = key;
+    activityPanel.value?.pick(key);
+    if (key && tab.value !== 'node' && key !== 'requirements_gate' && key !== 'ready_for_pr') tab.value = 'node';
+};
 const tab = ref<'node' | 'requirements' | 'findings' | 'assessment' | 'lessons' | 'events' | 'legend'>('node');
 const proposedLessons = computed(() => (task.value?.lessons ?? []).filter((lesson) => lesson.status === 'proposed').length);
 const notice = ref<string | null>(null);
@@ -720,7 +728,7 @@ watch(() => route.query.node, (key) => {
     </div>
 
     <div ref="layoutEl" class="task-layout" :style="{ '--side-w': sideWidth + 'px' }">
-      <WorkflowCanvas :task="task" :selected="selected" :locked="openQuestions.length > 0" :focus-key="typeof route.query.node === 'string' ? route.query.node : null" @select="(k) => { selected = k; if (k && tab !== 'node' && k !== 'requirements_gate' && k !== 'ready_for_pr') tab = 'node' }">
+      <WorkflowCanvas :task="task" :selected="selected" :locked="openQuestions.length > 0" :focus-key="typeof route.query.node === 'string' ? route.query.node : null" @select="onCanvasSelect">
         <QuestionModal :key="task.jiraKey" :task="task" @answered="onQuestionAnswered" />
       </WorkflowCanvas>
 
@@ -730,7 +738,7 @@ watch(() => route.query.node, (key) => {
           :aria-valuenow="sideWidth" @pointerdown="startSplit" @pointermove="onSplitMove" @pointerup="endSplit" @pointercancel="endSplit"
           @dblclick="resetSplit" @keydown="splitKey"></div>
         <div class="panel">
-          <AgentActivity :task="task" :selected="selected" />
+          <AgentActivity ref="activityPanel" :task="task" :selected="selected" />
         </div>
       </aside>
     </div>

@@ -66,6 +66,8 @@ const nodes = computed<Node[]>(() =>
     data: { node, taskKey: props.task.jiraKey, selected: props.selected === node.key },
     draggable: true,
     connectable: false,
+    // An agent card is a button that shows its agent in the activity panel (Enter or Space, below).
+    ...(node.kind === 'agent' ? { ariaLabel: `Show ${node.label} in the activity panel`, domAttributes: { role: 'button' } } : {}),
   })),
 )
 
@@ -317,6 +319,15 @@ const isEditable = (target: EventTarget | null): boolean =>
   (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))
 
 const onKeydown = (event: KeyboardEvent): void => {
+  if ((event.key === 'Enter' || event.key === ' ') && event.target instanceof HTMLElement
+    && event.target.classList.contains('vue-flow__node') && event.target.dataset.id) {
+    const id = event.target.dataset.id
+    if (props.task.nodes.some((node) => node.key === id && node.kind === 'agent' && !node.worker)) {
+      event.preventDefault()
+      emit('select', id)
+    }
+    return
+  }
   if (event.key.toLowerCase() !== 'f' || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return
   if (event.defaultPrevented || props.locked || isEditable(event.target)) return
   focusActive()

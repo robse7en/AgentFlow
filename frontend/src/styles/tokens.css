@@ -101,6 +101,9 @@
   --act-glow: rgba(79, 122, 0, 0.07);
   --act-wash: 0.06;
   --act-bar-idle: 0.5;
+  /* The map's trail ink and the hull's "waiting for you" text differ by theme in the mockup. */
+  --act-trail: #6b675a;
+  --act-wait-ink: #8f5500;
   --font: "Inter Variable", Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   /* Default elevation for floating panels (popovers, dropdowns). */
@@ -198,5 +201,7 @@
   --act-glow: rgba(198, 241, 74, 0.08);
   --act-wash: 0.07;
   --act-bar-idle: 0.5;
+  --act-trail: #f1eee6;
+  --act-wait-ink: #f0b04a;
   color-scheme: dark;
 }

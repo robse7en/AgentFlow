@@ -4,6 +4,7 @@
 //!
 //! Ported from `backend/agentflow/workflow` in slices.
 
+pub mod activity;
 pub mod agents;
 pub mod approvals;
 pub mod assessment;

@@ -1,0 +1,8 @@
+{"type":"user","timestamp":"2026-10-20T21:30:47.362Z","origin":{"kind":"human"},"message":{"content":"x"}}
+{"type":"user","timestamp":"2026-10-20T21:29:24.636Z","isMeta":true,"message":{"content":"x"}}
+{"type":"user","timestamp":"2026-11-11T10:50:16.643Z","isMeta":true,"message":{"content":"<system-reminder>x"}}
+{"type":"user","timestamp":"2026-10-14T04:13:49.223Z","origin":{"kind":"task-notification"},"message":{"content":"<task-notification>x"}}
+{"type":"user","timestamp":"2026-10-20T21:29:24.594Z","message":{"content":"<command-name>x"}}
+{"type":"user","timestamp":"2026-11-11T12:03:47.515Z","isMeta":true,"origin":{"kind":"peer"},"message":{"content":"x"}}
+{"type":"user","timestamp":"2026-10-13T23:31:24.985Z","isCompactSummary":true,"isVisibleInTranscriptOnly":true,"message":{"content":"x"}}
+{"type":"user","timestamp":"2026-10-23T02:01:05.528Z","isMeta":true,"origin":{"kind":"auto-continuation"},"message":{"content":"x"}}

@@ -178,6 +178,61 @@ fn spec_for(harness: &str, run_id: i64, session_id: i64, id: Option<&str>, home:
     }
 }
 
+/// A copilot run's `events.jsonl` is followed like Claude's, and its subagents' lines, written into
+/// the same file, hop to the `task` call that started them (fixture lines from a real session).
+#[tokio::test]
+async fn a_copilots_events_reach_the_websocket_and_the_get_with_their_subagents() {
+    let harness = engine().await;
+    fast(&harness);
+    let home = harness.tmp().join("copilot-home");
+    let run_dir = harness.tmp().join("copilot-run");
+    std::fs::create_dir_all(&run_dir).unwrap();
+    let mut client = harness.engine.broadcaster.connect();
+    let fixture = std::fs::read_to_string(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/activity/copilot/subagents.jsonl"),
+    )
+    .unwrap();
+    let lines: Vec<String> = fixture.lines().map(str::to_string).collect();
+    let events = home.join(".copilot").join("session-state").join("sess-c").join("events.jsonl");
+
+    // The file is not there yet (a fresh session): the tracker waits for it.
+    harness.engine.activity_trackers.start(spec_for("copilot", 31, 41, Some("sess-c"), &home, &run_dir));
+    // The task starts, its subagent works: a message and two searches begin.
+    append(&events, &lines[0..5]);
+    let out = activity(&mut client, |m| {
+        m["runId"] == 31 && m["entries"].as_array().unwrap().iter().any(|e| e["bySubagent"] == true)
+    })
+    .await;
+    assert_eq!(out["harness"], "copilot");
+    assert_eq!(out["summary"]["available"], true);
+    assert_eq!(out["summary"]["subagentsInFlight"], 1);
+    let entries = out["entries"].as_array().unwrap();
+    let task = entries.iter().find(|e| e["station"] == "agents").unwrap();
+    assert_eq!(task["label"], "Explore the code");
+    let hops: Vec<_> = entries.iter().filter(|e| e["bySubagent"] == true && e["station"] == "files").collect();
+    assert!(!hops.is_empty() && hops.iter().all(|e| e["parentId"] == task["id"]), "{entries:?}");
+
+    // The calls end and the subagent completes.
+    append(&events, &lines[5..9]);
+    activity(&mut client, |m| {
+        m["runId"] == 31 && m["summary"]["subagentsInFlight"] == 0 && has(m, task["id"].as_str().unwrap(), "ok")
+    })
+    .await;
+
+    let (status, body) = harness.route("GET", "/api/tasks/TEST-1/activity", None).await;
+    assert_eq!(status, 200, "{body}");
+    let run = &body["runs"][0];
+    assert_eq!(run["harness"], "copilot");
+    assert_eq!(run["summary"]["available"], true);
+    assert!(run["spans"].as_array().unwrap().len() >= 3);
+    assert!(run["summary"]["costUsd"].is_null(), "Copilot has no dollar cost: {run}");
+    assert!(
+        run["entries"].as_array().unwrap().iter().any(|e| e["bySubagent"] == true && e["parentId"] == task["id"]),
+        "{run}"
+    );
+    harness.engine.activity_trackers.stop_all();
+}
+
 #[tokio::test]
 async fn a_resumed_run_starts_at_its_recorded_offset_and_a_missing_transcript_is_unavailable() {
     let harness = engine().await;

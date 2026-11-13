@@ -18,7 +18,7 @@ use chrono::Utc;
 use serde_json::{Map, Value};
 
 use super::activity::{
-    RunActivity, Tail, TranscriptStart, parse_line, parses, subagent_files, subagent_key, subagents_dir,
+    RunActivity, Tail, TranscriptStart, parse_line, parse_routed, parses, subagent_files, subagent_key, subagents_dir,
     transcript_start,
 };
 use crate::collectors::{CollectorEnv, pricing};
@@ -170,8 +170,8 @@ impl RunTracker {
             || run.borrow_mut().reset(),
             |line| {
                 let mut run = run.borrow_mut();
-                for event in parse_line(harness, line) {
-                    run.apply(event);
+                for (parent, event) in parse_routed(harness, line) {
+                    run.apply_routed(parent.as_deref(), event);
                 }
             },
         );

@@ -598,12 +598,16 @@ fn odd_token_counts_are_zero_not_errors() {
 }
 
 #[test]
-fn only_claude_is_understood_so_far() {
+fn a_claude_line_means_nothing_to_the_other_harnesses() {
     let line = tool_line("Read", json!({"file_path": "/a/b.rs"}));
     assert!(!parse(&line).is_empty());
     for harness in ["copilot", "codex", "", "Claude", "gpt"] {
         assert!(parse_line(harness, &line).is_empty(), "{harness:?}");
     }
+    // Claude and Copilot are understood (see activity_copilot.rs); Codex is not yet.
+    assert!(agentflow_core::engine::activity::parses("claude"));
+    assert!(agentflow_core::engine::activity::parses("copilot"));
+    assert!(!agentflow_core::engine::activity::parses("codex"));
 }
 
 #[test]

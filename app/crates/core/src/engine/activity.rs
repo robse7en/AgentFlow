@@ -9,7 +9,7 @@
 //! host, a command name, a subcommand or Claude's own short description. It never holds a command
 //! line, a prompt, a query, a URL path or file contents, and nothing here logs any input.
 //!
-//! Only Claude Code lines are understood so far; Copilot and Codex return no events.
+//! Claude Code and GitHub Copilot lines are understood; Codex returns no events yet.
 
 use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::fs::File;
@@ -115,11 +115,30 @@ pub enum Parsed {
     Start { id: String, station: Station, label: String, at: DateTime<Utc>, inbound: bool },
     /// A call finished.
     End { id: String, at: DateTime<Utc>, is_error: bool },
+    /// A call the harness reports finished by another route than its own result: a subagent that
+    /// ran on after the call that started it returned, or a permission that was answered. It ends
+    /// the call, but does not hand the turn back to the model (see [`Parsed::End`]).
+    Done { id: String, at: DateTime<Utc>, is_error: bool },
     /// The agent's turn is over, so the model is no longer working on it: Claude Code wrote a
     /// `turn_duration` line, an interruption, or an error message in place of an answer.
     TurnEnd { at: DateTime<Utc> },
+    /// What one model request used, for a harness that reports it apart from the message (Copilot's
+    /// `session.usage_record`). It adds to the run's tokens and sets its context fill, and is not
+    /// a step. Copilot bills in premium requests, not tokens, so there is never a cost.
+    Usage {
+        /// The request's id as a set key, so a repeated record counts once.
+        message_id: Option<String>,
+        model: Option<String>,
+        at: DateTime<Utc>,
+        /// Input and output together; the input already holds what came from the cache.
+        tokens: u64,
+        /// The prompt's fill of the model's prompt limit, 0 to 100, when both are known.
+        context_percent: Option<f64>,
+    },
     /// One assistant line. A turn written as several lines repeats the same usage on each of them:
-    /// count it once per `message_id` with [`StepDedup`].
+    /// count it once per `message_id` with [`StepDedup`]. All five counts at 0 mean the harness
+    /// reports no usage with its messages (Copilot): the step is counted, but tokens, cost and
+    /// context stay as they were.
     Step {
         /// The message id as a set key (see [`message_key`]); `None` when the line has no usable id.
         message_id: Option<String>,
@@ -135,17 +154,28 @@ pub enum Parsed {
 }
 
 /// Never panics; an unknown or malformed line gives an empty list. `harness` is `claude`, `codex`
-/// or `copilot`; only Claude is understood so far.
+/// or `copilot`; Codex is not understood yet. Where a harness marks the lines of its subagents in
+/// the run's own file, use [`parse_routed`] to learn which are which.
 pub fn parse_line(harness: &str, line: &str) -> Vec<Parsed> {
+    parse_routed(harness, line).into_iter().map(|(_, event)| event).collect()
+}
+
+/// Like [`parse_line`], with each event's `Agents` call: the id of the call whose subagent wrote
+/// the line, or `None` for the run's own. Copilot writes its subagents' calls into the main
+/// `events.jsonl`, each marked with the `parentToolCallId` of the `task` call that started it.
+/// Claude keeps them in files of their own, so its events are all `None`. Feed these to
+/// [`RunActivity::apply_routed`].
+pub fn parse_routed(harness: &str, line: &str) -> Vec<(Option<String>, Parsed)> {
     match harness {
-        "claude" => parse_claude_line(line),
+        "claude" => parse_claude_line(line).into_iter().map(|event| (None, event)).collect(),
+        "copilot" => parse_copilot_line(line),
         _ => Vec::new(),
     }
 }
 
 /// Whether this harness's transcripts are understood yet. The others show no live activity.
 pub fn parses(harness: &str) -> bool {
-    harness == "claude"
+    matches!(harness, "claude" | "copilot")
 }
 
 /// Counts each assistant message's usage once, however many lines it was written as.
@@ -493,8 +523,13 @@ impl RunActivity {
         harness: &str,
         catalog: Option<Arc<Map<String, Value>>>,
     ) -> RunActivity {
-        let summary =
-            ActivitySummary { available: true, cost_usd: catalog.as_ref().map(|_| 0.0), ..ActivitySummary::default() };
+        // Copilot bills in premium requests, not tokens: its runs never have a dollar cost here.
+        let cost_lost = harness == "copilot";
+        let summary = ActivitySummary {
+            available: true,
+            cost_usd: catalog.as_ref().filter(|_| !cost_lost).map(|_| 0.0),
+            ..ActivitySummary::default()
+        };
         RunActivity {
             jira_key: jira_key.to_string(),
             node_key: node_key.to_string(),
@@ -512,7 +547,7 @@ impl RunActivity {
             spans_made: 0,
             anonymous_steps: 0,
             catalog,
-            cost_lost: false,
+            cost_lost,
             dirty: HashSet::new(),
             sent: None,
             parents: HashMap::new(),
@@ -573,6 +608,16 @@ impl RunActivity {
     /// Takes in one event from the run's own transcript.
     pub fn apply(&mut self, parsed: Parsed) {
         self.apply_from(Source::Main, parsed);
+    }
+
+    /// Takes in one event from [`parse_routed`]: the run's own when `parent` is `None`, else one of
+    /// the subagent that the `Agents` call `parent` started, whose lines are in the same file. Each
+    /// such subagent is kept apart like a subagent file is.
+    pub fn apply_routed(&mut self, parent: Option<&str>, parsed: Parsed) {
+        match parent {
+            None => self.apply(parsed),
+            Some(parent) => self.apply_subagent(&format!("task-{parent}"), Some(parent), parsed),
+        }
     }
 
     /// Takes in one event from a subagent's transcript. `file` names that transcript (two
@@ -659,6 +704,25 @@ impl RunActivity {
             }
             Parsed::TurnEnd { at } => {
                 self.stop_thinking(&source, at, None);
+            }
+            Parsed::Done { id, at, is_error } => {
+                if let Some(call) = self.open.remove(&id) {
+                    self.close(&id, call, at, is_error);
+                }
+            }
+            Parsed::Usage { message_id, model, at, tokens, context_percent } => {
+                if !self.dedup.counts(message_id.as_deref()) {
+                    return;
+                }
+                self.summary.tokens += tokens;
+                self.summary.model = model.or_else(|| self.summary.model.take());
+                if let Some(percent) = context_percent {
+                    self.summary.context_percent = Some(percent);
+                    self.context_steps.push_back(ContextStep { at, percent });
+                    if self.context_steps.len() > MAX_CONTEXT_STEPS {
+                        self.context_steps.pop_front();
+                    }
+                }
             }
             Parsed::End { id, at, is_error } => {
                 if let Some(call) = self.open.remove(&id) {
@@ -824,7 +888,13 @@ impl RunActivity {
     fn count_step(&mut self, model: Option<&str>, at: DateTime<Utc>, tokens: StepTokens) {
         self.summary.steps += 1;
         self.summary.model = model.map(str::to_string).or_else(|| self.summary.model.take());
-        self.summary.tokens += tokens.input_tokens + tokens.output_tokens + tokens.cache_read + tokens.cache_write;
+        let used = tokens.input_tokens + tokens.output_tokens + tokens.cache_read + tokens.cache_write;
+        if used == 0 {
+            // The harness reports usage apart from its messages (or not at all): leave tokens, cost
+            // and context alone rather than showing 0%.
+            return;
+        }
+        self.summary.tokens += used;
         let catalog = self.catalog.clone();
         let catalog = catalog.as_deref();
         let Some(model) = model else { return };
@@ -1047,6 +1117,217 @@ fn count(value: Option<&Value>) -> u64 {
         },
         _ => 0,
     }
+}
+
+// ---- Copilot lines ---------------------------------------------------------------------------
+
+// Read from real `~/.copilot/session-state/<id>/events.jsonl` files of Copilot CLI 1.0.5 to 1.0.105
+// (2026-11-13). Each line is `{type, data, id, timestamp, parentId}`. Calls are `tool.execution_start`
+// and `tool.execution_complete`, paired by `data.toolCallId`; a subagent's calls and messages carry
+// the `task` call's id as `data.parentToolCallId`. The start line is written while the tool runs
+// (measured: it was on disk 0.14 s after its timestamp, 25 s before the complete line), so the
+// live clock works. Not read, on purpose: `hook.*` (the plan leaves hooks out), `model.*` (only the
+// 0.0.0 development build writes them, beside `assistant.message`, and they hold whole responses),
+// `skill.invoked` (every agent-invoked skill also made a `skill` tool call, which is counted), and
+// `assistant.turn_end` (it ends one request round, and the model goes on working after it).
+
+/// An id from a Copilot line, as a plain string: non-empty and not absurdly long.
+fn copilot_id(value: Option<&Value>) -> Option<String> {
+    value.and_then(Value::as_str).filter(|id| !id.is_empty() && id.len() <= 200).map(str::to_string)
+}
+
+fn parse_copilot_line(line: &str) -> Vec<(Option<String>, Parsed)> {
+    let Ok(Value::Object(entry)) = serde_json::from_str::<Value>(line) else { return Vec::new() };
+    let Some(at) = entry.get("timestamp").and_then(Value::as_str).and_then(parse_time) else { return Vec::new() };
+    let Some(kind) = entry.get("type").and_then(Value::as_str) else { return Vec::new() };
+    let empty = Object::new();
+    let data = entry.get("data").and_then(Value::as_object).unwrap_or(&empty);
+    let parent = copilot_id(data.get("parentToolCallId"));
+    let own = |event: Parsed| vec![(None, event)];
+    let routed = |event: Parsed| vec![(parent.clone(), event)];
+    match kind {
+        "user.message" => {
+            if !copilot_from_person(data) {
+                return Vec::new();
+            }
+            // The line's own id keeps the entry's id the same when the file is read again.
+            let id = match copilot_id(entry.get("id")) {
+                Some(id) => format!("prompt-{id}"),
+                None => format!("prompt-{}", at.timestamp_millis()),
+            };
+            own(Parsed::Start { id, station: Station::You, label: "Prompt".to_string(), at, inbound: true })
+        }
+        "assistant.message" => {
+            // No usage here: Copilot reports it in `session.usage_record`. The message's own model
+            // (newer versions) names the step.
+            let model = data.get("model").and_then(Value::as_str).filter(|model| !model.is_empty());
+            routed(Parsed::Step {
+                message_id: data.get("messageId").and_then(message_key),
+                model: model.map(str::to_string),
+                at,
+                input_tokens: 0,
+                output_tokens: 0,
+                cache_read: 0,
+                cache_write: 0,
+                cache_write_1h: 0,
+            })
+        }
+        "session.usage_record" => {
+            let Some(usage) = data.get("usage").and_then(Value::as_object) else { return Vec::new() };
+            let input = count(usage.get("inputTokens"));
+            let tokens = input + count(usage.get("outputTokens"));
+            let limit = count(usage.get("maxPromptTokens"));
+            let context_percent = (input > 0 && limit > 0)
+                .then(|| ((input as f64 / limit as f64 * 100.0).min(100.0) * 10.0).round() / 10.0);
+            own(Parsed::Usage {
+                message_id: copilot_id(usage.get("apiCallId")).map(|id| format!("api:{id}")),
+                model: usage.get("model").and_then(Value::as_str).filter(|model| !model.is_empty()).map(str::to_string),
+                at,
+                tokens,
+                context_percent,
+            })
+        }
+        "tool.execution_start" => {
+            let (Some(id), Some(name)) =
+                (copilot_id(data.get("toolCallId")), data.get("toolName").and_then(Value::as_str))
+            else {
+                return Vec::new();
+            };
+            let mcp = match (
+                data.get("mcpServerName").and_then(Value::as_str),
+                data.get("mcpToolName").and_then(Value::as_str),
+            ) {
+                (Some(server), Some(tool)) => Some((server, tool)),
+                _ => None,
+            };
+            let Some((station, label)) =
+                classify_copilot_tool(name, data.get("arguments").unwrap_or(&Value::Null), mcp)
+            else {
+                return Vec::new();
+            };
+            routed(Parsed::Start { id, station, label, at, inbound: false })
+        }
+        "tool.execution_complete" => {
+            let Some(id) = copilot_id(data.get("toolCallId")) else { return Vec::new() };
+            // A background `task` returns at once ("Agent started in background …") while its
+            // subagent works on: the call stays open until `subagent.completed`. Only the result's
+            // opening words are compared, and nothing of it is kept. (The telemetry's
+            // `execution_mode` is missing from about 1 in 14 of these.)
+            let started_in_background = data
+                .get("result")
+                .and_then(|result| result.get("content"))
+                .and_then(Value::as_str)
+                .is_some_and(|content| content.starts_with("Agent started in background"));
+            if started_in_background {
+                return Vec::new();
+            }
+            let is_error = data.get("success").and_then(Value::as_bool) == Some(false);
+            routed(Parsed::End { id, at, is_error })
+        }
+        "subagent.completed" | "subagent.failed" => {
+            let Some(id) = copilot_id(data.get("toolCallId")) else { return Vec::new() };
+            own(Parsed::Done { id, at, is_error: kind == "subagent.failed" })
+        }
+        "permission.requested" => {
+            let Some(request) = copilot_id(data.get("requestId")) else { return Vec::new() };
+            // The kind is Copilot's own short word (shell, read, write, url, mcp, memory); anything
+            // else, and everything about the request (the commands, the path), is left out.
+            let kind = data.get("permissionRequest").and_then(|request| request.get("kind")).and_then(Value::as_str);
+            let label = match kind {
+                Some(kind @ ("shell" | "read" | "write" | "url" | "mcp" | "memory")) => format!("Permission: {kind}"),
+                _ => "Permission".to_string(),
+            };
+            own(Parsed::Start { id: format!("permission-{request}"), station: Station::You, label, at, inbound: false })
+        }
+        "permission.completed" => {
+            let Some(request) = copilot_id(data.get("requestId")) else { return Vec::new() };
+            // An answer, approved or denied, is not a failed call; a denied tool fails by itself.
+            own(Parsed::Done { id: format!("permission-{request}"), at, is_error: false })
+        }
+        "abort" | "session.error" | "session.task_complete" | "session.shutdown" => own(Parsed::TurnEnd { at }),
+        _ => Vec::new(),
+    }
+}
+
+/// Whether a `user.message` is the person talking. Copilot also writes user-role lines for
+/// skill text (`source: "skill-…"`), `system` and `memory` notes, `instruction-discovery`, the
+/// messages other agents send (`source: "agent-<id>"`) and autopilot continuations; none of those
+/// count. A message written while the agent works (`delivery: "steering"` or `"queued"`) does.
+fn copilot_from_person(data: &Object) -> bool {
+    match data.get("source") {
+        None | Some(Value::Null) => {}
+        Some(Value::String(source)) if source == "user" => {}
+        Some(_) => return false,
+    }
+    if data.get("isAutopilotContinuation").and_then(Value::as_bool) == Some(true) {
+        return false;
+    }
+    let text = data.get("content").and_then(Value::as_str).unwrap_or("").trim_start();
+    !text.is_empty() && !text.starts_with('<') && !text.starts_with('[')
+}
+
+/// Sorts one Copilot tool call into a station and a label, or `None` for the harness's own
+/// bookkeeping (`report_intent`, `task_complete`, `update_todo`), which is not work. A label is a
+/// name: a file's last two path parts, a host, a command name or Copilot's own short description.
+/// Never an argument's content (a patch, a query, a prompt). Unknown tools land on Shell, labelled
+/// with the tool's name, as for Claude.
+fn classify_copilot_tool(name: &str, input: &Value, mcp: Option<(&str, &str)>) -> Option<(Station, String)> {
+    let text = |key: &str| input.get(key).and_then(Value::as_str).unwrap_or("");
+    if let Some((server, tool)) = mcp {
+        let tool = tool.replace('_', " ");
+        let label = if tool.is_empty() { server.to_string() } else { format!("{server}: {tool}") };
+        return Some((Station::Network, clean_label(&label)));
+    }
+    let (station, label) = match name {
+        "report_intent" | "task_complete" | "update_todo" => return None,
+        "view" | "edit" | "create" => (Station::Files, last_two(text("path"))),
+        "grep" | "rg" => (Station::Files, "Grep".to_string()),
+        "glob" => (Station::Files, "Glob".to_string()),
+        "lsp" => (Station::Files, "LSP".to_string()),
+        "apply_patch" => (Station::Files, "Patch".to_string()),
+        "store_memory" | "vote_memory" | "read_memories" => (Station::Files, "Memory".to_string()),
+        "powershell" | "bash" => classify_shell(text("command"), text("description")),
+        "sql" | "session_store_sql" => (Station::Shell, "SQL".to_string()),
+        "web_fetch" => (Station::Network, host_of(text("url"))),
+        "web_search" => (Station::Network, "Web search".to_string()),
+        "fetch_copilot_cli_documentation" => (Station::Network, "Copilot docs".to_string()),
+        "task" => {
+            let description = text("description");
+            (Station::Agents, if description.trim().is_empty() { text("name") } else { description }.to_string())
+        }
+        "read_agent" => (Station::Agents, "Read agent".to_string()),
+        "write_agent" => (Station::Agents, "Write agent".to_string()),
+        "list_agents" => (Station::Agents, "List agents".to_string()),
+        "send_inbox" => (Station::Agents, "Send message".to_string()),
+        "skill" => (Station::Skills, text("skill").to_string()),
+        "tool_search_tool" => (Station::Skills, "Loading tools".to_string()),
+        "ask_user" => (Station::You, "Question for you".to_string()),
+        "exit_plan_mode" => (Station::You, "Plan for review".to_string()),
+        other => match other.split_once('_') {
+            // The shell's own helper tools: `read_powershell`, `write_bash`, `stop_powershell` …
+            Some((verb, "powershell" | "bash")) => {
+                let label = match verb {
+                    "read" => "Shell output",
+                    "write" => "Shell input",
+                    "stop" => "Stop shell",
+                    "list" => "List shells",
+                    _ => other,
+                };
+                (Station::Shell, label.to_string())
+            }
+            _ => (Station::Shell, other.to_string()),
+        },
+    };
+    let label = clean_label(&label);
+    // What a call is named when its input gave nothing to show: the same words as for Claude's tools.
+    let claude_name = match name {
+        "task" => "Task",
+        "web_fetch" => "WebFetch",
+        "skill" => "Skill",
+        other => other,
+    };
+    let label = if label.is_empty() { fallback_label(station, claude_name) } else { label };
+    Some((station, label))
 }
 
 // ---- classification --------------------------------------------------------------------------

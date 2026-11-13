@@ -1,0 +1,8 @@
+{"type":"user.message","data":{"content":"x"},"id":"92b7ff2a-d8ac-4a07-8634-98d82b007cbe","timestamp":"2026-11-13T10:00:00.000Z"}
+{"type":"user.message","data":{"content":"x","delivery":"steering"},"id":"447f2bdc-f649-4657-9e81-ac5a1653cae3","timestamp":"2026-11-13T10:01:00.000Z"}
+{"type":"user.message","data":{"content":"<x>","source":"skill-example"},"id":"f7a012ca-c28b-4c2d-9fcc-faa30f50b6ac","timestamp":"2026-11-13T10:02:00.000Z"}
+{"type":"user.message","data":{"content":"","source":"system","delivery":"steering"},"id":"091bbf21-f1fc-4c8c-9003-04b71a03c117","timestamp":"2026-11-13T10:03:00.000Z"}
+{"type":"user.message","data":{"content":"x","source":"agent-x","delivery":"idle"},"id":"7d0ad073-e4bd-4739-bd99-24dda7c56e84","timestamp":"2026-11-13T10:04:00.000Z"}
+{"type":"user.message","data":{"content":"","delivery":"idle","isAutopilotContinuation":true},"id":"ad067679-3260-4db6-8ae1-3bdaae8ab4d6","timestamp":"2026-11-13T10:05:00.000Z"}
+{"type":"user.message","data":{"content":"","source":"memory"},"id":"3d49e1e3-ebd0-42ca-9c62-762880118faa","timestamp":"2026-11-13T10:06:00.000Z"}
+{"type":"user.message","data":{"content":"<x>","source":"instruction-discovery"},"id":"558accc3-c227-4c97-ab17-0598beaed897","timestamp":"2026-11-13T10:07:00.000Z"}

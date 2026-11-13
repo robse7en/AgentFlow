@@ -306,3 +306,70 @@ fn a_tail_never_prints_the_text_it_holds_back() {
     assert!(!printed.contains("secret"), "{printed}");
     assert!(printed.contains("Tail"));
 }
+
+// ---- a replaced transcript, a restarted run, and a finished one ------------------------------
+
+#[test]
+fn a_transcript_replaced_by_a_longer_file_is_read_again_from_its_start() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("t.jsonl");
+    std::fs::write(&path, "{\"session\":\"first\"}\n{\"n\":1}\n").unwrap();
+    let mut tail = Tail::new(&path, 0);
+    let mut seen = Vec::new();
+    let poll = tail.poll(|line| seen.push(line.to_string())).unwrap();
+    assert!(!poll.restarted);
+    assert_eq!(seen.len(), 2);
+
+    // Growing is not replacing, also while the file is still shorter than the bytes remembered.
+    std::fs::OpenOptions::new().append(true).open(&path).unwrap().write_all(b"{\"n\":2}\n").unwrap();
+    let poll = tail.poll(|line| seen.push(line.to_string())).unwrap();
+    assert!(!poll.restarted);
+    assert_eq!(seen.len(), 3);
+
+    // Another session's file, longer than the first, under the same name.
+    let replacement = format!("{{\"session\":\"second\"}}\n{}", "{\"n\":9}\n".repeat(20));
+    std::fs::write(&path, &replacement).unwrap();
+    let mut again = Vec::new();
+    let poll = tail.poll(|line| again.push(line.to_string())).unwrap();
+    assert!(poll.restarted, "a longer file with other first bytes is another file");
+    assert_eq!(again.len(), 21);
+    assert_eq!(again[0], "{\"session\":\"second\"}");
+    // And then it is followed as usual.
+    let poll = tail.poll(|_| panic!("nothing new")).unwrap();
+    assert!(!poll.restarted);
+}
+
+#[test]
+fn a_tail_that_started_part_way_in_is_not_restarted_by_growth() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("t.jsonl");
+    let head = "{\"session\":\"s\"}\n".repeat(10);
+    std::fs::write(&path, &head).unwrap();
+    let mut tail = Tail::new(&path, head.len() as u64);
+    assert!(!tail.poll(|_| panic!("nothing yet")).unwrap().restarted);
+    std::fs::OpenOptions::new().append(true).open(&path).unwrap().write_all(b"{\"n\":1}\n").unwrap();
+    let mut lines = 0;
+    let poll = tail.poll(|_| lines += 1).unwrap();
+    assert!(!poll.restarted);
+    assert_eq!(lines, 1);
+}
+
+#[test]
+fn a_rebuilt_run_tells_the_client_once() {
+    let mut run = run("claude");
+    run.apply(start("a", Station::Shell, 0));
+    let first = run.take_delta().unwrap();
+    assert!(!first.restarted);
+    assert!(run.message(&first).get("restarted").is_none());
+    run.reset();
+    run.apply(start("b", Station::Files, 100));
+    let delta = run.take_delta().unwrap();
+    assert!(delta.restarted);
+    assert_eq!(run.message(&delta)["restarted"], true);
+    assert!(delta.entries.iter().all(|entry| entry.id != "a"));
+    let next = {
+        run.apply(end("b", 200));
+        run.take_delta().unwrap()
+    };
+    assert!(!next.restarted, "told once");
+}

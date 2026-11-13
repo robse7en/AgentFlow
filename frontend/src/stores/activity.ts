@@ -17,13 +17,28 @@ export const useActivityStore = defineStore('activity', () => {
   /** Every run seen, by run id. */
   const runs = ref<Record<number, RunActivity>>({})
 
+  /** The tasks whose runs are kept (lower case): those a view has asked for. Others are not stored. */
+  const watched = new Set<string>()
+
   /** Tasks being loaded, and the updates that arrived meanwhile (the answer may predate them). */
   const loading = new Map<string, { count: number; queue: ActivityMessage[] }>()
 
   /** One `activity` websocket message. */
   function apply(message: ActivityMessage) {
+    if (!watched.has(message.jiraKey.toLowerCase())) return
     loading.get(message.jiraKey)?.queue.push(message)
     runs.value[message.runId] = applyMessage(runs.value[message.runId], message)
+    trim()
+  }
+
+  /** Finished runs kept at most; the oldest go first, and a run still going is never dropped. */
+  const MAX_RUNS = 200
+  function trim() {
+    const held = Object.values(runs.value)
+    if (held.length <= MAX_RUNS) return
+    const over = held.length - MAX_RUNS
+    const finished = held.filter((run) => run.summary.ended).sort((a, b) => a.runId - b.runId)
+    for (const run of finished.slice(0, over)) delete runs.value[run.runId]
   }
 
   /**
@@ -32,6 +47,7 @@ export const useActivityStore = defineStore('activity', () => {
    * changes nothing.
    */
   async function load(jiraKey: string) {
+    watched.add(jiraKey.toLowerCase())
     const flight = loading.get(jiraKey) ?? { count: 0, queue: [] }
     flight.count += 1
     loading.set(jiraKey, flight)
@@ -43,6 +59,7 @@ export const useActivityStore = defineStore('activity', () => {
         if (run.jiraKey === jiraKey && !kept.has(Number(id))) delete runs.value[Number(id)]
       }
       for (const run of held) runs.value[run.runId] = runFromPayload(run)
+      trim()
     } catch {
       /* Display-only: a backend without the route (or a task not found) just shows no activity. */
     } finally {
@@ -56,6 +73,7 @@ export const useActivityStore = defineStore('activity', () => {
 
   /** Forgets a deleted task's runs. */
   function forgetTask(jiraKey: string) {
+    watched.delete(jiraKey.toLowerCase())
     for (const [id, run] of Object.entries(runs.value)) {
       if (run.jiraKey === jiraKey) delete runs.value[Number(id)]
     }

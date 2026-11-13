@@ -641,6 +641,8 @@ export interface ActivityMessage {
   entries: ActivityEntry[]
   /** Calls that ended after they had left the newest entries (absent when there are none). */
   spanEnds?: ActivitySpanEnd[]
+  /** The run was rebuilt from a transcript that was replaced: what is held of it is dropped (absent otherwise). */
+  restarted?: boolean
   summary: ActivitySummary
 }
 

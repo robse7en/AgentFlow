@@ -353,3 +353,64 @@ async fn a_resumed_run_starts_at_its_recorded_offset_and_a_missing_transcript_is
     let (_, body) = harness.route("GET", "/api/tasks/TEST-1/activity", None).await;
     assert!(body["runs"].as_array().unwrap().is_empty());
 }
+
+/// A run closed long after its transcript last moved ends its open calls when it last moved, not
+/// when it was closed (a pane found stopped days later).
+#[tokio::test]
+async fn a_closed_runs_open_calls_end_when_its_transcript_last_moved() {
+    let harness = engine().await;
+    fast(&harness);
+    let home = harness.tmp().join("late-home");
+    let run_dir = harness.tmp().join("late-run");
+    std::fs::create_dir_all(&run_dir).unwrap();
+    let transcript = home.join(".claude").join("projects").join("repo").join("sess-late.jsonl");
+    append(&transcript, &[call_line(0, "m1", "t1", "cargo build")]);
+    // Its file time is old too: only the line's own time says when it moved.
+    let old = std::time::UNIX_EPOCH + Duration::from_secs(946_684_800);
+    std::fs::File::options().write(true).open(&transcript).unwrap().set_modified(old).unwrap();
+    let mut client = harness.engine.broadcaster.connect();
+    harness.engine.activity_trackers.start(spec_for("claude", 71, 81, Some("sess-late"), &home, &run_dir));
+    activity(&mut client, |m| m["runId"] == 71 && has(m, "t1", "run")).await;
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    harness.engine.activity_trackers.cancel(81);
+    let done = activity(&mut client, |m| m["runId"] == 71 && m["summary"]["ended"] == true).await;
+    let call = done["entries"].as_array().unwrap().iter().find(|e| e["id"] == "t1").unwrap();
+    assert_eq!(call["status"], "ok");
+    assert_eq!(call["endedAt"], stamp(0), "when the transcript last moved, not now");
+    harness.engine.activity_trackers.stop_all();
+}
+
+/// Only the newest 200 finished runs are kept.
+#[tokio::test]
+async fn the_oldest_finished_runs_are_forgotten() {
+    let harness = engine().await;
+    fast(&harness);
+    let home = harness.tmp().join("many-home");
+    let run_dir = harness.tmp().join("many-run");
+    std::fs::create_dir_all(&run_dir).unwrap();
+    for n in 1..=205_i64 {
+        harness.engine.activity_trackers.start(spec_for("claude", n, 1000 + n, None, &home, &run_dir));
+        harness.engine.activity_trackers.cancel(1000 + n);
+    }
+    // Closing happens on blocking threads: wait until every run has ended.
+    tokio::time::timeout(Duration::from_secs(20), async {
+        loop {
+            let (_, body) = harness.route("GET", "/api/tasks/TEST-1/activity", None).await;
+            let runs = body["runs"].as_array().unwrap();
+            // (Starting the later runs already forgot the oldest ended ones.)
+            if runs.len() >= 200 && runs.iter().all(|r| r["summary"]["ended"] == true) {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+    })
+    .await
+    .expect("the runs did not all end");
+    harness.engine.activity_trackers.start(spec_for("claude", 999, 2000, None, &home, &run_dir));
+    let (_, body) = harness.route("GET", "/api/tasks/TEST-1/activity", None).await;
+    let ids: Vec<i64> = body["runs"].as_array().unwrap().iter().map(|r| r["runId"].as_i64().unwrap()).collect();
+    assert_eq!(ids.len(), 201, "200 finished runs and the new one");
+    assert!(!ids.contains(&1) && !ids.contains(&5), "the oldest five are gone: {ids:?}");
+    assert!(ids.contains(&205) && ids.contains(&999));
+    harness.engine.activity_trackers.stop_all();
+}

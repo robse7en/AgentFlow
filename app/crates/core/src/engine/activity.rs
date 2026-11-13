@@ -239,6 +239,8 @@ impl StepDedup {
 /// The longest line kept. A longer one (a huge tool result) is dropped, not buffered.
 const MAX_LINE_BYTES: usize = 32 * 1024 * 1024;
 const READ_CHUNK: usize = 256 * 1024;
+/// How many of a file's first bytes are remembered to tell it from a file that replaced it.
+const HEAD_BYTES: usize = 64;
 
 /// Reads the complete lines a growing transcript gains, from a byte offset on.
 ///
@@ -252,6 +254,9 @@ pub struct Tail {
     partial: Vec<u8>,
     /// The current line is over [`MAX_LINE_BYTES`] and is being thrown away up to its newline.
     skipping: bool,
+    /// The file's first bytes (up to [`HEAD_BYTES`]) as first seen. A transcript only grows, so
+    /// other bytes there mean the file was replaced, even by a longer one.
+    head: Vec<u8>,
 }
 
 /// Like a derived `Debug`, but without the held-back bytes, which are the transcript's own text.
@@ -262,6 +267,7 @@ impl std::fmt::Debug for Tail {
             .field("read", &self.read)
             .field("partial_bytes", &self.partial.len())
             .field("skipping", &self.skipping)
+            .field("head_bytes", &self.head.len())
             .finish()
     }
 }
@@ -278,7 +284,7 @@ pub struct Poll {
 
 impl Tail {
     pub fn new(path: impl Into<PathBuf>, offset: u64) -> Tail {
-        Tail { path: path.into(), read: offset, partial: Vec::new(), skipping: false }
+        Tail { path: path.into(), read: offset, partial: Vec::new(), skipping: false, head: Vec::new() }
     }
 
     pub fn path(&self) -> &Path {
@@ -308,11 +314,22 @@ impl Tail {
         };
         let length = file.metadata()?.len();
         let mut poll = Poll::default();
-        if length < self.read {
+        let mut head = [0u8; HEAD_BYTES];
+        let seen = length.min(HEAD_BYTES as u64) as usize;
+        if seen > 0 {
+            file.read_exact(&mut head[..seen])?;
+        }
+        let replaced =
+            seen < self.head.len() || head[..self.head.len().min(seen)] != self.head[..self.head.len().min(seen)];
+        if length < self.read || replaced {
             (self.read, poll.restarted) = (0, true);
             self.partial.clear();
             self.skipping = false;
+            self.head.clear();
             on_restart();
+        }
+        if self.head.len() < seen {
+            self.head = head[..seen].to_vec();
         }
         if length == self.read {
             return Ok(poll);
@@ -569,6 +586,9 @@ pub struct RunActivity {
     /// Calls that ended after leaving the newest entries, until the next delta carries them.
     #[serde(skip)]
     span_ends: Vec<SpanEnd>,
+    /// Set by [`reset`](Self::reset) until the next delta says so.
+    #[serde(skip)]
+    restarted: bool,
     #[serde(skip)]
     window_hint: Option<u64>,
 }
@@ -593,6 +613,9 @@ pub struct SpanEnd {
 pub struct ActivityDelta {
     pub entries: Vec<ActivityEntry>,
     pub span_ends: Vec<SpanEnd>,
+    /// The run was rebuilt from a transcript that was replaced: what the client holds of it is
+    /// out of date, and this delta (with what follows) is all there is.
+    pub restarted: bool,
     pub summary: ActivitySummary,
 }
 
@@ -644,6 +667,7 @@ impl RunActivity {
             model_hint: None,
             done_first: HashMap::new(),
             span_ends: Vec::new(),
+            restarted: false,
             window_hint: None,
         }
     }
@@ -659,6 +683,7 @@ impl RunActivity {
             &self.harness,
             self.catalog.clone(),
         );
+        self.restarted = true;
     }
 
     /// Sets the price catalog, which may arrive after the run began. It prices the steps that
@@ -677,11 +702,12 @@ impl RunActivity {
             self.entries.iter().filter(|entry| self.dirty.contains(&entry.id)).cloned().collect();
         self.dirty.clear();
         let span_ends = std::mem::take(&mut self.span_ends);
-        if entries.is_empty() && span_ends.is_empty() && self.sent.as_ref() == Some(&self.summary) {
+        let restarted = std::mem::take(&mut self.restarted);
+        if entries.is_empty() && span_ends.is_empty() && !restarted && self.sent.as_ref() == Some(&self.summary) {
             return None;
         }
         self.sent = Some(self.summary.clone());
-        Some(ActivityDelta { entries, span_ends, summary: self.summary.clone() })
+        Some(ActivityDelta { entries, span_ends, restarted, summary: self.summary.clone() })
     }
 
     /// The `activity` websocket message for a delta.
@@ -699,6 +725,9 @@ impl RunActivity {
         });
         if !delta.span_ends.is_empty() {
             message["spanEnds"] = serde_json::json!(delta.span_ends);
+        }
+        if delta.restarted {
+            message["restarted"] = serde_json::json!(true);
         }
         message
     }
@@ -761,6 +790,11 @@ impl RunActivity {
         }
         self.thinking.clear();
         self.detached.clear();
+        // Nothing more is read, so what only reading needed is let go.
+        self.dedup = StepDedup::default();
+        self.parents.clear();
+        self.origins.clear();
+        self.done_first.clear();
         self.summary.subagents_in_flight = 0;
         self.summary.ended = true;
     }

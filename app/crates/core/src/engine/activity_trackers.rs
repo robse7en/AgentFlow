@@ -166,7 +166,7 @@ impl RunTracker {
         let harness = self.spec.harness.as_str();
         let run = RefCell::new(&mut self.run);
         let Some(tail) = self.tail.as_mut() else { return };
-        let _ = tail.poll_with(
+        let poll = tail.poll_with(
             || run.borrow_mut().reset(),
             |line| {
                 let mut run = run.borrow_mut();
@@ -184,6 +184,11 @@ impl RunTracker {
         // When the file was last written, not when it was read: a rebuilt run reads a backlog.
         if let Ok(modified) = std::fs::metadata(tail.path()).and_then(|meta| meta.modified()) {
             run.borrow_mut().note_write(modified.into());
+        }
+        // The run started over, so the subagents' transcripts are read again from their start too.
+        if poll.is_ok_and(|poll| poll.restarted) {
+            self.subagents.clear();
+            self.recorded.subagents = None;
         }
     }
 
@@ -290,6 +295,28 @@ fn read_tool_use_id(meta: &Path) -> Option<String> {
     plain.then(|| id.to_string())
 }
 
+/// The most finished runs kept for the GET; the oldest beyond them are forgotten.
+const MAX_ENDED_RUNS: usize = 200;
+
+/// Forgets the oldest finished runs beyond [`MAX_ENDED_RUNS`]. A run that is being read at this
+/// moment is not waited for: it is left for the next time.
+fn prune_ended(runs: &mut HashMap<i64, Arc<Mutex<RunTracker>>>) {
+    if runs.len() <= MAX_ENDED_RUNS {
+        return;
+    }
+    let mut ended: Vec<i64> = runs
+        .iter()
+        .filter(|(_, tracker)| tracker.try_lock().is_ok_and(|tracker| tracker.run.summary.ended))
+        .map(|(id, _)| *id)
+        .collect();
+    if ended.len() > MAX_ENDED_RUNS {
+        ended.sort_unstable();
+        for id in &ended[..ended.len() - MAX_ENDED_RUNS] {
+            runs.remove(id);
+        }
+    }
+}
+
 fn locked<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
 }
@@ -356,7 +383,11 @@ impl ActivityTrackers {
         }
         let (session_id, run_id) = (spec.session_id, spec.run_id);
         let tracker = Arc::new(Mutex::new(RunTracker::new(spec)));
-        locked(&self.0.runs).insert(run_id, tracker.clone());
+        {
+            let mut runs = locked(&self.0.runs);
+            runs.insert(run_id, tracker.clone());
+            prune_ended(&mut runs);
+        }
         let task = tokio::spawn(track(self.0.clone(), tracker));
         tasks.insert(session_id, Following { task, run_id });
     }
@@ -438,8 +469,8 @@ impl ActivityTrackers {
 impl Inner {
     /// Read what is left of a run's transcript, close its open calls and send the last update.
     fn finish_run(&self, run_id: i64) {
-        let Some(tracker) = locked(&self.runs).get(&run_id).cloned() else { return };
-        let mut tracker = locked(&tracker);
+        let Some(handle) = locked(&self.runs).get(&run_id).cloned() else { return };
+        let mut tracker = locked(&handle);
         if tracker.run.summary.ended {
             return;
         }
@@ -447,8 +478,20 @@ impl Inner {
         tracker.locate(Duration::MAX);
         let give_up = self.settings.read().unwrap_or_else(|p| p.into_inner()).give_up;
         tracker.read(give_up);
-        tracker.run.finish(Utc::now());
-        if let Some(message) = tracker.message(true) {
+        // The run's calls end when its transcript last moved, not when someone noticed it was over
+        // (a stopped pane can be found days later).
+        let now = Utc::now();
+        let last = tracker.run.summary.last_write_at.map_or(now, |last| last.min(now));
+        tracker.run.finish(last);
+        tracker.tail = None;
+        tracker.subagents.clear();
+        // The last update keeps to the gap between updates, like the others.
+        let wait = tracker.last_sent.map(|sent| MIN_SEND_GAP.saturating_sub(sent.elapsed()));
+        drop(tracker);
+        if let Some(wait) = wait.filter(|wait| !wait.is_zero()) {
+            std::thread::sleep(wait);
+        }
+        if let Some(message) = locked(&handle).message(true) {
             self.broadcaster.activity(&message);
         }
     }

@@ -58,7 +58,9 @@ export function runFromPayload(run: RunActivityPayload): RunActivity {
  * replaced), spans and context steps appended from what the message shows, and the new summary.
  * Never changes `previous`.
  */
-export function applyMessage(previous: RunActivity | undefined, message: ActivityMessage): RunActivity {
+export function applyMessage(held: RunActivity | undefined, message: ActivityMessage): RunActivity {
+  // A run that started over has nothing in common with what was held of it.
+  const previous = message.restarted ? undefined : held
   const entries = previous ? previous.entries.slice() : []
   const spans = previous ? previous.spans.slice() : []
   const contextSteps = previous ? previous.contextSteps.slice() : []

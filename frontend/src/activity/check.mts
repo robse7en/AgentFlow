@@ -80,6 +80,13 @@ const again = applyMessage(longRun, endMessage)
 assert.deepEqual(again.spans, longRun.spans)
 assert.equal(applyMessage(longRun, { ...endMessage, spanEnds: [{ ...endMessage.spanEnds![0], startedAt: at(-1) }] }).spans.length, longRun.spans.length)
 
+// A run that started over (its transcript was replaced) drops what was held of it.
+let rebuilt = applyMessage(undefined, message(5, 'architect', [entry('old1', 'shell', 0), entry('old2', 'files', 10)]))
+rebuilt = applyMessage(rebuilt, { ...message(5, 'architect', [entry('new1', 'git', 5000)]), restarted: true })
+assert.deepEqual(rebuilt.entries.map((e) => e.id), ['new1'])
+assert.equal(rebuilt.spans.length, 1)
+assert.equal(rebuilt.contextSteps.length, 0)
+
 // ---- a run from the GET, which leaves out empty lists ----
 const sent = { ...run(9, 'architect', []) } as Partial<RunActivity> & Omit<RunActivity, 'spans' | 'contextSteps'>
 delete sent.spans

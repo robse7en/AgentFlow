@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { api } from '@/api/client'
 import type { ActivityMessage, QuestionDto, RunActivity } from '@/api/types'
 import {
-  applyMessage, currentCall, latestRound, liveSpend, nowLine, pulseLine, runFromPayload, runsForNode, waitsFor,
+  applyMessage, currentCall, latestRound, liveRunCount, liveSpend, nowLine, pulseLine, runFromPayload, runsForNode, waitsFor,
   type NowLine,
 } from '@/activity/runs'
 
@@ -77,11 +77,14 @@ export const useActivityStore = defineStore('activity', () => {
   /** The node's latest round of runs (a worker round for the Implementer). */
   const roundFor = (jiraKey: string, nodeKey: string): RunActivity[] => latestRound(runsFor(jiraKey, nodeKey))
 
+  /** How many of the node's runs are going at once (several workers side by side). */
+  const liveRuns = (jiraKey: string, nodeKey: string) => liveRunCount(runsFor(jiraKey, nodeKey))
+
   /** When a run waited on the person, from the task's questions. */
   const waits = (run: Pick<RunActivity, 'runId'>, questions: QuestionDto[]) => waitsFor(run, questions)
 
   return {
     runs, apply, load, forgetTask, runsFor, currentCall: currentCallFor, lineFor, liveCost, pulse, roundFor,
-    waitsFor: waits,
+    waitsFor: waits, liveRuns,
   }
 })

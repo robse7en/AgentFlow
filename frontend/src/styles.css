@@ -204,6 +204,8 @@ button.active { color: var(--accent-strong); background: var(--accent-soft); bor
    of old in dark. Set here, after tokens.css, so --panel wins over the shared one. */
 .canvas-wrap {
   --panel: #f8f6f0; --canvas-glow: rgba(79, 122, 0, 0.07); --canvas-card: #ffffff; --canvas-dots: #e2ddcf;
+  /* A baton (EdgeBaton.vue): its colour, the amber of the fix loop, the chip's card and ink, and the ring round the head. */
+  --baton-hot: #4f7a00; --baton-warm: #b36b00; --baton-card: #ffffff; --baton-ink: #1c1b17; --baton-ring: #f8f6f0;
   color: var(--text);
   background: radial-gradient(120% 90% at 50% -10%, var(--canvas-glow), transparent 65%), var(--panel);
   border: 1px solid var(--border); border-radius: var(--radius-lg); min-height: 520px; position: relative; overflow: hidden;
@@ -211,6 +213,7 @@ button.active { color: var(--accent-strong); background: var(--accent-soft); bor
 }
 :root[data-theme="dark"] .canvas-wrap {
   --panel: #0a0a09; --canvas-glow: rgba(198, 241, 74, 0.1); --canvas-card: #0a0a09; --canvas-dots: #46443d; color-scheme: dark;
+  --baton-hot: #dcf77a; --baton-warm: #ffce8a; --baton-card: #1a1a1a; --baton-ink: #f5f5f7; --baton-ring: #0a0a09;
 }
 /* Hidden until WorkflowCanvas.vue lands its first camera frame, so the graph never flashes at
    vue-flow's default viewport before jumping to the focused node. */
@@ -330,6 +333,7 @@ button.active { color: var(--accent-strong); background: var(--accent-soft); bor
   --foot-bg: #faf8f3;
   --foot-border: #e3dfd3;
   --foot-text: #3d3a31;
+  --wf-track: #ece8de;
   --logo-ring: #c9c4b4;
   --pending-border: #c9c4b4;
   --info-soft: #efece3;
@@ -391,6 +395,7 @@ button.active { color: var(--accent-strong); background: var(--accent-soft); bor
   --foot-bg: #121214;
   --foot-border: #2c2c31;
   --foot-text: #d6d9e0;
+  --wf-track: #2c2c31;
   --logo-ring: transparent;
   --pending-border: #3a3a3a;
   --info-soft: #1a1a1a;
@@ -515,6 +520,12 @@ button.active { color: var(--accent-strong); background: var(--accent-soft); bor
 .wf-node .wf-now .act-glyph { flex: none; width: 13px; height: 13px; }
 .wf-node .wf-now .lb { overflow: hidden; text-overflow: ellipsis; }
 .wf-node .wf-now.dim { color: var(--muted); }
+.wf-node .chip.workers { background: var(--accent-soft); border-color: var(--accent-border); color: var(--accent-strong); font-family: var(--mono); }
+/* The mini strip of calls under the current-call line (NodeStrips.vue). */
+.wf-node .wf-strips { margin-top: 0.4rem; height: 16px; }
+.wf-node .wf-strips svg { display: block; width: 100%; height: 16px; }
+.wf-node .wf-strips .st-track { fill: var(--wf-track); }
+.wf-node .wf-strips .st-dot { fill: var(--act-accent-hot); }
 .wf-node .actions { display: flex; gap: 0.35rem; margin-top: 0.5rem; flex-wrap: wrap; }
 .wf-node .input-required {
   margin-top: 0.4rem; padding: 0.3rem 0.5rem; border-radius: var(--radius-sm);

@@ -15,7 +15,9 @@ import { Background } from '@vue-flow/background'
 import { MiniMap } from '@vue-flow/minimap'
 import type { NodeState, TaskSnapshot } from '@/api/types'
 import { EDGE_LABELS, NODE_POSITIONS } from '@/workflow/layout'
+import { BATON_S, edgeFlows, edgeId, isLoopEdge, newBatons, type Baton, type BatonTask } from '@/workflow/batons'
 import WorkflowNode from './WorkflowNode.vue'
+import FlowEdge from './FlowEdge.vue'
 import LoopbackEdge from './LoopbackEdge.vue'
 
 // `locked` makes the graph inert (no focus, no keyboard/pointer interaction) while an overlay
@@ -73,37 +75,69 @@ const nodes = computed<Node[]>(() =>
 
 const stateOf = (key: string) => props.task.nodes.find((n) => n.key === key)?.displayState
 
-// The forward edge into the Implementer (orchestrator->implementer) only ever drives its very
-// first run. Once the fix loop has fired at least once (consolidate->implementer, the "loopback"
-// edge below), consolidate is the edge actually re-triggering the Implementer on every later
-// iteration — but the forward source stays COMPLETED forever, so it would otherwise keep
-// animating too.
-const loopedBack = computed(() => stateOf('consolidate') === 'COMPLETED')
+// Batons: when a node goes live because the stage before it finished, a baton runs along that edge carrying
+// what is handed over (workflow/batons.ts decides when; EdgeBaton.vue draws it). They are kept here, keyed by
+// edge, for as long as they last, so a vue-flow redraw in mid-flight does not start one over. The first
+// snapshot of a task (a reload mid-run) fires none.
+const batons = ref<Record<string, Baton>>({})
+const batonTimers = new Set<ReturnType<typeof setTimeout>>()
+let seen: BatonTask | null = null
+
+// What a handoff needs of a snapshot: the states, and what the payloads read. Copied, in case the store
+// updates its snapshot in place.
+const batonView = (task: TaskSnapshot): BatonTask => ({
+  jiraKey: task.jiraKey,
+  nodes: task.nodes.map((node) => ({ ...node })),
+  edges: task.edges.map((edge) => ({ ...edge })),
+  assessment: task.assessment,
+})
+const batonSignature = (task: TaskSnapshot) =>
+  `${task.jiraKey}|${task.nodes.map((node) => `${node.key}:${node.displayState}:${node.checkpointSha ?? ''}:${node.blockingCount}`).join(',')}`
+
+watch(
+  () => batonSignature(props.task),
+  () => {
+    const next = batonView(props.task)
+    if (seen && seen.jiraKey !== next.jiraKey) batons.value = {}
+    const fired = newBatons(seen, next, Date.now())
+    seen = next
+    for (const baton of fired) {
+      batons.value = { ...batons.value, [baton.edge]: baton }
+      const timer = setTimeout(() => {
+        batonTimers.delete(timer)
+        if (batons.value[baton.edge]?.key === baton.key) {
+          const { [baton.edge]: _gone, ...rest } = batons.value
+          batons.value = rest
+        }
+      }, BATON_S * 1000 + 150)
+      batonTimers.add(timer)
+    }
+  },
+  { immediate: true },
+)
+onUnmounted(() => batonTimers.forEach(clearTimeout))
 
 const edges = computed<Edge[]>(() =>
   props.task.edges.map(({ source, target }) => {
-    const id = `${source}->${target}`
+    const id = edgeId({ source, target })
     const active = stateOf(source) === 'COMPLETED' && stateOf(target) !== 'PENDING'
-    const isStaleFirstPass = target === 'implementer' && source !== 'consolidate' && loopedBack.value
     // Only the edge actually feeding the live node animates — a convergent edge whose own
     // source hasn't completed (e.g. an unused loop-back path), or whose path has been
     // superseded by a later re-entry into the same target, is not part of the live flow.
     // "Live" covers every state where the target node is the one currently demanding attention:
-    // READY (needs a click to start), RUNNING, or WAITING_FOR_USER/APPROVAL.
-    const targetState = stateOf(target)
-    const running =
-      !isStaleFirstPass &&
-      stateOf(source) === 'COMPLETED' &&
-      (targetState === 'READY' ||
-        targetState === 'RUNNING' ||
-        targetState === 'WAITING_FOR_USER' ||
-        targetState === 'WAITING_FOR_APPROVAL')
+    // READY (needs a click to start), RUNNING, or WAITING_FOR_USER/APPROVAL. (The forward edge
+    // into the Implementer only ever drives its first run; see isStaleFirstPass in batons.ts.)
+    const running = edgeFlows(props.task, { source, target })
+    const baton = batons.value[id] ?? null
     return {
       id,
       source,
       target,
       label: EDGE_LABELS[id],
-      type: source === 'consolidate' && target === 'implementer' ? 'loopback' : 'default',
+      type: isLoopEdge({ source, target }) ? 'loopback' : 'flow',
+      data: { baton },
+      // A baton's chip is left half over the target card, so its edge is drawn above the cards while it lasts.
+      ...(baton ? { zIndex: 2000 } : {}),
       animated: false,
       markerEnd: MarkerType.ArrowClosed,
       // Running edges get a "wf-edge-flow" class (see styles.css) instead of vue-flow's default
@@ -378,6 +412,9 @@ const minimapNodeClass = (node: GraphNode): string => `wf-minimap-node ${node.da
       />
       <template #node-agentflow="nodeProps">
         <WorkflowNode :data="nodeProps.data" />
+      </template>
+      <template #edge-flow="edgeProps">
+        <FlowEdge v-bind="edgeProps" />
       </template>
       <template #edge-loopback="edgeProps">
         <LoopbackEdge v-bind="edgeProps" />

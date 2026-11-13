@@ -89,6 +89,11 @@ export function latestRound(runs: RunActivity[]): RunActivity[] {
 
 const isLiveRun = (run: RunActivity) => run.summary.available && !run.summary.ended
 
+/** How many runs of the node's latest round are going at once: the card's "×N workers" chip shows at two or more. */
+export function liveRunCount(runs: RunActivity[]): number {
+  return latestRound(runs).filter(isLiveRun).length
+}
+
 /** What a card's current-call line shows. */
 export type NowLine =
   | { kind: 'call'; station: ActivityStation; label: string; entry: ActivityEntry }

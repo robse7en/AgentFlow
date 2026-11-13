@@ -3,14 +3,17 @@ import { computed, ref } from 'vue'
 import type { WorkflowNodeDto } from '@/api/types'
 import RunAgentButton from '@/components/RunAgentButton.vue';
 import AgentHeartbeat from '@/components/AgentHeartbeat.vue';
+import { useActivityStore } from '@/stores/activity'
 import { useTaskStore } from '@/stores/tasks'
 import { hasUsage, tokenRuns, usageDetail, useUsdToNzdRate } from '@/usage'
 import HarnessLogo from './HarnessLogo.vue'
 import NodeNow from './NodeNow.vue'
+import NodeStrips from './NodeStrips.vue'
 import QuestionIndicator from './QuestionIndicator.vue'
 
 const props = defineProps<{ node: WorkflowNodeDto; taskKey: string }>()
 const store = useTaskStore()
+const activity = useActivityStore()
 const usdToNzdRate = useUsdToNzdRate()
 const busy = ref(false)
 const error = ref<string | null>(null)
@@ -19,6 +22,8 @@ const isPending = computed(() => props.node.state === 'PENDING')
 const canRun = computed(() => ['READY', 'FAILED'].includes(props.node.state))
 const showIteration = computed(() => props.node.role !== 'architect' && props.node.iteration > 0)
 const usage = computed(() => (hasUsage(props.node.usage) ? props.node.usage : null))
+// Several workers going at once (the Implementer's round) get a chip of their own.
+const workers = computed(() => (['RUNNING', 'WAITING_FOR_USER'].includes(props.node.state) ? activity.liveRuns(props.taskKey, props.node.key) : 0))
 const usageTitle = computed(() => (usage.value ? usageDetail(usage.value, usdToNzdRate.value) : ''))
 
 async function act(fn: () => Promise<unknown>) {
@@ -56,6 +61,7 @@ const showFindings = () => window.dispatchEvent(new CustomEvent('agentflow:findi
     <span class="chip mono" title="Model">{{ node.effectiveConfig?.model ?? 'harness default' }}</span>
     <span v-if="node.effectiveConfig?.reasoning" class="chip" title="Reasoning">{{ node.effectiveConfig.reasoning }}</span>
     <span v-if="showIteration" class="chip">iter {{ node.iteration }}</span>
+    <span v-if="workers > 1" class="chip workers" title="Workers running at the same time">×{{ workers }} workers</span>
     <span v-if="node.checkpointSha" class="chip mono" title="Checkpoint SHA">{{ node.checkpointSha.slice(0, 10) }}</span>
     <button v-if="node.findingsCount" type="button" class="chip chip-link nodrag nopan" :class="{ warn: node.blockingCount }"
         title="Show these findings" @click.stop="showFindings">
@@ -67,6 +73,7 @@ const showFindings = () => window.dispatchEvent(new CustomEvent('agentflow:findi
     </span>
   </div>
   <NodeNow :node="node" :task-key="taskKey" />
+  <NodeStrips :node="node" :task-key="taskKey" />
   <div v-if="node.message && node.state !== 'WAITING_FOR_USER'" class="message" :title="node.message">{{ node.message }}</div>
   <p v-if="node.effectiveConfig?.routingReason" class="small muted">{{ node.effectiveConfig.routingReason }}</p>
   <div v-if="error" class="alert error small" style="margin-top: 0.4rem">{{ error }}</div>

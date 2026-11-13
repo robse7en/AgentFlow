@@ -1,7 +1,7 @@
 // What the activity store does with the messages and what the cards show, as pure functions so they
 // can be run with node (see `activity/check.mts`). Nothing here touches Vue or the network.
 import type {
-  ActivityEntry, ActivityMessage, ActivitySpan, ActivityStation, ActivitySummary,
+  ActivityEntry, ActivityMessage, ActivitySpan, ActivitySpanEnd, ActivityStation, ActivitySummary,
   QuestionDto, RunActivity, RunActivityPayload,
 } from '@/api/types'
 import { stationInfo } from './stations.ts'
@@ -16,12 +16,33 @@ const spanOf = (entry: ActivityEntry): ActivitySpan => ({
   bySubagent: entry.bySubagent, inbound: entry.inbound,
 })
 
-/** Updates the span `before` made, found from the end (a call ends soon after it starts). */
+/**
+ * Updates the span `before` made, found from the end (a call ends soon after it starts). Calls that
+ * began together look alike, so the span taken is one that is in the state `before` was in: the
+ * first of two to end must not leave the other's span running for good.
+ */
 function updateSpan(spans: ActivitySpan[], before: ActivityEntry, after: ActivityEntry) {
   for (let i = spans.length - 1; i >= 0; i--) {
     const span = spans[i]
-    if (span.startedAt === before.startedAt && span.station === before.station && span.bySubagent === before.bySubagent) {
+    if (
+      span.startedAt === before.startedAt && span.station === before.station &&
+      span.bySubagent === before.bySubagent && span.endedAt === before.endedAt
+    ) {
       spans[i] = spanOf(after)
+      return
+    }
+  }
+}
+
+/** Ends the running span that a call made, after the call had left the newest entries. */
+function endSpan(spans: ActivitySpan[], end: ActivitySpanEnd) {
+  for (let i = spans.length - 1; i >= 0; i--) {
+    const span = spans[i]
+    if (
+      span.endedAt === null && span.startedAt === end.startedAt && span.station === end.station &&
+      span.bySubagent === end.bySubagent
+    ) {
+      spans[i] = { ...span, endedAt: end.endedAt, status: end.status }
       return
     }
   }
@@ -51,6 +72,7 @@ export function applyMessage(previous: RunActivity | undefined, message: Activit
       spans.push(spanOf(entry))
     }
   }
+  for (const end of message.spanEnds ?? []) endSpan(spans, end)
   if (entries.length > MAX_ENTRIES) entries.splice(0, entries.length - MAX_ENTRIES)
   if (spans.length > MAX_SPANS) spans.splice(0, spans.length - MAX_SPANS)
   const summary = message.summary

@@ -244,7 +244,6 @@ const READ_CHUNK: usize = 256 * 1024;
 ///
 /// A partial last line (the writer is mid-line) is held back until its newline arrives. A missing
 /// file reads as no lines, and a file that shrank is read again from the start.
-#[derive(Debug)]
 pub struct Tail {
     path: PathBuf,
     /// How far into the file has been read, whole lines or not.
@@ -253,6 +252,18 @@ pub struct Tail {
     partial: Vec<u8>,
     /// The current line is over [`MAX_LINE_BYTES`] and is being thrown away up to its newline.
     skipping: bool,
+}
+
+/// Like a derived `Debug`, but without the held-back bytes, which are the transcript's own text.
+impl std::fmt::Debug for Tail {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Tail")
+            .field("path", &self.path)
+            .field("read", &self.read)
+            .field("partial_bytes", &self.partial.len())
+            .field("skipping", &self.skipping)
+            .finish()
+    }
 }
 
 /// What one [`Tail::poll`] saw.
@@ -551,17 +562,42 @@ pub struct RunActivity {
     /// The model and context window the harness last named (see [`Parsed::Setting`]).
     #[serde(skip)]
     model_hint: Option<String>,
+    /// `Agents` calls that were ended by a completion notice before their own result came, with the
+    /// transcript each is in.
+    #[serde(skip)]
+    done_first: HashMap<String, Source>,
+    /// Calls that ended after leaving the newest entries, until the next delta carries them.
+    #[serde(skip)]
+    span_ends: Vec<SpanEnd>,
     #[serde(skip)]
     window_hint: Option<u64>,
 }
 
+/// A call that ended after it had left the newest 80 entries: the client still holds its span as
+/// running, and finds it by these (the same facts a span is made of).
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SpanEnd {
+    #[serde(serialize_with = "time")]
+    pub started_at: DateTime<Utc>,
+    pub station: Station,
+    pub by_subagent: bool,
+    #[serde(serialize_with = "time")]
+    pub ended_at: DateTime<Utc>,
+    pub status: CallStatus,
+}
+
 /// What changed in a run since the last [`RunActivity::take_delta`]: the new or changed entries
-/// that are still in the newest 80, and the summary.
+/// that are still in the newest 80, the calls that ended after they left them, and the summary.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ActivityDelta {
     pub entries: Vec<ActivityEntry>,
+    pub span_ends: Vec<SpanEnd>,
     pub summary: ActivitySummary,
 }
+
+/// The most span ends kept for the next delta.
+const MAX_SPAN_ENDS: usize = 500;
 
 impl RunActivity {
     /// `catalog` is the models.dev price catalog (never loaded here: it may need a download). Without
@@ -606,6 +642,8 @@ impl RunActivity {
             origins: HashMap::new(),
             detached: HashSet::new(),
             model_hint: None,
+            done_first: HashMap::new(),
+            span_ends: Vec::new(),
             window_hint: None,
         }
     }
@@ -638,16 +676,17 @@ impl RunActivity {
         let entries: Vec<ActivityEntry> =
             self.entries.iter().filter(|entry| self.dirty.contains(&entry.id)).cloned().collect();
         self.dirty.clear();
-        if entries.is_empty() && self.sent.as_ref() == Some(&self.summary) {
+        let span_ends = std::mem::take(&mut self.span_ends);
+        if entries.is_empty() && span_ends.is_empty() && self.sent.as_ref() == Some(&self.summary) {
             return None;
         }
         self.sent = Some(self.summary.clone());
-        Some(ActivityDelta { entries, summary: self.summary.clone() })
+        Some(ActivityDelta { entries, span_ends, summary: self.summary.clone() })
     }
 
     /// The `activity` websocket message for a delta.
     pub fn message(&self, delta: &ActivityDelta) -> Value {
-        serde_json::json!({
+        let mut message = serde_json::json!({
             "type": "activity",
             "jiraKey": self.jira_key,
             "nodeKey": self.node_key,
@@ -657,7 +696,11 @@ impl RunActivity {
             "harness": self.harness,
             "entries": delta.entries,
             "summary": delta.summary,
-        })
+        });
+        if !delta.span_ends.is_empty() {
+            message["spanEnds"] = serde_json::json!(delta.span_ends);
+        }
+        message
     }
 
     /// Takes in one event from the run's own transcript.
@@ -790,15 +833,22 @@ impl RunActivity {
             }
             Parsed::Done { id, at, is_error } => {
                 if let Some(call) = self.open.remove(&id) {
+                    let (agents, source) = (call.station == Station::Agents, call.source.clone());
+                    let returned = self.detached.contains(&id);
                     self.close(&id, call, at, is_error);
+                    // Its own result may still follow (a subagent that ran to its end first): that
+                    // is where the model picks up again.
+                    if agents && !returned {
+                        self.done_first.insert(id, source);
+                    }
                 }
             }
             Parsed::Usage { message_id, model, at, tokens, context_percent } => {
                 if !self.dedup.counts(message_id.as_deref()) {
                     return;
                 }
-                self.summary.tokens += tokens;
-                self.summary.model = model.or_else(|| self.summary.model.take());
+                self.summary.tokens = self.summary.tokens.saturating_add(tokens);
+                self.summary.model = model.map(|model| clean_label(&model)).or_else(|| self.summary.model.take());
                 if let Some(percent) = context_percent {
                     self.summary.context_percent = Some(percent);
                     self.context_steps.push_back(ContextStep { at, percent });
@@ -814,6 +864,11 @@ impl RunActivity {
                     if !self.busy(&source) {
                         self.start_thinking(&source, &id, at);
                     }
+                } else if let Some(source) = self.done_first.remove(&id)
+                    && !self.busy(&source)
+                    && !self.thinking.contains_key(&source)
+                {
+                    self.start_thinking(&source, &id, at);
                 }
             }
             Parsed::Step {
@@ -953,6 +1008,18 @@ impl RunActivity {
         if let Some(entry) = self.entries.iter_mut().rev().find(|entry| entry.id == id) {
             entry.ended_at = Some(ended_at);
             entry.status = status;
+        } else {
+            // Gone from the newest entries, so no entry in a delta can tell the client.
+            if self.span_ends.len() >= MAX_SPAN_ENDS {
+                self.span_ends.remove(0);
+            }
+            self.span_ends.push(SpanEnd {
+                started_at: call.started_at,
+                station: call.station,
+                by_subagent: call.by_subagent,
+                ended_at,
+                status,
+            });
         }
         let first_held = self.spans_made - self.spans.len() as u64;
         if let Some(span) = call.span.checked_sub(first_held).and_then(|index| self.spans.get_mut(index as usize)) {
@@ -965,6 +1032,28 @@ impl RunActivity {
         }
         if call.station == Station::Agents && !call.by_subagent {
             self.summary.subagents_in_flight = self.summary.subagents_in_flight.saturating_sub(1);
+            self.end_subagent_work(id, ended_at);
+        }
+    }
+
+    /// The `Agents` call `call_id` is over, and so is its subagent's work: what it was thinking about,
+    /// and any call of its own that never reported back (a subagent that was stopped).
+    fn end_subagent_work(&mut self, call_id: &str, at: DateTime<Utc>) {
+        let sources: Vec<Source> = self
+            .parents
+            .iter()
+            .filter(|(_, parent)| parent.as_str() == call_id)
+            .map(|(file, _)| Source::Subagent(file.clone()))
+            .collect();
+        for source in sources {
+            self.stop_thinking(&source, at, None);
+            let left: Vec<String> =
+                self.open.iter().filter(|(_, call)| call.source == source).map(|(id, _)| id.clone()).collect();
+            for id in left {
+                if let Some(call) = self.open.remove(&id) {
+                    self.close(&id, call, at, false);
+                }
+            }
         }
     }
 
@@ -976,14 +1065,18 @@ impl RunActivity {
     /// One of the run's own assistant messages: steps, tokens, cost and context.
     fn count_step(&mut self, model: Option<&str>, at: DateTime<Utc>, tokens: StepTokens) {
         self.summary.steps += 1;
-        self.summary.model = model.map(str::to_string).or_else(|| self.summary.model.take());
-        let used = tokens.input_tokens + tokens.output_tokens + tokens.cache_read + tokens.cache_write;
+        self.summary.model = model.map(clean_label).or_else(|| self.summary.model.take());
+        let used = tokens
+            .input_tokens
+            .saturating_add(tokens.output_tokens)
+            .saturating_add(tokens.cache_read)
+            .saturating_add(tokens.cache_write);
         if used == 0 {
             // The harness reports usage apart from its messages (or not at all): leave tokens, cost
             // and context alone rather than showing 0%.
             return;
         }
-        self.summary.tokens += used;
+        self.summary.tokens = self.summary.tokens.saturating_add(used);
         if model.is_none() && self.window_hint.is_none() {
             return;
         }
@@ -996,7 +1089,7 @@ impl RunActivity {
         let window =
             self.window_hint.or_else(|| model.and_then(|model| pricing::context_window_for_name(catalog, model)));
         self.summary.context_percent = window.map(|window| {
-            let used = (tokens.input_tokens + tokens.cache_read + tokens.cache_write) as f64;
+            let used = tokens.input_tokens.saturating_add(tokens.cache_read).saturating_add(tokens.cache_write) as f64;
             ((used / window as f64 * 100.0).min(100.0) * 10.0).round() / 10.0
         });
         if let Some(percent) = self.summary.context_percent {
@@ -1119,6 +1212,11 @@ fn claude_user(entry: &Object, message: &Object, at: DateTime<Utc>) -> Vec<Parse
             .filter_map(|block| {
                 let id = block.get("tool_use_id").and_then(Value::as_str).filter(|id| !id.is_empty())?;
                 let is_error = block.get("is_error").and_then(Value::as_bool) == Some(true);
+                // A background `Agent` call returns at once with Claude Code's own words while its
+                // subagent works on; a task notification ends it later (see `claude_notification`).
+                if !is_error && starts_with_words(block.get("content"), "Async agent launched") {
+                    return Some(Parsed::Detach { id: id.to_string(), at });
+                }
                 Some(Parsed::End { id: id.to_string(), at, is_error })
             })
             .collect();
@@ -1147,6 +1245,9 @@ fn claude_user(entry: &Object, message: &Object, at: DateTime<Utc>) -> Vec<Parse
     if text.trim_start().starts_with("[Request interrupted") {
         return vec![Parsed::TurnEnd { at }];
     }
+    if entry.get("origin").and_then(|origin| origin.get("kind")).and_then(Value::as_str) == Some("task-notification") {
+        return claude_notification(text, at);
+    }
     if !is_from_the_person(entry, text) {
         return Vec::new();
     }
@@ -1158,6 +1259,33 @@ fn claude_user(entry: &Object, message: &Object, at: DateTime<Utc>) -> Vec<Parse
         None => format!("prompt-{}", at.timestamp_millis()),
     };
     vec![Parsed::Start { id, station: Station::You, label: "Prompt".to_string(), at, inbound: true }]
+}
+
+/// Whether a tool result's content (a string, or blocks with `text`) opens with these words.
+fn starts_with_words(content: Option<&Value>, words: &str) -> bool {
+    match content {
+        Some(Value::String(text)) => text.trim_start().starts_with(words),
+        Some(Value::Array(blocks)) => blocks
+            .iter()
+            .find_map(|block| block.get("text").and_then(Value::as_str))
+            .is_some_and(|text| text.trim_start().starts_with(words)),
+        _ => false,
+    }
+}
+
+/// A task notification (`origin.kind` "task-notification") says that a background call is over:
+/// it holds the call's `<tool-use-id>` and a `<status>`. Only those two words are read; the
+/// rest (the summary, the result) is never looked at. A call that is not open is left alone.
+fn claude_notification(text: &str, at: DateTime<Utc>) -> Vec<Parsed> {
+    let between = |tag: &str| {
+        let open = format!("<{tag}>");
+        let from = text.find(&open)? + open.len();
+        let to = from + text[from..].find(&format!("</{tag}>"))?;
+        Some(text[from..to].trim())
+    };
+    let Some(id) = between("tool-use-id").filter(|id| !id.is_empty() && id.len() <= 200) else { return Vec::new() };
+    let is_error = between("status").is_some_and(|status| matches!(status, "failed" | "error"));
+    vec![Parsed::Done { id: id.to_string(), at, is_error }]
 }
 
 /// Many user-role lines are not the person: harness notices, task notifications, subagent
@@ -1202,16 +1330,21 @@ pub fn message_key(id: &Value) -> Option<String> {
     }
 }
 
-/// A token count; anything that is not a non-negative number counts as 0.
+/// The most one token count can be: far above any real one, and low enough that sums of several
+/// (and the conversion to a signed number for pricing) cannot overflow.
+const MAX_TOKEN_COUNT: u64 = 1 << 50;
+
+/// A token count; anything that is not a non-negative number counts as 0, and a huge one is cut.
 fn count(value: Option<&Value>) -> u64 {
-    match value {
+    let counted = match value {
         Some(Value::Number(number)) => match (number.as_u64(), number.as_f64()) {
             (Some(whole), _) => whole,
             (None, Some(float)) if float.is_finite() && float >= 0.0 => float as u64,
             _ => 0,
         },
         _ => 0,
-    }
+    };
+    counted.min(MAX_TOKEN_COUNT)
 }
 
 // ---- Copilot lines ---------------------------------------------------------------------------
@@ -1270,7 +1403,7 @@ fn parse_copilot_line(line: &str) -> Vec<(Option<String>, Parsed)> {
         "session.usage_record" => {
             let Some(usage) = data.get("usage").and_then(Value::as_object) else { return Vec::new() };
             let input = count(usage.get("inputTokens"));
-            let tokens = input + count(usage.get("outputTokens"));
+            let tokens = input.saturating_add(count(usage.get("outputTokens")));
             let limit = count(usage.get("maxPromptTokens"));
             let context_percent = (input > 0 && limit > 0)
                 .then(|| ((input as f64 / limit as f64 * 100.0).min(100.0) * 10.0).round() / 10.0);
@@ -1508,7 +1641,7 @@ fn parse_codex_line(line: &str) -> Vec<Parsed> {
             let (input, cached) = (count(usage.get("input_tokens")), count(usage.get("cached_input_tokens")));
             let cache_write = count(usage.get("cache_write_input_tokens"));
             let output = count(usage.get("output_tokens"));
-            if input + output == 0 {
+            if input.saturating_add(output) == 0 {
                 return Vec::new();
             }
             vec![Parsed::Request {
@@ -1791,7 +1924,15 @@ pub fn classify_shell(command: &str, description: &str) -> (Station, String) {
     } else {
         let first =
             lines.iter().find(|words| !NEUTRAL_WORDS.contains(&command_name(&words[0]).as_str())).or(lines.first());
-        first.map_or_else(|| "shell".to_string(), |words| base(&words[0]))
+        // A word that is not a command's name (a quoted text, a here-string, a .NET call) is
+        // text of the command, and never a label.
+        first.map_or_else(
+            || "shell".to_string(),
+            |words| {
+                let name = base(&words[0]);
+                if looks_like_a_command(&name) { name } else { "shell".to_string() }
+            },
+        )
     };
     let label = clean_label(&label);
     let label = if label.is_empty() { "shell".to_string() } else { label };
@@ -1832,6 +1973,13 @@ fn subcommand_label(program: &str, args: &[String]) -> String {
         return if valid { format!("{program} {arg}") } else { program.to_string() };
     }
     program.to_string()
+}
+
+/// A short run of letters, digits and `. _ + -`, as a program or cmdlet is named.
+fn looks_like_a_command(name: &str) -> bool {
+    !name.is_empty()
+        && name.len() <= 40
+        && name.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'+' | b'-'))
 }
 
 /// A command word without its folder or its Windows ending: `/mingw64/bin/git` and `git.exe` are

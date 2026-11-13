@@ -56,6 +56,30 @@ assert.equal(big!.entries.length, MAX_ENTRIES)
 assert.equal(big!.entries[0].id, 'e20')
 assert.equal(big!.spans.length, 100)
 
+// Two calls that began together: the first to end must not leave the other's span running for good.
+let twins = applyMessage(undefined, message(3, 'architect', [entry('t1', 'shell', 0), entry('t2', 'shell', 0)]))
+twins = applyMessage(twins, message(3, 'architect', [entry('t1', 'shell', 0, { endedAt: at(100), status: 'ok' })]))
+twins = applyMessage(twins, message(3, 'architect', [entry('t2', 'shell', 0, { endedAt: at(200), status: 'err' })]))
+assert.deepEqual(twins.spans.map((s) => s.status).sort(), ['err', 'ok'], 'both spans ended')
+assert.ok(twins.spans.every((s) => s.endedAt !== null))
+
+// A call that ended after it left the newest entries ends its span by the facts the message carries.
+let longRun = applyMessage(undefined, message(4, 'architect', [entry('long', 'agents', 0)]))
+for (let i = 0; i < 100; i++) longRun = applyMessage(longRun, message(4, 'architect', [entry(`s${i}`, 'shell', 10 + i)]))
+assert.ok(longRun.entries.every((e) => e.id !== 'long'))
+assert.equal(longRun.spans[0].endedAt, null)
+const endMessage: ActivityMessage = {
+  ...message(4, 'architect', []),
+  spanEnds: [{ startedAt: at(0), station: 'agents', bySubagent: false, endedAt: at(5000), status: 'ok' }],
+}
+longRun = applyMessage(longRun, endMessage)
+assert.equal(longRun.spans[0].endedAt, at(5000))
+assert.equal(longRun.spans[0].status, 'ok')
+// Told twice, or about a call whose span is not held: nothing else changes.
+const again = applyMessage(longRun, endMessage)
+assert.deepEqual(again.spans, longRun.spans)
+assert.equal(applyMessage(longRun, { ...endMessage, spanEnds: [{ ...endMessage.spanEnds![0], startedAt: at(-1) }] }).spans.length, longRun.spans.length)
+
 // ---- a run from the GET, which leaves out empty lists ----
 const sent = { ...run(9, 'architect', []) } as Partial<RunActivity> & Omit<RunActivity, 'spans' | 'contextSteps'>
 delete sent.spans

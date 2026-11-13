@@ -639,5 +639,15 @@ export interface ActivityMessage {
   runNumber: number
   harness: string
   entries: ActivityEntry[]
+  /** Calls that ended after they had left the newest entries (absent when there are none). */
+  spanEnds?: ActivitySpanEnd[]
   summary: ActivitySummary
+}
+
+export interface ActivitySpanEnd {
+  startedAt: string
+  station: ActivityStation
+  bySubagent: boolean
+  endedAt: string
+  status: ActivityStatus
 }

@@ -349,7 +349,7 @@ impl ActivityTrackers {
                     following.task.abort();
                 }
                 if run != spec.run_id {
-                    self.0.finish_run(run);
+                    self.finish(run);
                 }
             }
             None => {}
@@ -362,12 +362,24 @@ impl ActivityTrackers {
     }
 
     /// Stop following a session and close its run: what its transcript still holds is read, and
-    /// calls left open end `ok`. Safe under the task lock, and a second call changes nothing.
+    /// calls left open end `ok`. Safe under the task lock, and a second call changes nothing. The
+    /// closing happens on a blocking thread, a moment later: it may wait for a read in progress.
     pub fn cancel(&self, session_id: i64) {
         let removed = locked(&self.0.tasks).remove(&session_id);
         if let Some(following) = removed {
             following.task.abort();
-            self.0.finish_run(following.run_id);
+            self.finish(following.run_id);
+        }
+    }
+
+    /// Closes a run off the caller's thread (on the spot when there is no runtime to hand it to).
+    fn finish(&self, run_id: i64) {
+        let inner = self.0.clone();
+        match tokio::runtime::Handle::try_current() {
+            Ok(runtime) => {
+                runtime.spawn_blocking(move || inner.finish_run(run_id));
+            }
+            Err(_) => inner.finish_run(run_id),
         }
     }
 
@@ -431,7 +443,7 @@ impl Inner {
         if tracker.run.summary.ended {
             return;
         }
-        // Prices are not fetched here: this can run under the task lock.
+        // Prices are not fetched here.
         tracker.locate(Duration::MAX);
         let give_up = self.settings.read().unwrap_or_else(|p| p.into_inner()).give_up;
         tracker.read(give_up);
@@ -457,6 +469,10 @@ async fn track(inner: Arc<Inner>, tracker: Arc<Mutex<RunTracker>>) {
             // waits for under the task lock.
             let prices = wanted.then(|| catalog());
             let mut tracker = locked(&work);
+            // The run may have been closed while this waited: it takes nothing more in.
+            if tracker.run.summary.ended {
+                return None;
+            }
             if let Some(prices) = prices {
                 tracker.run.set_catalog(prices);
             }

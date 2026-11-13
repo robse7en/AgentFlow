@@ -37,6 +37,11 @@ export const useActivityStore = defineStore('activity', () => {
     loading.set(jiraKey, flight)
     try {
       const { runs: held } = await api.activity(jiraKey)
+      // A run the backend no longer holds (it restarted) would stay live here for good.
+      const kept = new Set(held.map((run) => run.runId))
+      for (const [id, run] of Object.entries(runs.value)) {
+        if (run.jiraKey === jiraKey && !kept.has(Number(id))) delete runs.value[Number(id)]
+      }
       for (const run of held) runs.value[run.runId] = runFromPayload(run)
     } catch {
       /* Display-only: a backend without the route (or a task not found) just shows no activity. */

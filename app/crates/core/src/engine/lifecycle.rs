@@ -590,6 +590,8 @@ impl Engine {
                 None if agent.status == "running" => {
                     agent.status = "stopped".into();
                     agent.ended_at = Some(DbTime::now());
+                    // Its run is over: nothing more is read, and its open calls end.
+                    self.activity_trackers.cancel(agent.id);
                 }
                 None => {}
             }

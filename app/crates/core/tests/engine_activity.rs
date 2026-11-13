@@ -233,6 +233,62 @@ async fn a_copilots_events_reach_the_websocket_and_the_get_with_their_subagents(
     harness.engine.activity_trackers.stop_all();
 }
 
+/// A Codex run's rollout is found by its session id once it is written, then followed like the
+/// others: a script is seen running before it ends (fixture lines from a real rollout).
+#[tokio::test]
+async fn a_codexs_rollout_is_found_by_its_session_id_and_reaches_the_websocket_and_the_get() {
+    let harness = engine().await;
+    fast(&harness);
+    let home = harness.tmp().join("codex-home");
+    let run_dir = harness.tmp().join("codex-run");
+    std::fs::create_dir_all(&run_dir).unwrap();
+    let mut client = harness.engine.broadcaster.connect();
+    let fixture = std::fs::read_to_string(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/activity/codex/typed.jsonl"),
+    )
+    .unwrap();
+    let lines: Vec<String> = fixture.lines().map(str::to_string).collect();
+    let id = "00000000-0000-4000-8000-0000000000a1";
+    let rollout = home
+        .join(".codex")
+        .join("sessions")
+        .join("2026")
+        .join("11")
+        .join("12")
+        .join(format!("rollout-2026-11-12T22-14-20-{id}.jsonl"));
+
+    // The id is known at launch; the file is not there yet (Codex writes it with its first turn).
+    harness.engine.activity_trackers.start(spec_for("codex", 51, 61, Some(id), &home, &run_dir));
+    // The prompt is read, and the model makes its first call: the script runs.
+    append(&rollout, &lines[..10]);
+    let running = activity(&mut client, |m| {
+        m["runId"] == 51
+            && m["entries"].as_array().unwrap().iter().any(|e| e["station"] == "shell" && e["status"] == "run")
+    })
+    .await;
+    assert_eq!(running["harness"], "codex");
+    assert_eq!(running["summary"]["available"], true);
+    let call = running["entries"].as_array().unwrap().iter().find(|e| e["station"] == "shell").unwrap();
+    assert_eq!(call["label"], "Get-Location");
+
+    // The rest of the session: results, two failed commands, tokens, and the end of the turn.
+    append(&rollout, &lines[10..]);
+    let done = activity(&mut client, |m| m["runId"] == 51 && m["summary"]["steps"] == 10).await;
+    assert_eq!(done["summary"]["tokens"], 451_170);
+    assert_eq!(done["summary"]["errors"], 2);
+    assert_eq!(done["summary"]["model"], "gpt-6.1-sol");
+
+    let (status, body) = harness.route("GET", "/api/tasks/TEST-1/activity", None).await;
+    assert_eq!(status, 200, "{body}");
+    let run = &body["runs"][0];
+    assert_eq!(run["harness"], "codex");
+    assert_eq!(run["summary"]["contextPercent"], 12.7);
+    assert!(run["summary"]["costUsd"].is_null(), "the catalog does not know this model: {run}");
+    assert!(run["spans"].as_array().unwrap().len() >= 8);
+    assert_eq!(run["contextSteps"].as_array().unwrap().len(), 10);
+    harness.engine.activity_trackers.stop_all();
+}
+
 #[tokio::test]
 async fn a_resumed_run_starts_at_its_recorded_offset_and_a_missing_transcript_is_unavailable() {
     let harness = engine().await;
@@ -267,8 +323,8 @@ async fn a_resumed_run_starts_at_its_recorded_offset_and_a_missing_transcript_is
         &home,
         &harness.tmp().join("no-offset"),
     ));
-    // Codex is not understood yet.
-    harness.engine.activity_trackers.start(spec_for("codex", 13, 23, None, &home, &run_dir));
+    // A Codex run whose session id was never found has no rollout to follow.
+    harness.engine.activity_trackers.start(spec_for("codex", 13, 23, None, &home, &harness.tmp().join("no-offset")));
 
     let seen = activity(&mut client, |m| m["runId"] == 11 && has(m, "new-t", "ok")).await;
     assert_eq!(seen["summary"]["counts"]["git"], 1);

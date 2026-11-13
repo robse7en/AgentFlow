@@ -171,6 +171,12 @@ impl RunTracker {
             |line| {
                 let mut run = run.borrow_mut();
                 for (parent, event) in parse_routed(harness, line) {
+                    // A line's own time is the latest the file was written by then. (Windows keeps
+                    // the modified time of a file a program has open, as Codex does, at its first
+                    // write, so the file's time alone would read as silence.)
+                    if let Some(at) = event.at() {
+                        run.note_write(at);
+                    }
                     run.apply_routed(parent.as_deref(), event);
                 }
             },

@@ -9,7 +9,7 @@
 //! host, a command name, a subcommand or Claude's own short description. It never holds a command
 //! line, a prompt, a query, a URL path or file contents, and nothing here logs any input.
 //!
-//! Claude Code and GitHub Copilot lines are understood; Codex returns no events yet.
+//! Claude Code, GitHub Copilot and OpenAI Codex lines are understood.
 
 use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::fs::File;
@@ -138,6 +138,23 @@ pub enum Parsed {
         /// The prompt's fill of the model's prompt limit, 0 to 100, when both are known.
         context_percent: Option<f64>,
     },
+    /// Something the harness says once for the lines after it: the model in use and its context
+    /// window (Codex writes both when a turn begins, and its usage records name neither). The run
+    /// keeps what was said last; a `None` leaves the earlier value alone.
+    Setting { model: Option<String>, window: Option<u64> },
+    /// What one model request used, written apart from any message and after the call it made
+    /// (Codex's `token_usage_record`). It is a step for the totals, tokens, cost and context, but
+    /// never a Model entry of its own: the span the call closed is the model's work. The model and
+    /// the window are the last [`Parsed::Setting`]. Counts as for [`Parsed::Step`], with the input
+    /// split into what was not cached, and what was read from or written to the cache.
+    Request {
+        message_id: Option<String>,
+        at: DateTime<Utc>,
+        input_tokens: u64,
+        output_tokens: u64,
+        cache_read: u64,
+        cache_write: u64,
+    },
     /// One assistant line. A turn written as several lines repeats the same usage on each of them:
     /// count it once per `message_id` with [`StepDedup`]. All five counts at 0 mean the harness
     /// reports no usage with its messages (Copilot): the step is counted, but tokens, cost and
@@ -156,9 +173,27 @@ pub enum Parsed {
     },
 }
 
+impl Parsed {
+    /// When the line this came from was written, by its own timestamp (none for a [`Parsed::Setting`],
+    /// which is a fact and not an event).
+    pub fn at(&self) -> Option<DateTime<Utc>> {
+        match self {
+            Parsed::Start { at, .. }
+            | Parsed::End { at, .. }
+            | Parsed::Detach { at, .. }
+            | Parsed::Done { at, .. }
+            | Parsed::TurnEnd { at }
+            | Parsed::Usage { at, .. }
+            | Parsed::Request { at, .. }
+            | Parsed::Step { at, .. } => Some(*at),
+            Parsed::Setting { .. } => None,
+        }
+    }
+}
+
 /// Never panics; an unknown or malformed line gives an empty list. `harness` is `claude`, `codex`
-/// or `copilot`; Codex is not understood yet. Where a harness marks the lines of its subagents in
-/// the run's own file, use [`parse_routed`] to learn which are which.
+/// or `copilot`. Where a harness marks the lines of its subagents in the run's own file, use
+/// [`parse_routed`] to learn which are which.
 pub fn parse_line(harness: &str, line: &str) -> Vec<Parsed> {
     parse_routed(harness, line).into_iter().map(|(_, event)| event).collect()
 }
@@ -172,13 +207,14 @@ pub fn parse_routed(harness: &str, line: &str) -> Vec<(Option<String>, Parsed)> 
     match harness {
         "claude" => parse_claude_line(line).into_iter().map(|event| (None, event)).collect(),
         "copilot" => parse_copilot_line(line),
+        "codex" => parse_codex_line(line).into_iter().map(|event| (None, event)).collect(),
         _ => Vec::new(),
     }
 }
 
-/// Whether this harness's transcripts are understood yet. The others show no live activity.
+/// Whether this harness's transcripts are understood. Any other harness shows no live activity.
 pub fn parses(harness: &str) -> bool {
-    matches!(harness, "claude" | "copilot")
+    matches!(harness, "claude" | "copilot" | "codex")
 }
 
 /// Counts each assistant message's usage once, however many lines it was written as.
@@ -325,7 +361,8 @@ fn emit<F: FnMut(&str)>(line: &[u8], each: &mut F) {
 /// Where a run's transcript is, and how much of it was already written when the run launched.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TranscriptStart {
-    /// None while the file is not there (a fresh conversation) or cannot be named yet (Codex).
+    /// None while the file is not there (a fresh Claude conversation) or cannot be named yet (a
+    /// fresh Codex one: its session id is only known once the rollout is written).
     pub path: Option<PathBuf>,
     pub offset: u64,
     /// Claude only: the subagent transcripts that already existed, by file name, with their length.
@@ -374,6 +411,9 @@ pub fn transcript_start(home: &Path, harness: &str, session_id: Option<&str>) ->
             crate::collectors::claude::find_transcript(&env, session_id)
         }
         "copilot" => Some(home.join(".copilot").join("session-state").join(session_id).join("events.jsonl")),
+        // Only known once the file is written: a fresh Codex run has no id yet, and a resumed one
+        // finds its old rollout.
+        "codex" => crate::harness::codex::find_rollout(&home.join(".codex").join("sessions"), session_id),
         _ => None,
     };
     let Some(path) = path else { return none };
@@ -508,6 +548,11 @@ pub struct RunActivity {
     /// subagent): they do not keep the model from being seen working.
     #[serde(skip)]
     detached: HashSet<String>,
+    /// The model and context window the harness last named (see [`Parsed::Setting`]).
+    #[serde(skip)]
+    model_hint: Option<String>,
+    #[serde(skip)]
+    window_hint: Option<u64>,
 }
 
 /// What changed in a run since the last [`RunActivity::take_delta`]: the new or changed entries
@@ -560,6 +605,8 @@ impl RunActivity {
             parents: HashMap::new(),
             origins: HashMap::new(),
             detached: HashSet::new(),
+            model_hint: None,
+            window_hint: None,
         }
     }
 
@@ -697,7 +744,8 @@ impl RunActivity {
                     return;
                 }
                 // The model has made its call, or the person has spoken: either way its turn is over.
-                self.stop_thinking(&source, at, None);
+                let model = self.model_hint.clone();
+                self.stop_thinking(&source, at, model.as_deref());
                 let entry = self.entry(&source, id, station, label, at);
                 let entry = ActivityEntry {
                     ended_at: inbound.then_some(at),
@@ -712,7 +760,24 @@ impl RunActivity {
                 }
             }
             Parsed::TurnEnd { at } => {
-                self.stop_thinking(&source, at, None);
+                let model = self.model_hint.clone();
+                self.stop_thinking(&source, at, model.as_deref());
+            }
+            Parsed::Setting { model, window } => {
+                if let Some(model) = model.map(|model| clean_label(&model)).filter(|model| !model.is_empty()) {
+                    self.model_hint = Some(model);
+                }
+                self.window_hint = window.filter(|window| *window > 0).or(self.window_hint);
+            }
+            Parsed::Request { message_id, at, input_tokens, output_tokens, cache_read, cache_write } => {
+                if !self.dedup.counts(message_id.as_deref()) {
+                    return;
+                }
+                if source == Source::Main {
+                    let tokens = StepTokens { input_tokens, output_tokens, cache_read, cache_write, cache_write_1h: 0 };
+                    let model = self.model_hint.clone();
+                    self.count_step(model.as_deref(), at, tokens);
+                }
             }
             Parsed::Detach { id, at } => {
                 let Some(call) = self.open.get(&id) else { return };
@@ -919,11 +984,17 @@ impl RunActivity {
             return;
         }
         self.summary.tokens += used;
+        if model.is_none() && self.window_hint.is_none() {
+            return;
+        }
         let catalog = self.catalog.clone();
         let catalog = catalog.as_deref();
-        let Some(model) = model else { return };
-        self.price(catalog, model, &tokens);
-        let window = pricing::context_window_for_name(catalog, model);
+        if let Some(model) = model {
+            self.price(catalog, model, &tokens);
+        }
+        // The harness's own window, when it named one, is the one in force; the catalog's is a guess.
+        let window =
+            self.window_hint.or_else(|| model.and_then(|model| pricing::context_window_for_name(catalog, model)));
         self.summary.context_percent = window.map(|window| {
             let used = (tokens.input_tokens + tokens.cache_read + tokens.cache_write) as f64;
             ((used / window as f64 * 100.0).min(100.0) * 10.0).round() / 10.0
@@ -1155,8 +1226,8 @@ fn count(value: Option<&Value>) -> u64 {
 // `skill.invoked` (every agent-invoked skill also made a `skill` tool call, which is counted), and
 // `assistant.turn_end` (it ends one request round, and the model goes on working after it).
 
-/// An id from a Copilot line, as a plain string: non-empty and not absurdly long.
-fn copilot_id(value: Option<&Value>) -> Option<String> {
+/// An id from a Copilot or Codex line, as a plain string: non-empty and not absurdly long.
+fn plain_id(value: Option<&Value>) -> Option<String> {
     value.and_then(Value::as_str).filter(|id| !id.is_empty() && id.len() <= 200).map(str::to_string)
 }
 
@@ -1166,7 +1237,7 @@ fn parse_copilot_line(line: &str) -> Vec<(Option<String>, Parsed)> {
     let Some(kind) = entry.get("type").and_then(Value::as_str) else { return Vec::new() };
     let empty = Object::new();
     let data = entry.get("data").and_then(Value::as_object).unwrap_or(&empty);
-    let parent = copilot_id(data.get("parentToolCallId"));
+    let parent = plain_id(data.get("parentToolCallId"));
     let own = |event: Parsed| vec![(None, event)];
     let routed = |event: Parsed| vec![(parent.clone(), event)];
     match kind {
@@ -1175,7 +1246,7 @@ fn parse_copilot_line(line: &str) -> Vec<(Option<String>, Parsed)> {
                 return Vec::new();
             }
             // The line's own id keeps the entry's id the same when the file is read again.
-            let id = match copilot_id(entry.get("id")) {
+            let id = match plain_id(entry.get("id")) {
                 Some(id) => format!("prompt-{id}"),
                 None => format!("prompt-{}", at.timestamp_millis()),
             };
@@ -1204,7 +1275,7 @@ fn parse_copilot_line(line: &str) -> Vec<(Option<String>, Parsed)> {
             let context_percent = (input > 0 && limit > 0)
                 .then(|| ((input as f64 / limit as f64 * 100.0).min(100.0) * 10.0).round() / 10.0);
             own(Parsed::Usage {
-                message_id: copilot_id(usage.get("apiCallId")).map(|id| format!("api:{id}")),
+                message_id: plain_id(usage.get("apiCallId")).map(|id| format!("api:{id}")),
                 model: usage.get("model").and_then(Value::as_str).filter(|model| !model.is_empty()).map(str::to_string),
                 at,
                 tokens,
@@ -1213,7 +1284,7 @@ fn parse_copilot_line(line: &str) -> Vec<(Option<String>, Parsed)> {
         }
         "tool.execution_start" => {
             let (Some(id), Some(name)) =
-                (copilot_id(data.get("toolCallId")), data.get("toolName").and_then(Value::as_str))
+                (plain_id(data.get("toolCallId")), data.get("toolName").and_then(Value::as_str))
             else {
                 return Vec::new();
             };
@@ -1232,7 +1303,7 @@ fn parse_copilot_line(line: &str) -> Vec<(Option<String>, Parsed)> {
             routed(Parsed::Start { id, station, label, at, inbound: false })
         }
         "tool.execution_complete" => {
-            let Some(id) = copilot_id(data.get("toolCallId")) else { return Vec::new() };
+            let Some(id) = plain_id(data.get("toolCallId")) else { return Vec::new() };
             // A background `task` returns at once ("Agent started in background …") while its
             // subagent works on: the call stays open until `subagent.completed` (detached, so the model is
             // still seen working meanwhile). Only the result's
@@ -1250,11 +1321,11 @@ fn parse_copilot_line(line: &str) -> Vec<(Option<String>, Parsed)> {
             routed(Parsed::End { id, at, is_error })
         }
         "subagent.completed" | "subagent.failed" => {
-            let Some(id) = copilot_id(data.get("toolCallId")) else { return Vec::new() };
+            let Some(id) = plain_id(data.get("toolCallId")) else { return Vec::new() };
             own(Parsed::Done { id, at, is_error: kind == "subagent.failed" })
         }
         "permission.requested" => {
-            let Some(request) = copilot_id(data.get("requestId")) else { return Vec::new() };
+            let Some(request) = plain_id(data.get("requestId")) else { return Vec::new() };
             // The kind is Copilot's own short word (shell, read, write, url, mcp, memory); anything
             // else, and everything about the request (the commands, the path), is left out.
             let kind = data.get("permissionRequest").and_then(|request| request.get("kind")).and_then(Value::as_str);
@@ -1265,7 +1336,7 @@ fn parse_copilot_line(line: &str) -> Vec<(Option<String>, Parsed)> {
             own(Parsed::Start { id: format!("permission-{request}"), station: Station::You, label, at, inbound: false })
         }
         "permission.completed" => {
-            let Some(request) = copilot_id(data.get("requestId")) else { return Vec::new() };
+            let Some(request) = plain_id(data.get("requestId")) else { return Vec::new() };
             // An answer, approved or denied, is not a failed call; a denied tool fails by itself.
             own(Parsed::Done { id: format!("permission-{request}"), at, is_error: false })
         }
@@ -1353,6 +1424,192 @@ fn classify_copilot_tool(name: &str, input: &Value, mcp: Option<(&str, &str)>) -
     };
     let label = if label.is_empty() { fallback_label(station, claude_name) } else { label };
     Some((station, label))
+}
+
+// ---- Codex lines -----------------------------------------------------------------------------
+
+// Read from two real rollouts, `~/.codex/sessions/YYYY/MM/DD/rollout-<time>-<session id>.jsonl`, of
+// Codex CLI 0.167.2 (2026-11-13): one typed in the terminal, one run with `codex exec`. A line is
+// `{timestamp, ordinal, type, payload}`.
+//
+// The model's only tool is `exec`: one `response_item` of type `custom_tool_call` whose input is
+// JavaScript calling `tools.exec_command(…)`, `tools.apply_patch(…)` or `tools.mcp__<server>__<tool>(…)`,
+// and a `custom_tool_call_output` with the same `call_id`. The call line is on disk while the script
+// runs (measured: 0.12 s after its timestamp, 25 s before the output), so that is the live call, and
+// its tool is named from the script. The tools inside write nothing when they start; each leaves an
+// `item_completed` line (`CommandExecution`, `McpToolCall`, `FileChange`) when it ends, which is not
+// read: the call already stands for it. A script that runs several tools is one call, sorted by the
+// first of them.
+//
+// Read once each, because Codex writes most facts twice: a prompt is the `UserMessage` item (the
+// `response_item` of role user repeats it, and other user-role lines hold AGENTS.md and the
+// environment); a request's usage is `token_usage_record` (`token_count` repeats it, and may carry
+// none). Not read: `reasoning`, `AgentMessage`, `world_state` and `thread_settings_applied`.
+// Not seen in any sample, so not read: approvals, `request_user_input`, subagents (`collaboration`
+// tools), a script that yields before it ends, a script that fails (as against a command that
+// does), and the older `function_call` / `shell` rollouts.
+
+/// A call of one of the tools a script has: `tools.exec_command(`, or `tools.collaboration.spawn_agent(`.
+static CODEX_TOOL_CALL: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(r"\btools\.(?:(?:collaboration|clock|functions)\.)?([A-Za-z_][A-Za-z0-9_]*)\s*\(").unwrap()
+});
+
+/// The `cmd:` property of a call's arguments.
+static CODEX_CMD: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new(r"\bcmd\s*:\s*").unwrap());
+
+fn parse_codex_line(line: &str) -> Vec<Parsed> {
+    let Ok(Value::Object(entry)) = serde_json::from_str::<Value>(line) else { return Vec::new() };
+    let Some(at) = entry.get("timestamp").and_then(Value::as_str).and_then(parse_time) else { return Vec::new() };
+    let Some(Value::Object(payload)) = entry.get("payload") else { return Vec::new() };
+    let kind = payload.get("type").and_then(Value::as_str).unwrap_or("");
+    match (entry.get("type").and_then(Value::as_str).unwrap_or(""), kind) {
+        // The model is named here, once per turn (the usage records do not name it).
+        ("turn_context", _) => {
+            let model = payload.get("model").and_then(Value::as_str).filter(|model| !model.is_empty());
+            vec![Parsed::Setting { model: model.map(str::to_string), window: None }]
+        }
+        ("event_msg", "task_started") => {
+            let window = payload.get("model_context_window").and_then(Value::as_u64);
+            vec![Parsed::Setting { model: None, window }]
+        }
+        ("event_msg", "item_completed") => {
+            let Some(item) = payload.get("item").and_then(Value::as_object) else { return Vec::new() };
+            if item.get("type").and_then(Value::as_str) != Some("UserMessage") {
+                return Vec::new();
+            }
+            // The item's own id keeps the entry's id the same when the file is read again.
+            let id = match plain_id(item.get("id")) {
+                Some(id) => format!("prompt-{id}"),
+                None => format!("prompt-{}", at.timestamp_millis()),
+            };
+            vec![Parsed::Start { id, station: Station::You, label: "Prompt".to_string(), at, inbound: true }]
+        }
+        ("event_msg", "task_complete") => vec![Parsed::TurnEnd { at }],
+        ("response_item", "custom_tool_call") => {
+            let (Some(id), Some(name)) =
+                (plain_id(payload.get("call_id")), payload.get("name").and_then(Value::as_str))
+            else {
+                return Vec::new();
+            };
+            let (station, label) = if name == "exec" {
+                classify_codex_cell(payload.get("input").and_then(Value::as_str).unwrap_or(""))
+            } else {
+                // Another tool of the model's own: named, never described.
+                (Station::Shell, fallback_label(Station::Shell, name))
+            };
+            vec![Parsed::Start { id, station, label, at, inbound: false }]
+        }
+        ("response_item", "custom_tool_call_output") => {
+            let Some(id) = plain_id(payload.get("call_id")) else { return Vec::new() };
+            vec![Parsed::End { id, at, is_error: codex_output_failed(payload.get("output")) }]
+        }
+        ("token_usage_record", _) => {
+            let Some(usage) = payload.get("usage").and_then(Value::as_object) else { return Vec::new() };
+            let (input, cached) = (count(usage.get("input_tokens")), count(usage.get("cached_input_tokens")));
+            let cache_write = count(usage.get("cache_write_input_tokens"));
+            let output = count(usage.get("output_tokens"));
+            if input + output == 0 {
+                return Vec::new();
+            }
+            vec![Parsed::Request {
+                message_id: plain_id(payload.get("response_id")).map(|id| format!("resp:{id}")),
+                at,
+                // `input_tokens` already holds what came from or went to the cache, and
+                // `reasoning_output_tokens` is part of `output_tokens`.
+                input_tokens: input.saturating_sub(cached).saturating_sub(cache_write),
+                output_tokens: output,
+                cache_read: cached,
+                cache_write,
+            }]
+        }
+        _ => Vec::new(),
+    }
+}
+
+/// Sorts one `exec` script into a station and a label from the tools it calls, by the first call.
+/// Only names are taken: the tool's, an MCP server's and tool's, and the command's own name (the
+/// command text is read to find it and is not kept).
+fn classify_codex_cell(script: &str) -> (Station, String) {
+    let Some(call) = CODEX_TOOL_CALL.captures(script) else {
+        // Looking the tool list up (the harness's tool search) or plain JavaScript.
+        return if script.contains("ALL_TOOLS") {
+            (Station::Skills, "Loading tools".to_string())
+        } else {
+            (Station::Shell, "Script".to_string())
+        };
+    };
+    let name = &call[1];
+    let (station, label) = match name {
+        "exec_command" => {
+            let arguments = &script[call.get(0).map_or(0, |whole| whole.end())..];
+            match codex_command(arguments) {
+                Some(command) => classify_shell(&command, ""),
+                None => (Station::Shell, "shell".to_string()),
+            }
+        }
+        "apply_patch" => (Station::Files, "Patch".to_string()),
+        "request_user_input" | "request_user_input_async" => (Station::You, "Question for you".to_string()),
+        "spawn_agent" => (Station::Agents, "Spawn agent".to_string()),
+        "followup_task" => (Station::Agents, "Follow-up task".to_string()),
+        "send_message" => (Station::Agents, "Send message".to_string()),
+        "wait_agent" => (Station::Agents, "Wait for agent".to_string()),
+        "interrupt_agent" => (Station::Agents, "Interrupt agent".to_string()),
+        "list_agents" => (Station::Agents, "List agents".to_string()),
+        // `mcp__<server>__<tool>` is Network; any tool nobody listed lands on Shell, named.
+        other => classify_tool(other, &Value::Null),
+    };
+    let label = clean_label(&label);
+    (station, if label.is_empty() { "shell".to_string() } else { label })
+}
+
+/// The command in `{cmd: "…", …}`, when it is a plain string: JavaScript's escapes are undone, and a
+/// template with `${…}` in it, or a command built in some other way, gives `None`. Long commands are
+/// cut, which is enough to name them.
+fn codex_command(arguments: &str) -> Option<String> {
+    let rest = &arguments[CODEX_CMD.find(arguments)?.end()..];
+    let mut chars = rest.chars().peekable();
+    let quote = chars.next().filter(|quote| matches!(quote, '"' | '\'' | '`'))?;
+    let mut command = String::new();
+    while let Some(c) = chars.next() {
+        if c == quote {
+            return Some(command);
+        }
+        match c {
+            '\\' => command.push(match chars.next()? {
+                'n' => '\n',
+                't' => '\t',
+                'r' => '\r',
+                other => other,
+            }),
+            '$' if quote == '`' && chars.peek() == Some(&'{') => return None,
+            _ => command.push(c),
+        }
+        if command.len() > 8192 {
+            return Some(command);
+        }
+    }
+    None
+}
+
+/// Whether a script's output says a command it ran failed. The output is a header and then the
+/// values the script printed; a command's result is an object with an `exit_code`. Only that number
+/// is read.
+fn codex_output_failed(output: Option<&Value>) -> bool {
+    let texts: Vec<&str> = match output {
+        Some(Value::String(text)) => vec![text.as_str()],
+        Some(Value::Array(items)) => items.iter().filter_map(|item| item.get("text")?.as_str()).collect(),
+        _ => Vec::new(),
+    };
+    texts.into_iter().any(|text| {
+        let text = text.trim_start();
+        text.starts_with('{')
+            && text.len() <= 4 * 1024 * 1024
+            && text.contains("\"exit_code\"")
+            && serde_json::from_str::<Value>(text)
+                .ok()
+                .and_then(|result| result.get("exit_code")?.as_i64())
+                .is_some_and(|code| code != 0)
+    })
 }
 
 // ---- classification --------------------------------------------------------------------------

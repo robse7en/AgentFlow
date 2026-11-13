@@ -604,10 +604,11 @@ fn a_claude_line_means_nothing_to_the_other_harnesses() {
     for harness in ["copilot", "codex", "", "Claude", "gpt"] {
         assert!(parse_line(harness, &line).is_empty(), "{harness:?}");
     }
-    // Claude and Copilot are understood (see activity_copilot.rs); Codex is not yet.
+    // Claude, Copilot and Codex are understood (see activity_copilot.rs, activity_codex.rs).
     assert!(agentflow_core::engine::activity::parses("claude"));
     assert!(agentflow_core::engine::activity::parses("copilot"));
-    assert!(!agentflow_core::engine::activity::parses("codex"));
+    assert!(agentflow_core::engine::activity::parses("codex"));
+    assert!(!agentflow_core::engine::activity::parses("gpt"));
 }
 
 #[test]

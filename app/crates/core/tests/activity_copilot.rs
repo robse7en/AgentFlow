@@ -679,9 +679,10 @@ fn a_malformed_line_gives_nothing_and_does_not_panic() {
 }
 
 #[test]
-fn copilot_is_understood_and_codex_is_not_yet() {
+fn a_copilot_line_means_nothing_to_codex() {
     assert!(parses("copilot"));
     assert!(parses("claude"));
-    assert!(!parses("codex"));
-    assert!(parse_line("codex", &fixture("current.jsonl")[0]).is_empty());
+    for line in fixture("current.jsonl") {
+        assert!(parse_line("codex", &line).is_empty(), "{line}");
+    }
 }

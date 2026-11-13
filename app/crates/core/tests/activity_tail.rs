@@ -579,7 +579,8 @@ fn the_launch_offset_names_the_transcript_and_how_much_was_written() {
     assert_eq!((copilot.path.as_deref(), copilot.offset), (Some(events.as_path()), 0));
     assert!(launch_offset(&copilot).get("subagents").is_none(), "only Claude has subagent transcripts");
 
-    // Codex has no path until the tracker finds the rollout; an unsafe id names nothing.
+    // Codex has no path until a rollout of that id is written (activity_codex.rs finds one); an unsafe
+    // id names nothing.
     assert_eq!(transcript_start(home.path(), "codex", Some("abc-123")).path, None);
     assert_eq!(transcript_start(home.path(), "claude", None).path, None);
     assert_eq!(transcript_start(home.path(), "claude", Some("../etc")).path, None);

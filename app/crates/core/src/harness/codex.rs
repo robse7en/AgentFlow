@@ -104,6 +104,41 @@ fn day_directories_desc(sessions_root: &Path) -> Vec<PathBuf> {
     days
 }
 
+/// How many day folders back [`find_rollout`] looks: a resumed session's file is in the folder of
+/// the day it began.
+const MAX_ROLLOUT_DAYS: usize = 30;
+
+/// The rollout of the session with this id: `sessions_root/YYYY/MM/DD/rollout-<time>-<id>.jsonl`,
+/// newest days first. A file is opened only when its name ends with the id, and then only to read
+/// its first line, so that a long history of large rollouts costs a directory listing each.
+pub fn find_rollout(sessions_root: &Path, session_id: &str) -> Option<PathBuf> {
+    if session_id.is_empty() {
+        return None;
+    }
+    let suffix = format!("-{session_id}.jsonl");
+    let days = subdirs_desc(sessions_root)
+        .into_iter()
+        .flat_map(|year| subdirs_desc(&year))
+        .flat_map(|month| subdirs_desc(&month))
+        .take(MAX_ROLLOUT_DAYS);
+    for day in days {
+        let Ok(entries) = std::fs::read_dir(&day) else { continue };
+        for entry in entries.flatten() {
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if !name.starts_with("rollout-") || !name.ends_with(&suffix) {
+                continue;
+            }
+            let path = entry.path();
+            let Some(meta) = read_session_meta(&path) else { continue };
+            let named = |key: &str| meta.get(key).and_then(Value::as_str) == Some(session_id);
+            if named("session_id") || named("id") {
+                return Some(path);
+            }
+        }
+    }
+    None
+}
+
 /// The payload of a rollout file's first line when it is a `session_meta` entry.
 fn read_session_meta(path: &Path) -> Option<Map<String, Value>> {
     use std::io::BufRead;

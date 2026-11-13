@@ -115,6 +115,9 @@ pub enum Parsed {
     Start { id: String, station: Station, label: String, at: DateTime<Utc>, inbound: bool },
     /// A call finished.
     End { id: String, at: DateTime<Utc>, is_error: bool },
+    /// A call has returned to the model but is still open: its work goes on (a background subagent),
+    /// and a [`Parsed::Done`] ends it later. The model is working again unless something else is.
+    Detach { id: String, at: DateTime<Utc> },
     /// A call the harness reports finished by another route than its own result: a subagent that
     /// ran on after the call that started it returned, or a permission that was answered. It ends
     /// the call, but does not hand the turn back to the model (see [`Parsed::End`]).
@@ -501,6 +504,10 @@ pub struct RunActivity {
     /// Which subagent file each listed subagent entry came from (only the entries still listed).
     #[serde(skip)]
     origins: HashMap<String, String>,
+    /// Open calls that have already returned to the model while their work goes on (a background
+    /// subagent): they do not keep the model from being seen working.
+    #[serde(skip)]
+    detached: HashSet<String>,
 }
 
 /// What changed in a run since the last [`RunActivity::take_delta`]: the new or changed entries
@@ -552,6 +559,7 @@ impl RunActivity {
             sent: None,
             parents: HashMap::new(),
             origins: HashMap::new(),
+            detached: HashSet::new(),
         }
     }
 
@@ -662,6 +670,7 @@ impl RunActivity {
             self.close(&id, call, at, false);
         }
         self.thinking.clear();
+        self.detached.clear();
         self.summary.subagents_in_flight = 0;
         self.summary.ended = true;
     }
@@ -705,6 +714,15 @@ impl RunActivity {
             Parsed::TurnEnd { at } => {
                 self.stop_thinking(&source, at, None);
             }
+            Parsed::Detach { id, at } => {
+                let Some(call) = self.open.get(&id) else { return };
+                let source = call.source.clone();
+                self.detached.insert(id.clone());
+                // The call has returned: the agent is back with the model unless something else runs.
+                if !self.busy(&source) {
+                    self.start_thinking(&source, &id, at);
+                }
+            }
             Parsed::Done { id, at, is_error } => {
                 if let Some(call) = self.open.remove(&id) {
                     self.close(&id, call, at, is_error);
@@ -728,7 +746,7 @@ impl RunActivity {
                 if let Some(call) = self.open.remove(&id) {
                     self.close(&id, call, at, is_error);
                     // With nothing left running, the agent is back with the model.
-                    if !self.open.values().any(|call| call.source == source) {
+                    if !self.busy(&source) {
                         self.start_thinking(&source, &id, at);
                     }
                 }
@@ -786,6 +804,11 @@ impl RunActivity {
             parent_id,
             inbound: false,
         }
+    }
+
+    /// Whether a call of `source` is open that has not yet returned to the model.
+    fn busy(&self, source: &Source) -> bool {
+        self.open.iter().any(|(id, call)| call.source == *source && !self.detached.contains(id))
     }
 
     /// The model starts working on what just happened (a prompt, or the end of its last call).
@@ -859,6 +882,7 @@ impl RunActivity {
     /// totals still count it.
     fn close(&mut self, id: &str, call: OpenCall, at: DateTime<Utc>, is_error: bool) {
         self.dirty.insert(id.to_string());
+        self.detached.remove(id);
         let ended_at = at.max(call.started_at);
         let status = if is_error { CallStatus::Err } else { CallStatus::Ok };
         if let Some(entry) = self.entries.iter_mut().rev().find(|entry| entry.id == id) {
@@ -1210,7 +1234,8 @@ fn parse_copilot_line(line: &str) -> Vec<(Option<String>, Parsed)> {
         "tool.execution_complete" => {
             let Some(id) = copilot_id(data.get("toolCallId")) else { return Vec::new() };
             // A background `task` returns at once ("Agent started in background …") while its
-            // subagent works on: the call stays open until `subagent.completed`. Only the result's
+            // subagent works on: the call stays open until `subagent.completed` (detached, so the model is
+            // still seen working meanwhile). Only the result's
             // opening words are compared, and nothing of it is kept. (The telemetry's
             // `execution_mode` is missing from about 1 in 14 of these.)
             let started_in_background = data
@@ -1219,7 +1244,7 @@ fn parse_copilot_line(line: &str) -> Vec<(Option<String>, Parsed)> {
                 .and_then(Value::as_str)
                 .is_some_and(|content| content.starts_with("Agent started in background"));
             if started_in_background {
-                return Vec::new();
+                return routed(Parsed::Detach { id, at });
             }
             let is_error = data.get("success").and_then(Value::as_bool) == Some(false);
             routed(Parsed::End { id, at, is_error })

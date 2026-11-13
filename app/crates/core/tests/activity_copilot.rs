@@ -490,8 +490,12 @@ fn a_background_task_stays_open_until_its_subagent_completes() {
     let mut run = RunActivity::new("PROJ-1", "architect", 1, 1, 1, "copilot", None);
     // task start, subagent.started, the task's result ("Agent started in background …")
     feed(&mut run, &lines[9..12]);
-    assert!(parse(&lines[11]).is_empty(), "the early result ends nothing");
+    assert!(matches!(&parse(&lines[11])[..], [Parsed::Detach { .. }]), "the early result ends nothing");
     assert_eq!(run.summary.subagents_in_flight, 1, "the pod stays out while the subagent works");
+    let main_thinking = |run: &RunActivity| {
+        run.entries.iter().filter(|e| e.station == Station::Model && !e.by_subagent && e.ended_at.is_none()).count()
+    };
+    assert_eq!(main_thinking(&run), 1, "the main agent is back with the model");
     // its message and calls, then subagent.completed
     feed(&mut run, &lines[12..17]);
     assert_eq!(run.summary.subagents_in_flight, 1);
@@ -504,12 +508,40 @@ fn a_background_task_stays_open_until_its_subagent_completes() {
         other => panic!("{other:?}"),
     };
     assert_eq!(task.ended_at, Some(done));
-    // Finishing the call does not make the model look busy: nothing left open for the main agent.
-    assert!(
-        run.entries
-            .iter()
-            .all(|entry| entry.station != Station::Model || entry.by_subagent || entry.ended_at.is_some())
-    );
+    // Finishing the call does not start the model working again: still the one entry from before.
+    assert_eq!(main_thinking(&run), 1);
+}
+
+#[test]
+fn the_main_agent_is_seen_thinking_while_a_background_subagent_runs() {
+    let lines = vec![
+        event("user.message", &at(0, 0), json!({"content": "hello"})),
+        event("assistant.message", &at(1, 0), json!({"messageId": "m1", "model": "model-a"})),
+        event(
+            "tool.execution_start",
+            &at(1, 10),
+            json!({"toolCallId": "bg1", "toolName": "task", "arguments": {"description": "Look", "mode": "background"}}),
+        ),
+        event(
+            "tool.execution_complete",
+            &at(1, 20),
+            json!({"toolCallId": "bg1", "success": true, "result": {"content": "Agent started in background with agent_id: x."}}),
+        ),
+        event(
+            "tool.execution_start",
+            &at(3, 0),
+            json!({"toolCallId": "t1", "toolName": "view", "arguments": {"path": "src/a.rs"}}),
+        ),
+        event("tool.execution_complete", &at(3, 100), json!({"toolCallId": "t1", "success": true})),
+        event("assistant.message", &at(6, 100), json!({"messageId": "m2", "model": "model-a"})),
+        event("subagent.completed", &at(30, 0), json!({"toolCallId": "bg1"})),
+    ];
+    let run = run_of(&lines);
+    // 0 to 1 s, 1.020 to 3 s (after the task returned) and 3.1 to 6.1 s (after the tool): the dock
+    // is not dark for the subagent's whole life, and each step is not a zero-length tick.
+    assert_eq!(run.summary.busy_ms[&Station::Model], 1000 + 1980 + 3000);
+    assert_eq!(run.summary.subagents_in_flight, 0);
+    assert_eq!(started(&run, "Look").ended_at.map(|t| t.timestamp_millis() % 60_000), Some(30_000));
 }
 
 #[test]

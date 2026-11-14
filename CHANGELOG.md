@@ -41,6 +41,12 @@ version is bumped.
   show calls.
 - Known limits: PowerShell commands such as `Get-Content` show as Shell, not Files. Two Codex roles
   sharing one working folder get no activity, because the session cannot be told apart.
+- Not checked before release: Copilot's activity was verified against real Copilot transcripts (subagents,
+  failed commands, permissions, usage) and in tests, but not on a fresh Copilot run just before this
+  version, because GitHub rate-limited the Copilot CLI's login that day. Neither Copilot nor Codex was run
+  end to end through an AgentFlow-launched task; Codex was run once with `codex exec` and read by the
+  same parser. If a Copilot run shows wrong calls, report it with the transcript's shape and the parser gets
+  a new fixture.
 
 ## 1.1.14 - 2026-11-06
 

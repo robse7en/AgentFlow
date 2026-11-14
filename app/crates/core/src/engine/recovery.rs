@@ -73,6 +73,7 @@ impl Engine {
                         Ok(None) => "Agent is no longer present. Retry explicitly to launch a new run.".to_string(),
                         Ok(Some(agent)) => {
                             self.ensure_screen_tracker(&state, agent);
+                            self.ensure_activity_tracker(&state, agent);
                             "Backend restarted. Resume the existing agent or stop it and retry.".to_string()
                         }
                         Err(error) => {
@@ -140,6 +141,7 @@ impl Engine {
                 return Err(WorkflowError::conflict("No authenticated agent session survives; use Stop & retry"));
             };
             self.ensure_screen_tracker(&state, agent);
+            self.ensure_activity_tracker(&state, agent);
             state.runs[run].state = NodeState::Running.as_str().into();
             state.set_state(node, NodeState::Running, Some("Human resumed the surviving agent"), None);
             let run_id = state.runs[run].id;

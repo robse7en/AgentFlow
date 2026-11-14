@@ -16,6 +16,7 @@ use rusqlite::OptionalExtension;
 use serde::Deserialize;
 use serde_json::{Map, Value, json};
 
+use super::activity;
 use super::lifecycle::{AgentOverride, untracked_tab};
 use super::prompts::{self, PromptContext};
 use super::rules;
@@ -700,6 +701,11 @@ impl Engine {
         )
         .await;
         files::write_json(&run_dir.join("usage-baseline.json"), &baseline).map_err(io_error)?;
+        // Where the activity map starts reading the transcript. It is display-only, so a failure
+        // to write it never stops the launch.
+        let start =
+            activity::transcript_start(adapter.home(), &adapter.config.kind, launch.harness_session_id.as_deref());
+        let _ = files::write_json(&run_dir.join("activity-offset.json"), &activity::launch_offset(&start));
         adapter.prepare_workspace(&cwd, Some(Path::new(&state.task.repository_root)));
         let script = self.write_launcher(&run_dir, &launch, &cwd, state, role.as_str(), run_id).map_err(io_error)?;
         let mut command = self.terminals.shell_command();
@@ -756,6 +762,7 @@ impl Engine {
             // later run of this role can resume.
             state.agents[agent_index].harness_session_id = adapter.capture_session_id(&cwd, launch_started_at).await;
         }
+        self.ensure_activity_tracker(state, agent_index);
         let label = state.nodes[index].label.clone();
         state.log(
             format!("{label} started: {harness_key} in zellij tab '{tab}' (cwd {})", py_str(&cwd)),
@@ -806,6 +813,7 @@ impl Engine {
             agent.status = "exited".into();
             agent.ended_at = Some(DbTime::now());
             self.screen_trackers.cancel(agent.id);
+            self.activity_trackers.cancel(agent.id);
             return Ok(None);
         }
         Ok(Some(index))

@@ -1,17 +1,22 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { NodeState, WorkflowNodeDto } from '@/api/types'
+import { formatTokens } from '@/activity/runs'
 import { formatNzd } from '@/currency'
 import { formatElapsed, parseTimestamp, useNow } from '@/now'
+import { useActivityStore } from '@/stores/activity'
 import { hasUsage, tokenRuns, usageDetail, useUsdToNzdRate } from '@/usage'
 
 // The card's footer: how long the current (or last) run has taken, ticking while it runs, and
 // what the node's runs have cost. Usage is only collected once a run exits, so while one is
-// live the cost is the settled total of the earlier runs plus a "+ run N…" marker.
+// live the cost is the settled total of the earlier runs plus a "+ run N…" marker. When the
+// agent's transcript is being followed, the live run's own spend (an estimate from its usage so
+// far) is added instead, and the settled figure takes over once the run exits.
 const LIVE_RUN_STATES: NodeState[] = ['RUNNING', 'WAITING_FOR_USER', 'WAITING_FOR_APPROVAL']
 
-const props = defineProps<{ node: WorkflowNodeDto }>()
+const props = defineProps<{ node: WorkflowNodeDto; taskKey: string }>()
 const usdToNzdRate = useUsdToNzdRate()
+const activity = useActivityStore()
 
 const run = computed(() => props.node.lastRun)
 const live = computed(() => !!run.value && LIVE_RUN_STATES.includes(run.value.state))
@@ -38,7 +43,26 @@ const cost = computed(() => {
   if (u.costUsd !== null) return formatNzd(u.costUsd, usdToNzdRate.value) + (u.runsWithUsage < u.runs ? '*' : '')
   return tokenRuns(u) ? `${u.totalTokens.toLocaleString()} tok` : 'cost unknown'
 })
-const costTitle = computed(() => (usage.value ? usageDetail(usage.value, usdToNzdRate.value) : ''))
+// While the node runs: what its live runs have spent so far, on top of what its earlier runs settled at.
+const spend = computed(() => {
+  if (!['RUNNING', 'WAITING_FOR_USER'].includes(props.node.state)) return null
+  const now = activity.liveCost(props.taskKey, props.node.key)
+  return now && now.tokens > 0 ? now : null
+})
+const liveCost = computed(() => {
+  const now = spend.value
+  if (!now) return null
+  const settled = usage.value
+  const tokens = formatTokens((settled?.totalTokens ?? 0) + now.tokens)
+  const known = now.costUsd !== null && (!settled || settled.costUsd !== null)
+  return known ? `${formatNzd((settled?.costUsd ?? 0) + now.costUsd!, usdToNzdRate.value)} · ${tokens}` : tokens
+})
+const costTitle = computed(() => {
+  if (spend.value) {
+    return "An estimate from the agent's transcript so far, plus what its earlier runs cost. The settled figure replaces it when the run exits."
+  }
+  return usage.value ? usageDetail(usage.value, usdToNzdRate.value) : ''
+})
 </script>
 
 <template>
@@ -52,9 +76,10 @@ const costTitle = computed(() => (usage.value ? usageDetail(usage.value, usdToNz
     </span>
     <span v-else class="dim">{{ idleLabel }}</span>
     <span class="cost" :title="costTitle">
-      <template v-if="cost">{{ cost }}</template>
-      <span v-if="live" class="dim">{{ cost ? ` + run ${run!.runNumber}…` : 'cost after run' }}</span>
-      <span v-else-if="!cost" class="dim">—</span>
+      <template v-if="liveCost">{{ liveCost }}</template>
+      <template v-else-if="cost">{{ cost }}</template>
+      <span v-if="live && !liveCost" class="dim">{{ cost ? ` + run ${run!.runNumber}…` : 'cost after run' }}</span>
+      <span v-else-if="!cost && !liveCost" class="dim">—</span>
     </span>
   </div>
 </template>

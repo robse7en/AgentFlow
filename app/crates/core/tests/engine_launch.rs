@@ -187,6 +187,37 @@ async fn test_new_configuration_gets_a_new_process() {
     assert_eq!(calls.iter().filter(|c| c.starts_with("write_line")).count(), 0);
 }
 
+/// The activity map starts reading a run's transcript where it was when the run launched.
+#[tokio::test]
+async fn launch_records_where_the_activity_map_starts_reading() {
+    let offset_of = |harness: &Harness, run_id: i64| -> Value {
+        let state = harness.load();
+        let run_dir = state.runs.iter().find(|r| r.id == run_id).unwrap().run_dir.clone().unwrap();
+        let text = std::fs::read_to_string(std::path::Path::new(&run_dir).join("activity-offset.json")).unwrap();
+        serde_json::from_str(&text).unwrap()
+    };
+
+    // Claude names its session upfront, but its file does not exist yet.
+    let harness = engine().await;
+    harness.launchable();
+    set_node(&harness, spec::IMPLEMENTER, "READY");
+    let first = run_with(&harness, spec::IMPLEMENTER, RunNodeRequest::default()).await;
+    let run_id = node(&first, spec::IMPLEMENTER)["lastRun"]["id"].as_i64().unwrap();
+    assert_eq!(offset_of(&harness, run_id), json!({"path": null, "offset": 0}));
+
+    // Copilot's file has a known place under the harness's home.
+    let harness = engine().await;
+    harness.launchable();
+    harness.configure(|config| config.agents.implementer.harness = "copilot".into());
+    let home = harness.usable_harnesses();
+    set_node(&harness, spec::IMPLEMENTER, "READY");
+    let launched = run_with(&harness, spec::IMPLEMENTER, RunNodeRequest::default()).await;
+    let run_id = node(&launched, spec::IMPLEMENTER)["lastRun"]["id"].as_i64().unwrap();
+    let session = harness.load().agents.last().unwrap().harness_session_id.clone().unwrap();
+    let events = home.join(".copilot").join("session-state").join(&session).join("events.jsonl");
+    assert_eq!(offset_of(&harness, run_id), json!({"path": events.to_string_lossy(), "offset": 0}));
+}
+
 #[tokio::test]
 async fn test_collector_error_leaves_usage_unknown() {
     let harness = engine().await;

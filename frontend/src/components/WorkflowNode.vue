@@ -18,7 +18,7 @@ defineProps<{
       <ApprovalNode v-else :node="data.node" :task-key="data.taskKey" />
     </div>
     <!-- Gates have no runs to time or cost unless they ran something (a system step). -->
-    <NodeFooter v-if="data.node.kind === 'agent' || data.node.lastRun" :node="data.node" />
+    <NodeFooter v-if="data.node.kind === 'agent' || data.node.lastRun" :node="data.node" :task-key="data.taskKey" />
     <Handle type="source" :position="Position.Right" />
   </div>
 </template>

@@ -37,10 +37,15 @@
   --live: #1f5fbf;
   --live-soft: #e9f0fb;
   --live-glow: #7fb0ee;
-  /* Edge flow-animation colours (the ".wf-edge-flow" dash animation) — a fixed grey/white pair,
-     independent of the theme. */
-  --edge-flow-mid: #9a9a9a;
-  --edge-flow-light: #f5f5f5;
+  /* For the activity panel's HTML parts and the "how to read it" legend (design-spec section 8). */
+  --raised: #f6f4ee;
+  --dim: #8f8a7a;
+  --warn-hot: #b36b00;
+  --live-hot: #2f74db;
+  /* Edge flow-animation colours (the ".wf-edge-flow" dash animation): the dash and its glow. Blue on
+     the light canvas; the dark theme keeps its grey and white. */
+  --edge-flow-mid: rgba(127, 176, 238, 0.6);
+  --edge-flow-light: #1f5fbf;
   --info-soft: #efece3;
   --shadow-1: rgba(70, 60, 30, 0.12);
   --shadow-2: rgba(70, 60, 30, 0.07);
@@ -72,6 +77,33 @@
   --syntax-title: var(--project-blue);
   --syntax-type: var(--project-pink);
   --syntax-meta: var(--project-slate);
+  /* The activity map, tape and current-call line (notes/agent-activity-map/design-spec.md section 8).
+     Their own values: several look like app tokens but differ, so they are not aliases. */
+  --act-ground: #ffffff;
+  --act-canvas: #f8f6f0;
+  --act-raised: #f6f4ee;
+  --act-line: #e3dfd3;
+  --act-strong: #c9c4b4;
+  --act-ink: #1c1b17;
+  --act-ash: #6b675a;
+  --act-dim: #8f8a7a;
+  --act-live: #1f5fbf;
+  --act-live-hot: #2f74db;
+  --act-accent: #4f7a00;
+  --act-accent-hot: #5f9400;
+  --act-ok: #0b7560;
+  --act-warn: #b36b00;
+  --act-warn-hot: #8f5500;
+  --act-red: #c4372f;
+  --act-red-hot: #d9483f;
+  --act-think: #a09b8c;
+  --act-think-hot: #6b675a;
+  --act-glow: rgba(79, 122, 0, 0.07);
+  --act-wash: 0.06;
+  --act-bar-idle: 0.5;
+  /* The map's trail ink and the hull's "waiting for you" text differ by theme in the mockup. */
+  --act-trail: #6b675a;
+  --act-wait-ink: #8f5500;
   --font: "Inter Variable", Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   /* Default elevation for floating panels (popovers, dropdowns). */
@@ -119,6 +151,12 @@
   --live: #7db4f0;
   --live-soft: rgba(125, 180, 240, 0.16);
   --live-glow: #c3dcf8;
+  --raised: #1b1b18;
+  --dim: #6f6b60;
+  --warn-hot: #ffce8a;
+  --live-hot: #c3dcf8;
+  --edge-flow-mid: #9a9a9a;
+  --edge-flow-light: #f5f5f5;
   --info-soft: #1d1d1a;
   --shadow-1: rgba(0, 0, 0, 0.5);
   --shadow-2: rgba(0, 0, 0, 0.35);
@@ -141,5 +179,29 @@
   --code-add-gutter: rgba(62, 201, 167, 0.22);
   --code-del: rgba(239, 107, 99, 0.1);
   --code-del-gutter: rgba(239, 107, 99, 0.24);
+  --act-ground: #151513;
+  --act-canvas: #10100e;
+  --act-raised: #1b1b18;
+  --act-line: #2e2d28;
+  --act-strong: #46443d;
+  --act-ink: #f1eee6;
+  --act-ash: #a29e92;
+  --act-dim: #6f6b60;
+  --act-live: #7db4f0;
+  --act-live-hot: #c3dcf8;
+  --act-accent: #c6f04a;
+  --act-accent-hot: #dcf77a;
+  --act-ok: #3ec9a7;
+  --act-warn: #f0b04a;
+  --act-warn-hot: #ffce8a;
+  --act-red: #ef6b63;
+  --act-red-hot: #ff9e9e;
+  --act-think: #8d897e;
+  --act-think-hot: #d6d2c6;
+  --act-glow: rgba(198, 241, 74, 0.08);
+  --act-wash: 0.07;
+  --act-bar-idle: 0.5;
+  --act-trail: #f1eee6;
+  --act-wait-ink: #f0b04a;
   color-scheme: dark;
 }

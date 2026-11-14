@@ -563,6 +563,7 @@ impl Engine {
         agent.status = "stopped".into();
         agent.ended_at = Some(DbTime::now());
         self.screen_trackers.cancel(agent.id);
+        self.activity_trackers.cancel(agent.id);
     }
 
     /// Align agent rows with the panes positively identified by id before cleanup
@@ -589,6 +590,8 @@ impl Engine {
                 None if agent.status == "running" => {
                     agent.status = "stopped".into();
                     agent.ended_at = Some(DbTime::now());
+                    // Its run is over: nothing more is read, and its open calls end.
+                    self.activity_trackers.cancel(agent.id);
                 }
                 None => {}
             }
@@ -1138,6 +1141,7 @@ impl Engine {
             details[k] = v.clone();
         }
         crate::diagnostics::event("task.deleted", details);
+        self.activity_trackers.forget_task(&key);
         self.broadcaster.broadcast(&json!({"type": "task.deleted", "jiraKey": key}));
         Ok(json!({"jiraKey": key, "deleted": true, "removed": removed}))
     }

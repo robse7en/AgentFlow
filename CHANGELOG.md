@@ -8,6 +8,46 @@ tested. The frontend and Python package versions are independent of desktop vers
 Each version has a local annotated `v<version>` Git tag at the source checkpoint
 shown below. Tags must be pushed separately to share them with other checkouts.
 
+## Unreleased
+
+Source: the `feature/agent-activity-map` branch. Rename this heading and add its `Source:` line when the
+version is bumped.
+
+- **Agent activity map.** Each running agent now shows what it is doing, live, from its own transcript:
+  - The task page is a canvas with an activity column beside it. The Details tabs moved to a slide-in
+    drawer, and the canvas follows the theme (a light canvas in the light theme).
+  - The panel has a "Now" headline (the current call and its clock), vitals (context fill, tokens, spend,
+    steps) and a hull-and-docks map: the model in the middle, and docks for You, AgentFlow, Skills,
+    Agents, Files, Shell, Git and Network. A call travels out to its dock and back, and a subagent
+    appears as a pod on a tether. Waiting for you is amber, a failed call red.
+  - A Map | Tape switch (remembered per viewer) shows the same data as a tape of lanes over time, with
+    a "Run so far" strip.
+  - Each agent card on the canvas shows its current call and live cost. Batons travel along the edges
+    when work is handed on, each Implementer worker shows a mini strip, and a chip counts workers
+    running side by side.
+  - Claude Code, GitHub Copilot and OpenAI Codex are all read. Claude's subagent transcripts are
+    followed and tied to the call that started them, and so are Copilot's subagents and Claude's
+    background agents. A Codex script is shown as one call named from its first tool.
+  - Live tokens and context fill come from each harness's transcript. Cost is shown only when the model's
+    price is known; Copilot has none, because it bills premium requests.
+  - Labels carry names only, never content: a file's last two path parts, a web host, a command or
+    subcommand name, a tool's name. Prompts show as "Prompt". Nothing of a command line, prompt or file
+    is logged or kept.
+  - Updates go to the web page over the existing websocket (at most one every 250 ms per run, only when
+    something changed), and `GET /api/tasks/{key}/activity` returns the whole picture. The task
+    snapshot is unchanged, and the Python backend is untouched: it shows no activity.
+- Codex support was built from Codex CLI 0.167.2 rollouts; earlier formats (`function_call` / `shell`)
+  are not read. Live Copilot tokens and context need Copilot CLI 1.0.105 or later; older versions still
+  show calls.
+- Known limits: PowerShell commands such as `Get-Content` show as Shell, not Files. Two Codex roles
+  sharing one working folder get no activity, because the session cannot be told apart.
+- Not checked before release: Copilot's activity was verified against real Copilot transcripts (subagents,
+  failed commands, permissions, usage) and in tests, but not on a fresh Copilot run just before this
+  version, because GitHub rate-limited the Copilot CLI's login that day. Neither Copilot nor Codex was run
+  end to end through an AgentFlow-launched task; Codex was run once with `codex exec` and read by the
+  same parser. If a Copilot run shows wrong calls, report it with the transcript's shape and the parser gets
+  a new fixture.
+
 ## 1.1.14 - 2026-11-06
 
 Source: the version commit tagged `v1.1.14` on `main`.

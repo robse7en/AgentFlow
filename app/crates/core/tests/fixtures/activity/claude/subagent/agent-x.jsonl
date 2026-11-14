@@ -1,0 +1,5 @@
+{"type":"user","isSidechain":true,"agentId":"x","timestamp":"2026-11-12T10:00:01.500Z","uuid":"s0","message":{"content":"stand-in prompt from the parent"}}
+{"type":"assistant","isSidechain":true,"agentId":"x","timestamp":"2026-11-12T10:00:02.000Z","message":{"id":"msg_sub1","model":"claude-opus-5-5","usage":{"input_tokens":20,"output_tokens":5},"content":[{"type":"tool_use","id":"toolu_sub1","name":"Read","input":{"file_path":"src/lib.rs"}}]}}
+{"type":"user","isSidechain":true,"agentId":"x","timestamp":"2026-11-12T10:00:03.000Z","message":{"content":[{"type":"tool_result","tool_use_id":"toolu_sub1","is_error":false}]}}
+{"type":"assistant","isSidechain":true,"agentId":"x","timestamp":"2026-11-12T10:00:04.000Z","message":{"id":"msg_sub2","model":"claude-opus-5-5","usage":{"input_tokens":30,"output_tokens":5},"content":[{"type":"tool_use","id":"toolu_sub2","name":"Bash","input":{"command":"git status"}}]}}
+{"type":"user","isSidechain":true,"agentId":"x","timestamp":"2026-11-12T10:00:05.000Z","message":{"content":[{"type":"tool_result","tool_use_id":"toolu_sub2","is_error":false}]}}

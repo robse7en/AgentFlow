@@ -1,0 +1,23 @@
+{"type":"session.start","data":{"sessionId":"session-x","copilotVersion":"1.0.105"},"id":"153699ca-6a5f-4a48-be3c-539f6b4f197a","timestamp":"2026-11-13T03:29:12.953Z"}
+{"type":"permission.requested","data":{"requestId":"dc097e80-6ff7-4e5f-8954-c8f80a6839b6","permissionRequest":{"kind":"extension-permission-access"}},"id":"09fdb3cb-5ebc-4e72-a3ec-5da97634dcca","timestamp":"2026-11-13T03:29:28.409Z"}
+{"type":"permission.completed","data":{"requestId":"dc097e80-6ff7-4e5f-8954-c8f80a6839b6","result":{"kind":"denied-interactively-by-user"}},"id":"8f79a1e9-4c5a-47cc-a598-6ed6eeea703d","timestamp":"2026-11-13T03:29:28.414Z"}
+{"type":"hook.start","data":{"hookType":"preToolUse"},"id":"60cd3d87-c5e9-49c7-93a1-50db5944ac3a","timestamp":"2026-11-13T03:29:28.915Z"}
+{"type":"hook.start","data":{"hookType":"preToolUse"},"id":"8743b0c9-12f8-4fb1-8caf-6cdeebede99e","timestamp":"2026-11-13T03:29:29.568Z"}
+{"type":"hook.end","data":{"hookType":"preToolUse"},"id":"7159646e-5f04-42a1-8cee-1e2c7cc334d1","timestamp":"2026-11-13T03:29:31.458Z"}
+{"type":"user.message","data":{"content":"x","delivery":"idle"},"id":"a068dfc7-ca06-429e-a7bb-4a7b61a493e1","timestamp":"2026-11-13T03:29:31.463Z"}
+{"type":"hook.end","data":{"hookType":"preToolUse"},"id":"e6a95615-103b-46f8-a1e8-bfaf82775d6b","timestamp":"2026-11-13T03:29:33.655Z"}
+{"type":"assistant.turn_start","data":{"turnId":"0"},"id":"9ab8cea1-75c7-4253-a611-c60cdf09615e","timestamp":"2026-11-13T03:29:33.673Z"}
+{"type":"session.usage_record","data":{"usage":{"model":"example-model","inputTokens":17966,"outputTokens":203,"cacheReadTokens":0,"cacheWriteTokens":17963,"maxPromptTokens":200000,"apiCallId":"api-call-1"}},"id":"d824a2e6-4762-440c-b6e8-a22fe64b2286","timestamp":"2026-11-13T03:29:38.848Z"}
+{"type":"assistant.message","data":{"messageId":"b6b3c664-0f19-43bc-9c9e-a3a4e6a6c2aa","model":"example-model","content":"x","toolRequests":[]},"id":"e651afa2-8baf-4191-86d9-0f3c4b0d3a41","timestamp":"2026-11-13T03:29:38.859Z"}
+{"type":"tool.execution_start","data":{"toolCallId":"call_khdzokYlwXPJtDZGQ3ulO2vZ","toolName":"powershell","arguments":{"command":"cargo test","description":"Run the tests","mode":"sync"}},"id":"fc819646-4722-4f9f-933d-a01e878296f1","timestamp":"2026-11-13T03:29:38.870Z"}
+{"type":"tool.execution_complete","data":{"toolCallId":"call_khdzokYlwXPJtDZGQ3ulO2vZ","success":true,"result":{"content":"x"}},"id":"760728ac-120e-435c-875a-9ecf2dbd4d07","timestamp":"2026-11-13T03:30:04.400Z"}
+{"type":"assistant.turn_end","data":{"turnId":"0"},"id":"df879df4-3efe-400a-b558-f70d358219b8","timestamp":"2026-11-13T03:30:04.433Z"}
+{"type":"assistant.turn_start","data":{"turnId":"1"},"id":"6571a0c6-0cb4-49ec-a75f-1a48b1acdcff","timestamp":"2026-11-13T03:30:04.435Z"}
+{"type":"session.usage_record","data":{"usage":{"model":"example-model","inputTokens":18195,"outputTokens":5,"cacheReadTokens":17963,"cacheWriteTokens":229,"maxPromptTokens":200000,"apiCallId":"api-call-2"}},"id":"811b0555-a14c-4fcc-8e63-db74b6725c9f","timestamp":"2026-11-13T03:30:05.614Z"}
+{"type":"assistant.message","data":{"messageId":"5312c3d4-89a5-4843-8437-61a85a31883d","model":"example-model","content":"x","toolRequests":[]},"id":"9d0a35cc-8839-4807-9a29-2ece0b1903ae","timestamp":"2026-11-13T03:30:05.623Z"}
+{"type":"assistant.turn_end","data":{"turnId":"1"},"id":"08757f8e-5481-4ee9-a59f-d775db4d3fff","timestamp":"2026-11-13T03:30:05.625Z"}
+{"type":"hook.start","data":{"hookType":"preToolUse"},"id":"340c7f9d-7262-4ba2-a2e4-dca3a08d8076","timestamp":"2026-11-13T03:30:05.630Z"}
+{"type":"hook.end","data":{"hookType":"preToolUse"},"id":"81a08d47-4f8e-4928-adc3-6698d80b733a","timestamp":"2026-11-13T03:30:06.069Z"}
+{"type":"hook.start","data":{"hookType":"preToolUse"},"id":"f3eda970-e3ec-430d-920a-45d2066678cb","timestamp":"2026-11-13T03:30:06.070Z"}
+{"type":"hook.end","data":{"hookType":"preToolUse"},"id":"6c244d36-c2dc-4b74-94d5-3fea0f0b5175","timestamp":"2026-11-13T03:30:06.598Z"}
+{"type":"session.shutdown","data":{"shutdownType":"routine"},"id":"daeafa0e-ac81-4e20-9034-ab9b7248f592","timestamp":"2026-11-13T03:30:06.802Z"}

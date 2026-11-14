@@ -1,4 +1,5 @@
 import type {
+  ActivityMessage,
   AgentOverride,
   LessonDecision,
   RouteEstimate,
@@ -16,6 +17,7 @@ import type {
   Project,
   ProjectPayload,
   RepositoryValidation,
+  RunActivityPayload,
   SystemConfig,
   TaskSnapshot,
   TaskListFilter,
@@ -166,6 +168,8 @@ export const api = {
       body,
     ),
   openQuestions: () => request<OpenQuestionDto[]>('/api/questions?open=true'),
+  /** What the task's agents have been doing, from their transcripts (display-only; held in memory). */
+  activity: (key: string) => request<{ runs: RunActivityPayload[] }>(`/api/tasks/${encodeURIComponent(key)}/activity`),
 
   runNode: (key: string, node: string, override?: AgentOverride | null, meteredApproval?: MeteredApproval) =>
     post<TaskSnapshot>(`/api/tasks/${encodeURIComponent(key)}/nodes/${node}/run`, {
@@ -212,11 +216,12 @@ export interface ProgressEvent {
 
 /**
  * Live task updates: the backend pushes a full snapshot on every state change, the key of a deleted task, the
- * progress steps of long requests, and the whole project list whenever a project changes.
+ * progress steps of long requests, the whole project list whenever a project changes, and small
+ * `activity` updates of what a running agent is doing.
  */
 export function connectEvents(onTask: (task: TaskSnapshot) => void, onStatus: (connected: boolean) => void,
   onTaskDeleted: (jiraKey: string) => void, onProgress?: (event: ProgressEvent) => void,
-  onProjects?: (projects: Project[]) => void): () => void {
+  onProjects?: (projects: Project[]) => void, onActivity?: (message: ActivityMessage) => void): () => void {
   let socket: WebSocket | null = null
   let closed = false
   let retry = 1000
@@ -238,6 +243,8 @@ export function connectEvents(onTask: (task: TaskSnapshot) => void, onStatus: (c
         else if (message.type === 'progress' && typeof message.operation === 'string'
             && typeof message.message === 'string') onProgress?.(message as ProgressEvent)
         else if (message.type === 'projects' && Array.isArray(message.projects)) onProjects?.(message.projects as Project[])
+        else if (message.type === 'activity' && typeof message.runId === 'number' && Array.isArray(message.entries)
+            && message.summary) onActivity?.(message as ActivityMessage)
       } catch {
         /* ignore malformed frames */
       }

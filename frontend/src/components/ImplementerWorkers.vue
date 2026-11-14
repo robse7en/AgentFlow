@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { useTaskStore } from '@/stores/tasks';
 import RunAgentButton from '@/components/RunAgentButton.vue';
 import AgentHeartbeat from '@/components/AgentHeartbeat.vue';
+import NodeNow from '@/components/NodeNow.vue';
 import type { TaskSnapshot, WorkflowNodeDto } from '@/api/types';
 
 const props = defineProps<{ task: TaskSnapshot }>();
@@ -40,8 +41,9 @@ const hasTerminal = (node: WorkflowNodeDto): boolean => props.task.sessions.some
         <details v-for="node in workers" :key="node.key" class="worker">
             <summary>
                 {{ node.label }} <span class="badge" :class="node.state">{{ node.state }}</span>
+                <NodeNow :node="node" :task-key="task.jiraKey" class="worker-now" />
             </summary>
-            <AgentHeartbeat :node="node" />
+            <AgentHeartbeat :node="node" :task-key="task.jiraKey" />
             <p class="brief">{{ node.description }}</p>
             <p class="small">Owns: {{ node.worker?.ownedPaths.join(', ') }}</p>
             <p class="small">Depends on: {{ node.worker?.dependencies.join(', ') || 'None' }}</p>
@@ -73,6 +75,11 @@ const hasTerminal = (node: WorkflowNodeDto): boolean => props.task.sessions.some
 .workers { display: grid; gap: 0.6rem; }
 .worker { border: 1px solid var(--border-strong); border-radius: 6px; padding: 0.75rem; }
 summary { cursor: pointer; }
+/* The worker's current call sits under its name, in the same line as on the canvas card. */
+.worker-now { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.3rem; min-height: 16px; font-family: var(--mono); font-size: 11px; color: var(--text); white-space: nowrap; overflow: hidden; }
+.worker-now.dim { color: var(--muted); }
+.worker-now :deep(.act-glyph) { flex: none; width: 13px; height: 13px; }
+.worker-now :deep(.lb) { overflow: hidden; text-overflow: ellipsis; }
 .brief { white-space: pre-wrap; }
 .path { overflow-wrap: anywhere; }
 .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }

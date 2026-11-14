@@ -2,7 +2,7 @@
 
 AgentFlow's own code is under the [Apache License 2.0](LICENSE); see [NOTICE](NOTICE). Dependencies are pulled in by Cargo, npm
 and pip under their own licenses (see `app/Cargo.lock`, `frontend/package-lock.json` and
-`backend/pyproject.toml`). The repository also contains this data copied from elsewhere:
+`backend/pyproject.toml`). The repository also contains this data and code copied or adapted from elsewhere:
 
 ## HTML5 named character references
 
@@ -15,3 +15,35 @@ Jira renderer decodes text exactly as Python's `html.unescape` does.
 - The entity list itself comes from the [WHATWG HTML Living Standard](https://html.spec.whatwg.org/multipage/named-characters.html),
   Copyright © WHATWG (Apple, Google, Mozilla, Microsoft), under a
   [Creative Commons Attribution 4.0 International License](https://creativecommons.org/licenses/by/4.0/).
+
+## lot-map
+
+The tool and shell-command classifier in `app/crates/core/src/engine/activity.rs` (`classify_tool`,
+`classify_shell`, `host_of`, `clean_label` and `last_two`, which sort a call into Files, Shell, Git,
+Network and so on and shorten it to a label) is adapted from `classify`, `classifyBash`, `hostOf`,
+`clean` and `lastTwo` in `hooks/map.ts` of [lot-map](https://github.com/alexeyw/lot-map) by alexeyw
+(commit `0db5066`), under the MIT license below. The rest of the activity map is original.
+
+```text
+MIT License
+
+Copyright (c) 2026 Aleksei Volodin
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```

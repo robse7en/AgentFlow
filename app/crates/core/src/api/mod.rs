@@ -232,6 +232,7 @@ pub fn router_with_ui(app: Arc<App>, dist: Option<PathBuf>) -> Router {
         .route("/api/tasks/validate-repository", post(tasks::validate_repository))
         .route("/api/tasks/cost-estimate", post(tasks::cost_estimate))
         .route("/api/tasks/{jira_key}", get(tasks::get_task))
+        .route("/api/tasks/{jira_key}/activity", get(tasks::task_activity))
         .route("/api/tasks/{jira_key}/instructions", get(instructions::task))
         .route("/api/tasks/{jira_key}/instructions/{role}", put(instructions::save_task))
         .route("/api/tasks/{jira_key}/instructions/apply", post(instructions::apply))

@@ -190,6 +190,11 @@ impl HarnessAdapter {
         HarnessAdapter { key: key.to_string(), config, kind, home }
     }
 
+    /// The home directory this adapter's harness keeps its files under.
+    pub fn home(&self) -> &Path {
+        &self.home
+    }
+
     // detection ---------------------------------------------------------------------------------
 
     pub async fn detect(&self) -> HarnessCapabilities {

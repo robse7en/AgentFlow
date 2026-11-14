@@ -551,3 +551,105 @@ export interface Project {
 /** Creating a project, or editing one: an edit changes only the fields it sends, and null clears one. */
 export type ProjectPayload = Partial<Pick<Project, 'name' | 'color' | 'description' | 'defaultRepositoryPath'
   | 'defaultProjectRelativePath' | 'defaultBaseBranch' | 'agentOverrides'>>
+
+// ---- agent activity (`GET /api/tasks/{key}/activity` and the `activity` websocket message) ----
+
+/** The nine kinds of work the backend sorts a call into. */
+export type ActivityStation = 'you' | 'model' | 'agentflow' | 'files' | 'shell' | 'git' | 'network' | 'agents' | 'skills'
+export type ActivityStatus = 'run' | 'ok' | 'err'
+
+/** One call. The label is a name, never content. */
+export interface ActivityEntry {
+  id: string
+  station: ActivityStation
+  label: string
+  startedAt: string
+  endedAt: string | null
+  status: ActivityStatus
+  bySubagent: boolean
+  /** The Agents entry a subagent call belongs to (Claude only); null while not known. */
+  parentId: string | null
+  /** A prompt or answer arriving from the person. */
+  inbound: boolean
+}
+
+/** A call without its label, for the whole-run strip. */
+export interface ActivitySpan {
+  station: ActivityStation
+  startedAt: string
+  endedAt: string | null
+  status: ActivityStatus
+  bySubagent: boolean
+  inbound: boolean
+}
+
+/** The context window's fill at one assistant step. */
+export interface ActivityContextStep {
+  at: string
+  percent: number
+}
+
+export interface ActivitySummary {
+  /** Calls begun per station. */
+  counts: Partial<Record<ActivityStation, number>>
+  /** Milliseconds spent in finished calls per station (inbound prompts left out). */
+  busyMs: Partial<Record<ActivityStation, number>>
+  errors: number
+  subagentsInFlight: number
+  model: string | null
+  steps: number
+  contextPercent: number | null
+  tokens: number
+  costUsd: number | null
+  lastWriteAt: string | null
+  /** False: no transcript data for this run. */
+  available: boolean
+  ended: boolean
+}
+
+/** One run as the GET serves it; `spans` and `contextSteps` never come on the websocket. */
+export interface RunActivity {
+  jiraKey: string
+  /** A worker run uses its `worker_<uid>` node key. */
+  nodeKey: string
+  runId: number
+  sessionId: number
+  runNumber: number
+  harness: string
+  /** The newest 80 calls, oldest first. */
+  entries: ActivityEntry[]
+  summary: ActivitySummary
+  spans: ActivitySpan[]
+  contextSteps: ActivityContextStep[]
+}
+
+/** A run as the GET sends it: `spans` and `contextSteps` are left out while they are empty. */
+export type RunActivityPayload = Omit<RunActivity, 'spans' | 'contextSteps'> & {
+  spans?: ActivitySpan[]
+  contextSteps?: ActivityContextStep[]
+}
+
+/** The websocket update: only new or changed entries, plus the summary. */
+export interface ActivityMessage {
+  type: 'activity'
+  jiraKey: string
+  nodeKey: string
+  runId: number
+  sessionId: number
+  runNumber: number
+  harness: string
+  entries: ActivityEntry[]
+  /** Calls that ended after they had left the newest entries (absent when there are none). */
+  spanEnds?: ActivitySpanEnd[]
+  /** The run was rebuilt from a transcript that was replaced: what is held of it is dropped (absent otherwise). */
+  restarted?: boolean
+  summary: ActivitySummary
+}
+
+export interface ActivitySpanEnd {
+  startedAt: string
+  station: ActivityStation
+  bySubagent: boolean
+  endedAt: string
+  status: ActivityStatus
+}

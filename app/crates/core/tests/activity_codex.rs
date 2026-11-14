@@ -95,9 +95,7 @@ fn the_fixtures_are_the_shape_the_tests_rely_on() {
         )
         .unwrap();
         // (A drive path is written `C:\Users` inside JSON.)
-        for word in
-            ["robse7en", "Rob Rodolfo", "C:\\\\", "D:\\\\", "github.com", "creator", "account", "AgentFlow"]
-        {
+        for word in ["robse7en", "Rob Rodolfo", "C:\\\\", "D:\\\\", "github.com", "creator", "account", "AgentFlow"] {
             assert!(!text.to_lowercase().contains(&word.to_lowercase()), "{name} holds {word:?}");
         }
     }

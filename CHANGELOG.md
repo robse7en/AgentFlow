@@ -8,10 +8,9 @@ tested. The frontend and Python package versions are independent of desktop vers
 Each version has a local annotated `v<version>` Git tag at the source checkpoint
 shown below. Tags must be pushed separately to share them with other checkouts.
 
-## Unreleased
+## 1.2.0 - 2026-11-14
 
-Source: the `feature/agent-activity-map` branch. Rename this heading and add its `Source:` line when the
-version is bumped.
+Source: the version commit tagged `v1.2.0` on `main`.
 
 - **Agent activity map.** Each running agent now shows what it is doing, live, from its own transcript:
   - The task page is a canvas with an activity column beside it. The Details tabs moved to a slide-in

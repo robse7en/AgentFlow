@@ -14,11 +14,20 @@ model-free code decides what happens next, and nothing reaches a pull request wi
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 ![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 
-[Quick start](#quick-start) · [Deterministic by design](#deterministic-by-design) · [Ticket as contract](#the-ticket-is-the-contract) · [How it works](#how-it-works) · [Common concerns](#common-concerns) · [Documentation](#documentation) · [Releases](https://github.com/robse7en/AgentFlow/releases)
+[Quick start](#quick-start) · [Watch the agents work](#watch-the-agents-work) · [Deterministic by design](#deterministic-by-design) · [Ticket as contract](#the-ticket-is-the-contract) · [How it works](#how-it-works) · [Common concerns](#common-concerns) · [Documentation](#documentation) · [Releases](https://github.com/robse7en/AgentFlow/releases)
 
-<img src="docs/assets/agentflow-demo.gif" alt="A task moving through AgentFlow: the Architect asks a question, requirements are approved, the implementer and both reviewers run, and the task reaches Ready for PR" width="900">
+<img src="docs/assets/agentflow-demo.gif" alt="The AgentFlow task page in the light theme: the Implementer works while the activity panel shows its current call, context, spend and the hull-and-docks map with a subagent pod; the view switches between Map and Tape, the canvas follows the code and security reviews, a fix round and the second reviews, and the same map is shown again in the dark theme" width="900">
 
 <sub>Recorded with a scripted demo agent on a sample repository. Real runs use your own coding CLI.</sub>
+
+<details>
+<summary><b>Watch the whole flow</b> (75 s): create a task, answer the Architect, approve, review, fix and reach Ready for PR</summary>
+<br>
+<img src="docs/assets/agentflow-full-flow.gif" alt="One task from start to finish in AgentFlow, in the light theme: the task is created, the Architect asks a question, the requirements are approved, the Implementer works while the activity map shows its calls, a reviewer raises a blocking finding, the fix round and second reviews run with the canvas following, final verification runs, the page switches to the dark theme and the task reaches Ready for PR" width="900">
+</details>
+
+**New in 1.2: the [agent activity map](docs/activity-map.md).** See every call a running agent makes, live,
+beside a canvas that follows the work. [Changelog](CHANGELOG.md#120---2026-11-14)
 
 </div>
 
@@ -37,6 +46,31 @@ CLIs you already use:
   coming back.
 - **Bring your own agents.** Mix harnesses per role, for example a Claude Code architect, a Codex
   implementer and a Copilot reviewer. AgentFlow never holds your model credentials.
+- **You can see what every agent is doing.** The task page shows each running agent's calls, context
+  and spend as they happen, read from the agent's own transcript.
+
+## Watch the agents work
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/task-page-dark.png">
+  <img src="docs/assets/task-page-light.png" alt="The AgentFlow task page: the workflow canvas with the Implementer running, and the agent activity panel beside it with the current call, context, spend and the hull-and-docks map" width="900">
+</picture>
+
+The task page puts the workflow canvas beside a live activity panel:
+
+- **A canvas that follows the work.** The camera centres on the running stage and moves with the task,
+  from the Implementer to both reviews and back through each fix round. Agent cards show the current
+  call and the cost so far, and batons travel along the edges as work is handed on.
+- **An activity map for each agent.** The model sits in a hull with docks for You, AgentFlow, Skills,
+  Agents, Files, Shell, Git and Network. Every call travels out to its dock and back, and subagents
+  appear as pods on tethers. Waiting for you shows amber and a failed call red.
+- **Now, vitals and a tape.** A headline shows the current call and its clock. Beside it are the
+  context fill, the spend and the steps so far. Switch to the tape to see the run as lanes over time.
+- **Light or dark.** The canvas and the map follow the app's theme.
+
+Activity is read from Claude Code, Codex and GitHub Copilot CLI transcripts in the desktop app. Labels
+carry names only, such as a file's last two path parts or a command's name, never a prompt or file's
+content. See [The task page and the agent activity map](docs/activity-map.md).
 
 ## Deterministic by design
 
@@ -98,6 +132,7 @@ the agents. See [Jira integration](docs/configuration.md#agentflows-own-jira-res
 | 🛠️ **Direct or parallel implementation** | One implementer, or up to three workers in separate worktrees whose work is merged before review. |
 | 🔍 **Parallel code and security review** | Normalised findings (`CODE-001`, `SEC-001`) shown on the reviewed code, with a counted fix loop. |
 | 🧪 **Independent verification** | Your own test commands run against the checkpoint. Reviewers see their output, and the implementer's summary is labelled as unverified. |
+| 📡 **Agent activity map** | Each running agent's calls, context and spend, live on a hull-and-docks map or a tape, beside a canvas that follows the work. |
 | 🖥️ **Live terminals** | Each agent runs in a terminal tab you can watch or attach to: built-in terminals in the desktop app, Zellij from source. |
 | 🔁 **Retries and recovery** | Retry briefings carry the failed attempt's context. Automatic retries are opt-in. Nothing relaunches without you after a restart. |
 | 💸 **Budgets and estimates** | Optional API budgets, metered-launch approvals, and cost estimates based on past runs. |
@@ -238,6 +273,7 @@ and writes `config.json`. Open the pairing link the backend prints, and you're i
 | [Installing AgentFlow](docs/installation.md) | Desktop app, prerequisites, MCP setup, guided and manual install, starting the server |
 | [Configuration](docs/configuration.md) | `config.json`, harnesses, Jira, GitHub PR sync, Slack, worktree cleanup, Zellij |
 | [How the workflow runs](docs/workflow.md) | Your first task, agent questions, task files, cost estimates, reviewed lessons |
+| [The task page and the activity map](docs/activity-map.md) | The canvas camera, the Details drawer, the activity panel, which transcripts are read |
 | [Approvals, retries and recovery](docs/approvals-and-recovery.md) | Approval protection, overrides, the fix loop, retry briefings, automatic retries |
 | [`flowctl`](docs/flowctl.md) | The CLI agents use to report questions, findings and results |
 | [Parallel workers](docs/implementer-workers.md) | Splitting work across up to three implementer workers |

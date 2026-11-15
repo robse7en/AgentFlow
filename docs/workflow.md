@@ -90,7 +90,7 @@ Claude Code or Copilot CLI headless, with every tool disabled, on your own login
    canvas (see [Agent questions](#agent-questions)); answer there, in the **Decisions** inbox, or in Slack.
    AgentFlow sends that one-line answer to the tracked agent pane and marks the agent running again once its last
    question is answered. When done it writes `requirements/*.md` and calls `flowctl complete`.
-4. **Approve requirements.** Review requirements, acceptance criteria, assumptions, plan and risks in the side panel.
+4. **Approve requirements.** Review requirements, acceptance criteria, assumptions, plan and risks in the **Details** drawer (task header → *Details*).
     The embedded pane is read-only; attach manually for freeform discussion if needed, then *Approve*.
 5. **Run the Implementer.** It implements the plan and calls `flowctl complete` with a structured result; AgentFlow
    commits a checkpoint and records the SHA.
@@ -114,7 +114,7 @@ If the maximum number of review iterations is reached with blocking findings lef
 third time, or a reviewer upholds a finding the implementer disputed, the task becomes `NEEDS_HUMAN_REVIEW` and lists
 the remaining findings. You may still run the Implementer manually to continue.
 
-Every step is logged in the task's event log (side panel → Events).
+Every step is logged in the task's event log (**Details** drawer → Events).
 
 ## Agent questions
 

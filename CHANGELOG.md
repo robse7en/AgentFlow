@@ -8,6 +8,16 @@ tested. The frontend and Python package versions are independent of desktop vers
 Each version has a local annotated `v<version>` Git tag at the source checkpoint
 shown below. Tags must be pushed separately to share them with other checkouts.
 
+## Unreleased
+
+Source: the fix commit on `main`. Rename this heading and add its `Source:` line when the version is bumped.
+
+- On Windows, an untracked `CONOUT$` file in a task worktree no longer counts as a change to it or goes
+  into a checkpoint commit. A Claude Code agent launched there can leave that 9-byte file behind (a program
+  opening the console by name through a POSIX layer creates a real file), and it made every Architect plan
+  fail with "Planning changed the task worktree; inspect it before retrying". Only the desktop app is fixed;
+  the Python backend still has the old check.
+
 ## 1.2.0 - 2026-11-14
 
 Source: the version commit tagged `v1.2.0` on `main`.

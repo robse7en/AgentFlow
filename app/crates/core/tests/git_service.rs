@@ -761,6 +761,41 @@ async fn checkpoint_commits_changes_as_agentflow_and_reports_the_sha() {
     assert_eq!((same, committed), (sha, false));
 }
 
+// An agent launched in a worktree on Windows can leave a `CONOUT$` file behind (a console write
+// that became a real file). It must not block planning as "changed the worktree" nor be committed
+// into a checkpoint with the agent's work.
+#[tokio::test]
+async fn console_artifact_does_not_dirty_the_worktree_or_enter_a_checkpoint() {
+    // On Windows a plain `...\CONOUT$` path opens the console device; a verbatim path makes the file.
+    fn console_file(dir: &Path) -> PathBuf {
+        let path = dir.join("CONOUT$");
+        if cfg!(windows) && !path.to_string_lossy().starts_with(r"\\?\") {
+            PathBuf::from(format!(r"\\?\{}", path.display()))
+        } else {
+            path
+        }
+    }
+    let f = Fixture::new();
+    f.create().await.unwrap();
+    let tree = Fixture::p(&f.path);
+    std::fs::write(console_file(&f.path), "\x1b[2;7;3,|").unwrap();
+    std::fs::create_dir_all(f.path.join("sub")).unwrap();
+    std::fs::write(console_file(&f.path.join("sub")), "x").unwrap();
+    let status = f.out(&["-C", &tree, "status", "--porcelain", "--untracked-files=all"]);
+    assert!(status.contains("?? CONOUT$") && status.contains("?? sub/CONOUT$"), "{status}");
+
+    assert!(!f.service.is_dirty(&f.path).await.unwrap());
+    let head = f.out(&["-C", &tree, "rev-parse", "HEAD"]);
+    assert_eq!(f.service.checkpoint(&f.path, "review", false).await.unwrap(), (head, false));
+
+    std::fs::write(f.path.join("work.txt"), "x").unwrap();
+    assert!(f.service.is_dirty(&f.path).await.unwrap());
+    let (_, committed) = f.service.checkpoint(&f.path, "AgentFlow checkpoint", true).await.unwrap();
+    assert!(committed);
+    assert_eq!(f.out(&["-C", &tree, "show", "--name-only", "--format=", "HEAD"]), "work.txt");
+    assert!(console_file(&f.path).exists());
+}
+
 #[tokio::test]
 async fn inspect_repository_lists_local_and_remote_branches() {
     let f = Fixture::new();

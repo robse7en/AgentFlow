@@ -81,6 +81,11 @@ const SHORT: Duration = Duration::from_secs(30);
 /// A push may run the repository's pre-push hooks.
 const PUSH_TIMEOUT: Duration = Duration::from_secs(600);
 const IDENTITY: [&str; 4] = ["-c", "user.name=AgentFlow", "-c", "user.email=agentflow@local"];
+/// Everything under the working directory except files named `CONOUT$`. On Windows a program that
+/// opens the console by that name through a POSIX layer (Git Bash, an agent launched in a worktree)
+/// creates a real file instead; it is never task work, so it neither dirties a worktree nor goes
+/// into a checkpoint commit.
+const WITHOUT_CONSOLE_ARTIFACTS: [&str; 3] = ["--", ".", ":(exclude,glob)**/CONOUT$"];
 
 pub struct GitService {
     pub command: String,
@@ -480,7 +485,9 @@ impl GitService {
     }
 
     pub async fn is_dirty(&self, cwd: &Path) -> Result<bool> {
-        let result = self.git(&["status", "--porcelain"], Some(cwd), TIMEOUT).await?;
+        let mut args = vec!["status", "--porcelain"];
+        args.extend(WITHOUT_CONSOLE_ARTIFACTS);
+        let result = self.git(&args, Some(cwd), TIMEOUT).await?;
         if !result.ok() {
             return failed(format!("Cannot inspect worktree: {}", result.stderr.trim()));
         }
@@ -516,7 +523,9 @@ impl GitService {
             return failed("Commit the worktree changes before requesting a review checkpoint");
         }
         if commit && self.is_dirty(cwd).await? {
-            self.git(&["add", "-A"], Some(cwd), TIMEOUT).await?.check(Some("git add"))?;
+            let mut add = vec!["add", "-A"];
+            add.extend(WITHOUT_CONSOLE_ARTIFACTS);
+            self.git(&add, Some(cwd), TIMEOUT).await?.check(Some("git add"))?;
             let mut args = IDENTITY.to_vec();
             args.extend(["commit", "-q", "-m", message]);
             let result = self.git(&args, Some(cwd), TIMEOUT).await?;

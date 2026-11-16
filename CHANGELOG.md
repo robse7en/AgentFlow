@@ -8,9 +8,9 @@ tested. The frontend and Python package versions are independent of desktop vers
 Each version has a local annotated `v<version>` Git tag at the source checkpoint
 shown below. Tags must be pushed separately to share them with other checkouts.
 
-## Unreleased
+## 1.2.1 - 2026-11-17
 
-Source: the fix commit on `main`. Rename this heading and add its `Source:` line when the version is bumped.
+Source: the version commit tagged `v1.2.1` on `main`.
 
 - On Windows, an untracked `CONOUT$` file in a task worktree no longer counts as a change to it or goes
   into a checkpoint commit. A Claude Code agent launched there can leave that 9-byte file behind (a program

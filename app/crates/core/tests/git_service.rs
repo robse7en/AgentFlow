@@ -761,20 +761,21 @@ async fn checkpoint_commits_changes_as_agentflow_and_reports_the_sha() {
     assert_eq!((same, committed), (sha, false));
 }
 
+// On Windows a plain `...\CONOUT$` path opens the console device; a verbatim path makes the file.
+fn console_file(dir: &Path) -> PathBuf {
+    let path = dir.join("CONOUT$");
+    if cfg!(windows) && !path.to_string_lossy().starts_with(r"\\?\") {
+        PathBuf::from(format!(r"\\?\{}", path.display()))
+    } else {
+        path
+    }
+}
+
 // An agent launched in a worktree on Windows can leave a `CONOUT$` file behind (a console write
 // that became a real file). It must not block planning as "changed the worktree" nor be committed
 // into a checkpoint with the agent's work.
 #[tokio::test]
 async fn console_artifact_does_not_dirty_the_worktree_or_enter_a_checkpoint() {
-    // On Windows a plain `...\CONOUT$` path opens the console device; a verbatim path makes the file.
-    fn console_file(dir: &Path) -> PathBuf {
-        let path = dir.join("CONOUT$");
-        if cfg!(windows) && !path.to_string_lossy().starts_with(r"\\?\") {
-            PathBuf::from(format!(r"\\?\{}", path.display()))
-        } else {
-            path
-        }
-    }
     let f = Fixture::new();
     f.create().await.unwrap();
     let tree = Fixture::p(&f.path);
@@ -794,6 +795,35 @@ async fn console_artifact_does_not_dirty_the_worktree_or_enter_a_checkpoint() {
     assert!(committed);
     assert_eq!(f.out(&["-C", &tree, "show", "--name-only", "--format=", "HEAD"]), "work.txt");
     assert!(console_file(&f.path).exists());
+}
+
+// Git deletes a worktree's files through a normal path, and Windows refuses to delete a file named
+// `CONOUT$` that way ("Directory not empty") after git has already deregistered the worktree. Every
+// forced removal must finish the delete itself instead of leaving an unregistered directory for a
+// second cleanup.
+#[tokio::test]
+async fn console_artifact_does_not_block_a_forced_worktree_removal() {
+    let f = Fixture::new();
+    f.create().await.unwrap();
+    std::fs::write(console_file(&f.path), "\x1b[2;7;3,|").unwrap();
+    std::fs::create_dir_all(f.path.join("sub")).unwrap();
+    std::fs::write(console_file(&f.path.join("sub")), "x").unwrap();
+    assert!(f.service.remove_worktree(&f.repo, &f.path, false).await.is_err(), "a plain remove refuses");
+    assert!(f.path.exists() && f.registered(&f.path).await);
+
+    let discarded = f.cleanup().await.unwrap();
+    assert!(discarded.iter().any(|l| l.ends_with("CONOUT$")), "{discarded:?}");
+    assert!(!f.path.exists() && !f.registered(&f.path).await);
+
+    f.create().await.unwrap();
+    std::fs::write(console_file(&f.path), "x").unwrap();
+    f.service.remove_task_worktree(&f.repo, &f.path, &f.folder).await.unwrap();
+    assert!(!f.path.exists() && !f.registered(&f.path).await);
+
+    f.create().await.unwrap();
+    std::fs::write(console_file(&f.path), "x").unwrap();
+    f.service.discard_worktree(&f.repo, &f.path).await.unwrap();
+    assert!(!f.path.exists() && !f.registered(&f.path).await);
 }
 
 #[tokio::test]

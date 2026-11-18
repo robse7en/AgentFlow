@@ -551,6 +551,22 @@ impl GitService {
         Ok(())
     }
 
+    /// Force-remove a registered worktree, finishing the delete itself when git cannot. `git
+    /// worktree remove` deregisters before it deletes, so a delete that then fails leaves an
+    /// unregistered directory. On Windows that happens for a `CONOUT$` file (a reserved device
+    /// name git's delete cannot open); Rust's `remove_dir_all` can, so it is retried here rather
+    /// than left for a second cleanup. The caller has already vetted the worktree.
+    async fn force_remove_worktree(&self, root: &Path, path: &Path) -> Result<()> {
+        match self.remove_worktree(root, path, true).await {
+            Err(GitError::Busy(_))
+                if present(path) && Self::find(&self.list_worktrees(root).await?, path).is_none() =>
+            {
+                self.remove_leftover_directory(root, path).await
+            }
+            other => other,
+        }
+    }
+
     /// Remove the task worktree, discarding any modified/untracked/ignored files in it. Returns
     /// the porcelain lines of the modified/untracked files (ignored ones are discarded but not
     /// listed: there can be tens of thousands and the project marked them regenerable).
@@ -623,7 +639,7 @@ impl GitService {
                 event("worktree.cleanup.discarding", json!({"path": path.to_string_lossy(), "count": discarded.len()}));
             }
         }
-        self.remove_worktree(root, path, true).await?;
+        self.force_remove_worktree(root, path).await?;
         if present(path) || Self::find(&self.list_worktrees(root).await?, path).is_some() {
             return Err(GitError::Busy("Worktree cleanup could not be verified".into()));
         }
@@ -745,7 +761,7 @@ impl GitService {
             return failed("Worktree is locked");
         }
         let discarded = if present(path) { self.dirty_paths(path, false).await? } else { Vec::new() };
-        self.remove_worktree(root, path, true).await?;
+        self.force_remove_worktree(root, path).await?;
         if present(path) || Self::find(&self.list_worktrees(root).await?, path).is_some() {
             return failed(format!("Could not verify removal of {}", path.display()));
         }
@@ -931,7 +947,7 @@ impl GitService {
             return failed("Worktree is locked");
         }
         let discarded = if present(path) { self.dirty_paths(path, false).await? } else { Vec::new() };
-        self.remove_worktree(root, path, true).await?;
+        self.force_remove_worktree(root, path).await?;
         if present(path) || Self::find(&self.list_worktrees(root).await?, path).is_some() {
             return failed(format!("Could not verify removal of {}", path.display()));
         }

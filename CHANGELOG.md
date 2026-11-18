@@ -8,7 +8,9 @@ tested. The frontend and Python package versions are independent of desktop vers
 Each version has a local annotated `v<version>` Git tag at the source checkpoint
 shown below. Tags must be pushed separately to share them with other checkouts.
 
-## Unreleased
+## 1.2.3 - 2026-11-18
+
+Source: the version commit tagged `v1.2.3` on `main`.
 
 - A parallel worker can ask for a file outside its ownership with a decision-tree choice that
   carries `grantsPaths`; picking that choice adds the paths to its ownership (refused when they

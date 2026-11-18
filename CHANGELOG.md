@@ -8,9 +8,9 @@ tested. The frontend and Python package versions are independent of desktop vers
 Each version has a local annotated `v<version>` Git tag at the source checkpoint
 shown below. Tags must be pushed separately to share them with other checkouts.
 
-## Unreleased
+## 1.2.2 - 2026-11-18
 
-Source: the fix commit on `main`. Rename this heading and add its `Source:` line when the version is bumped.
+Source: the version commit tagged `v1.2.2` on `main`.
 
 - On Windows, cleaning up a task worktree that holds a `CONOUT$` file (see 1.2.1) no longer fails the
   first time. Git deregistered the worktree, then could not delete a file with that reserved device

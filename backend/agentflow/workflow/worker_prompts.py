@@ -59,6 +59,11 @@ history. Ask via flowctl if your focused brief lacks a required decision.
 {json.dumps(item.owned_paths)}
 Only modify these paths. If changes elsewhere are required, report them as known issues
 for integration or ask the human. Do not modify dependency code outside your ownership.
+To ask for a file or directory outside them, use a decision tree (`flowctl question --file`)
+and give the choice that allows the change `"grantsPaths": ["path/to/file"]` (repository-
+relative, at most 10; not on a choice with a followUp). Picking that choice adds the paths to
+your ownership. Any other answer, even a yes, does not: completion is refused while a file
+outside your ownership differs from your base checkpoint.
 
 ## Acceptance criteria
 {json.dumps(item.acceptance_criteria)}

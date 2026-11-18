@@ -11,6 +11,7 @@ use serde_json::{Map, Value, json};
 
 use super::agents::py_isprintable;
 use super::prompts::py_strip;
+use super::work_plans::clean_owned_path;
 
 /// Between a branch and its follow-up option in an answer line. Labels may not contain its glyph.
 pub const ANSWER_SEPARATOR: &str = " \u{2192} ";
@@ -23,7 +24,11 @@ const LABEL_LIMIT: usize = 250;
 const CONTEXT_LIMIT: usize = 500;
 const FOLLOW_UP_MESSAGE_LIMIT: usize = 500;
 const CHOICE_TEXT_LIMITS: [(&str, usize); 4] = [("detail", 200), ("warning", 120), ("note", 300), ("source", 200)];
-const CHOICE_FIELDS: [&str; 7] = ["label", "recommended", "detail", "warning", "note", "source", "followUp"];
+const CHOICE_FIELDS: [&str; 8] =
+    ["label", "recommended", "detail", "warning", "note", "source", "grantsPaths", "followUp"];
+/// A worker's choice may name files or directories outside its ownership that picking it lets the
+/// worker change (`grantsPaths`); at most this many per choice.
+pub const GRANT_LIMIT: usize = 10;
 const FOLLOW_UP_FIELDS: [&str; 2] = ["message", "choices"];
 
 pub const NO_SUCH_CHOICE: &str = "That choice does not exist";
@@ -112,7 +117,35 @@ fn choice(raw: &Value, field: &str, top_level: bool) -> Result<Value, String> {
             choice.insert("followUp".into(), self::follow_up(follow_up, &format!("{field}.followUp"))?);
         }
     }
+    match raw.get("grantsPaths") {
+        None | Some(Value::Null) => {}
+        Some(_) if choice.contains_key("followUp") => {
+            return Err(format!(
+                "{field}.grantsPaths: a choice with a follow-up cannot grant paths; put them on its options"
+            ));
+        }
+        Some(grants) => {
+            choice.insert("grantsPaths".into(), json!(self::grants(grants, &format!("{field}.grantsPaths"))?));
+        }
+    }
     Ok(Value::Object(choice))
+}
+
+fn grants(raw: &Value, field: &str) -> Result<Vec<String>, String> {
+    let items = match raw {
+        Value::Array(items) if (1..=GRANT_LIMIT).contains(&items.len()) => items,
+        _ => return Err(format!("{field}: must be a list of 1 to {GRANT_LIMIT} paths")),
+    };
+    let mut paths: Vec<String> = Vec::new();
+    for item in items {
+        let Some(path) = item.as_str().and_then(clean_owned_path) else {
+            return Err(format!("{field}: must contain explicit repository-relative files or directories"));
+        };
+        if !paths.contains(&path) {
+            paths.push(path);
+        }
+    }
+    Ok(paths)
 }
 
 fn level(raw: Option<&Value>, field: &str, minimum: usize, top_level: bool) -> Result<Vec<Value>, String> {
@@ -211,4 +244,38 @@ pub fn answer_line(
         }
         _ => Err(NO_SUCH_CHOICE.into()),
     }
+}
+
+fn paths_of(choice: &Value) -> Vec<String> {
+    choice["grantsPaths"].as_array().into_iter().flatten().filter_map(|p| p.as_str().map(String::from)).collect()
+}
+
+/// The paths the picked leaf grants (`grantsPaths`); none for free text or a flat question.
+/// `path` must already have passed `answer_line`.
+pub fn granted_paths(decision: Option<&Value>, path: Option<&[usize]>) -> Vec<String> {
+    let (Some(decision), Some(path)) = (decision, path) else { return Vec::new() };
+    let Some(&first) = path.first() else { return Vec::new() };
+    let mut choice = &decision["choices"][first];
+    if let Some(&second) = path.get(1) {
+        choice = &choice["followUp"]["choices"][second];
+    }
+    paths_of(choice)
+}
+
+/// Every path any choice of the tree would grant, in order, once each.
+pub fn requested_paths(decision: Option<&Value>) -> Vec<String> {
+    let mut paths: Vec<String> = Vec::new();
+    let choices = decision.and_then(|d| d["choices"].as_array()).map(Vec::as_slice).unwrap_or_default();
+    for choice in choices {
+        let options = choice["followUp"]["choices"].as_array().filter(|o| !o.is_empty());
+        let leaves = options.map(|o| o.iter().collect::<Vec<_>>()).unwrap_or_else(|| vec![choice]);
+        for leaf in leaves {
+            for path in paths_of(leaf) {
+                if !paths.contains(&path) {
+                    paths.push(path);
+                }
+            }
+        }
+    }
+    paths
 }

@@ -166,6 +166,11 @@ fn choice_notes(number: &str, choice: &Value) -> Option<String> {
     if !text(choice, "warning").is_empty() {
         parts.push(format!("⚠ {}", escape(text(choice, "warning"))));
     }
+    let grants: Vec<String> =
+        choice["grantsPaths"].as_array().into_iter().flatten().filter_map(Value::as_str).map(escape).collect();
+    if !grants.is_empty() {
+        parts.push(format!("Lets it also change: {}", grants.join(", ")));
+    }
     if !text(choice, "note").is_empty() {
         let source = text(choice, "source");
         let source = if source.is_empty() { String::new() } else { format!(" ({})", escape(source)) };

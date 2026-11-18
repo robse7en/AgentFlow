@@ -164,6 +164,8 @@ def _choice_notes(number: str, choice: dict[str, Any]) -> str | None:
     parts = [escape(choice["detail"])] if choice.get("detail") else []
     if choice.get("warning"):
         parts.append(f"⚠ {escape(choice['warning'])}")
+    if choice.get("grantsPaths"):
+        parts.append("Lets it also change: " + ", ".join(escape(path) for path in choice["grantsPaths"]))
     if choice.get("note"):
         source = f" ({escape(choice['source'])})" if choice.get("source") else ""
         parts.append(f"⚠ Note on \"{escape(choice['label'])}\": {escape(choice['note'])}{source}")

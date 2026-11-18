@@ -137,7 +137,9 @@ tree** (`--file -` with one JSON object on stdin, or a file path):
 `message` is required; `context` (one line, ≤500 characters) and `risk` (`low`/`medium`/`high`) are optional. Up to
 eight `choices`, each with a unique `label` (≤250, no `→`) and optionally `recommended` (the agent's pick, one per
 level), `detail` (≤200), `warning` (≤120), `note` (≤300, the evidence behind the choice) and `source` (where the note
-came from: a repository-relative path or an `https://` URL; needs a note). A top-level choice may carry one `followUp`
+came from: a repository-relative path or an `https://` URL; needs a note). A parallel worker's choice may carry
+`grantsPaths` (1–10 repository-relative files or directories) that picking it adds to the worker's ownership
+(see [implementer workers](implementer-workers.md)). A top-level choice may carry one `followUp`
 with 2–8 choices of its own; nothing deeper. AgentFlow displays notes and sources but never fetches or opens them
 itself (an `https://` source is a link the human may follow). A question that breaks a rule is rejected with the field
 at fault and is not recorded.

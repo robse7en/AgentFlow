@@ -69,7 +69,7 @@ from . import estimates
 from .screen_tracking import ScreenTracker
 from .usage import UsagePending, UsageReport, collect_usage, cost_kind as _cost_kind, prepare_baseline, run_usage
 from .attention import attention_items
-from .decisions import answer_line
+from .decisions import answer_line, granted_paths, requested_paths
 from .projects import clean_overrides, next_color, project_dict, unique_slug
 from .budgets import budget_status, charged_at, launch_blocker, run_charge, unknown_cost_runs_today
 from .models import (
@@ -1950,6 +1950,15 @@ class WorkflowEngine:
                     raise WorkflowError("Run is no longer active", 409)
                 if node.state not in ACTIVE_STATES:
                     raise WorkflowError(f"{node.label} is {node.state}; questions are only accepted while it is running", 409)
+                requested = requested_paths(decision)
+                if requested:
+                    if not node.key.startswith("worker_"):
+                        raise WorkflowError("grantsPaths: only a parallel worker can ask for files outside its "
+                                            "ownership", 422)
+                    conflict = workers.grant_conflict(workers.work_items(session, task),
+                                                      workers.work_item(session, node), requested)
+                    if conflict:
+                        raise WorkflowError(conflict, 409)
                 session.add(AgentQuestion(
                     task_id=task.id, node_run_id=run.id, role=node.role or role, message=message, choices=choices or [],
                     decision=decision,
@@ -1995,6 +2004,13 @@ class WorkflowEngine:
                     node, run = self._resolve_run(session, task, question.role, question.node_run_id)
                     if run.state != NodeState.WAITING_FOR_USER or node.state != NodeState.WAITING_FOR_USER:
                         raise WorkflowError("The agent is no longer waiting for this answer", 409)
+                    # Checked again: another worker may have been granted one of these paths since.
+                    granted = granted_paths(question.decision, path)
+                    item = workers.work_item(session, node) if granted else None
+                    if item is not None:
+                        conflict = workers.grant_conflict(workers.work_items(session, task), item, granted)
+                        if conflict:
+                            raise WorkflowError(conflict, 409)
 
                     agent_session = session.scalar(select(AgentSession).where(
                         AgentSession.task_id == task.id,
@@ -2018,6 +2034,10 @@ class WorkflowEngine:
                     question.answer = answer
                     question.answered = True
                     question.answered_at = _now()
+                    added = workers.grant(item, granted) if item is not None else []
+                    if added:
+                        self._log(session, task, f"{node.label} may now also change: {', '.join(added)}",
+                                  node_key=node.key, data={"grantedPaths": added, "questionUid": question.uid})
                     still_open = self._open_question_count(session, run.id)
                     if still_open:
                         self._set_state(session, task, node, NodeState.WAITING_FOR_USER,
@@ -3000,7 +3020,8 @@ class WorkflowEngine:
             except (GitError, ProcessError, OSError):
                 head_now = None
         attempt = await self._previous_attempt(session, task, role, previous_runs, worktree, head_now,
-                                               item.base_sha if item else None)
+                                               item.base_sha if item else None,
+                                               list(item.owned_paths) if item else None)
         workspace = self.workspace(task)
         # Run directories are per role so the architect's runs (discovery + final) live together.
         role_runs = session.scalars(select(NodeRun).join(WorkflowNode).where(NodeRun.task_id == task.id, WorkflowNode.role == node.role)).all()
@@ -3259,11 +3280,14 @@ class WorkflowEngine:
         return script
 
     async def _previous_attempt(self, session: Session, task: Task, role: str, previous_runs: list[NodeRun],
-                                worktree: Path | None, head: str | None, base_sha: str | None) -> dict[str, Any] | None:
+                                worktree: Path | None, head: str | None, base_sha: str | None,
+                                owned: list[str] | None = None) -> dict[str, Any] | None:
         """The unfinished attempts at this stage in the current review round (the node's trailing FAILED
         runs) for a retry's briefing (prompts.previous_attempt); None when the latest earlier run did not
         fail. `worktree` is given for implementers only: their committed and uncommitted work is listed,
-        measured from where the first unfinished attempt started (`base_sha` when it recorded nothing)."""
+        measured from where the first unfinished attempt started (`base_sha` when it recorded nothing).
+        A worker (`owned` given) also gets the files outside its ownership that differ from `base_sha`,
+        which its completion would be refused for again; left out when git cannot list them."""
         unfinished = []
         for run in sorted(previous_runs, key=lambda r: r.id, reverse=True):
             if run.state != NodeState.FAILED or run.iteration != task.review_iteration:
@@ -3305,6 +3329,17 @@ class WorkflowEngine:
                 uncommitted = None
             attempt["worktree"] = {"path": str(worktree), "startSha": start, "headSha": head,
                                    "committed": committed, "uncommitted": uncommitted}
+            if owned is not None and base_sha and head and uncommitted is not None:
+                since_base: list[str] | None = committed if start == base_sha else []
+                if start != base_sha and head != base_sha:
+                    try:
+                        since_base = await self.git.changed_paths(str(worktree), base_sha, head)
+                    except (GitError, ProcessError, OSError):
+                        since_base = None
+                outside = (workers.outside_ownership(owned, since_base, uncommitted)
+                           if since_base is not None else [])
+                if outside:
+                    attempt["outsideOwnership"] = {"baseSha": base_sha, "paths": outside}
         return attempt
 
     def _build_prompt(self, session: Session, task: Task, node: WorkflowNode, run: NodeRun, run_dir: Path) -> str:

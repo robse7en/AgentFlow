@@ -543,6 +543,13 @@ PROMPT_ATTEMPT_CASES = [
     ("attempt-commits-without-files", {**ATTEMPT, "worktree": {**ATTEMPT["worktree"], "committed": []}}),
     ("attempt-many-commits", {**ATTEMPT, "worktree": {**ATTEMPT["worktree"],
                                                       "committed": [f"src/m{n}.py" for n in range(51)]}}),
+    # A worker whose completion was refused for files outside its ownership.
+    ("attempt-outside-ownership", {**ATTEMPT, "error": "Result could not be accepted: Worker changed files outside "
+                                   "its ownership: src/shared/index.ts", "outsideOwnership": {
+                                       "baseSha": "c" * 40, "paths": ["src/shared/café.ts", "src/shared/index.ts"]}}),
+    ("attempt-outside-ownership-many", {**ATTEMPT, "outsideOwnership": {
+        "baseSha": "c" * 40, "paths": [f"src/x{n}.ts" for n in range(52)]}}),
+    ("attempt-outside-ownership-empty", {**ATTEMPT, "outsideOwnership": {"baseSha": "c" * 40, "paths": []}}),
 ]
 LOCAL_KEY ="LOCAL-550E8400-E29B-41D4-A716-446655440000"
 LOCAL_CTX = dict(jira_key=LOCAL_KEY, branch_name=f"agent/{LOCAL_KEY}",

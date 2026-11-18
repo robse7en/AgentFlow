@@ -8,6 +8,15 @@ tested. The frontend and Python package versions are independent of desktop vers
 Each version has a local annotated `v<version>` Git tag at the source checkpoint
 shown below. Tags must be pushed separately to share them with other checkouts.
 
+## Unreleased
+
+- A parallel worker can ask for a file outside its ownership with a decision-tree choice that
+  carries `grantsPaths`; picking that choice adds the paths to its ownership (refused when they
+  overlap another worker). Before, a human's "yes" to a plain question changed nothing, so every
+  retry re-checked finished work and was refused again for the same file.
+- A worker retried after an ownership refusal is told which files are still outside its ownership
+  and how to restore them or ask for them.
+
 ## 1.2.2 - 2026-11-18
 
 Source: the version commit tagged `v1.2.2` on `main`.

@@ -48,6 +48,19 @@ checkpoints before launch. These operations do not fetch from a remote. Workers 
 changes to their owned paths; AgentFlow verifies the committed diff before accepting completion.
 Worktrees are workflow isolation, not an OS sandbox against unrestricted same-user agents.
 
+A worker that needs a file outside its ownership asks with a decision tree whose approving choice
+lists the paths in `grantsPaths` (repository-relative, at most 10, only on a choice without a
+follow-up). The card and Slack show what each choice would grant. Picking that choice adds the paths
+to the worker's ownership in the same write as the answer and logs it; free text or any other choice
+grants nothing, so a "yes" to a plain question does not widen ownership. AgentFlow refuses the
+question, and checks again when the human answers, if a path overlaps another worker's ownership in
+either direction, and only workers may ask for paths.
+
+When a completion is refused for files outside the ownership, the retry briefing lists the files that
+still differ from the base checkpoint (committed or not, without `CONOUT$` console artifacts) and
+tells the worker to restore them with `git checkout <base> -- <path>` or `git rm`, or to ask for
+them as above. Files granted since then drop out of the list.
+
 Accepted worker completion closes only that worker's tracked terminal before releasing its slot.
 The final integration implementer receives all checkpoint SHAs, summaries, acceptance criteria and
 known issues. It merges the checkpoints, resolves conflicts and runs combined tests in the ticket's

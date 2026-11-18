@@ -20,14 +20,10 @@ class WorkItemPlan(BaseModel):
     @field_validator("owned_paths")
     @classmethod
     def safe_paths(cls, paths: list[str]) -> list[str]:
-        for path in paths:
-            parts = PurePosixPath(path).parts
-            if (not parts or path.startswith("/") or "\\" in path or ":" in path
-                    or any(p.casefold() in ("..", ".git") for p in parts)
-                    or any(p.endswith((".", " ")) for p in parts)
-                    or any(c in path for c in "*?[]\x00\n\r")):
-                raise ValueError("ownedPaths must contain explicit repository-relative files or directories")
-        return [str(PurePosixPath(path)) for path in paths]
+        cleaned = [clean_owned_path(path) for path in paths]
+        if None in cleaned:
+            raise ValueError("ownedPaths must contain explicit repository-relative files or directories")
+        return cleaned
 
 
 class WorkPlan(BaseModel):
@@ -56,6 +52,22 @@ class WorkPlan(BaseModel):
                         if owns_path(a, b) or owns_path(b, a):
                             raise ValueError(f"Overlapping ownership: {left.key} and {right.key}")
         return self
+
+
+def clean_owned_path(path: str) -> str | None:
+    """An explicit repository-relative file or directory, normalized; None when it is not one
+    (absolute, a glob, `..`, `.git`, a drive letter or backslash)."""
+    parts = PurePosixPath(path).parts
+    if (not parts or path.startswith("/") or "\\" in path or ":" in path
+            or any(p.casefold() in ("..", ".git") for p in parts)
+            or any(p.endswith((".", " ")) for p in parts)
+            or any(c in path for c in "*?[]\x00\n\r")):
+        return None
+    return str(PurePosixPath(path))
+
+
+def ownership_overlap(left: list[str], right: list[str]) -> bool:
+    return any(owns_path(a, b) or owns_path(b, a) for a in left for b in right)
 
 
 def owns_path(owner: str, path: str) -> bool:

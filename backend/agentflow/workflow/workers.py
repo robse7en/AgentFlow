@@ -12,7 +12,7 @@ from ..services.workspace import TaskWorkspace
 from . import default_workflow as wf
 from .models import ImplementationResult
 from .states import ACTIVE_STATES, ExecutionMode, NodeKind, NodeState, Role
-from .work_plans import WorkPlan, owns_path
+from .work_plans import WorkPlan, ownership_overlap, owns_path
 
 MAX_WORKERS = 3
 
@@ -29,6 +29,35 @@ def work_item(session, node):
 
 def node_for(task, item):
     return next(node for node in task.nodes if node.id == item.node_id)
+
+
+def grant_conflict(items, item, paths: list[str]) -> str | None:
+    """Why `item` cannot be granted `paths`: one of them overlaps another worker's ownership (either
+    way round), so two workers would change the same file. None when every path is free."""
+    for path in paths:
+        other = next((o for o in items if o.uid != item.uid and ownership_overlap(o.owned_paths, [path])), None)
+        if other is not None:
+            return f"grantsPaths: {path} overlaps the ownership of worker {other.plan_key}"
+    return None
+
+
+def grant(item, paths: list[str]) -> list[str]:
+    """Add `paths` to the worker's ownership; returns the ones it did not own already."""
+    added = [path for path in paths if not any(owns_path(owner, path) for owner in item.owned_paths)]
+    if added:
+        item.owned_paths = [*item.owned_paths, *added]
+    return added
+
+
+def outside_ownership(owned: list[str], committed: list[str], porcelain: list[str]) -> list[str]:
+    """The files a worker's completion would be refused for: changed since its base checkpoint
+    (`committed`) or uncommitted (`git status --porcelain` lines, both sides of a rename), not
+    owned, and not a `CONOUT$` console artifact (never part of a checkpoint)."""
+    paths = set(committed)
+    for line in porcelain:
+        paths.update(line[3:].split(" -> "))
+    return sorted(path for path in paths
+                  if path and path.rsplit("/", 1)[-1] != "CONOUT$" and not any(owns_path(o, path) for o in owned))
 
 
 def completed_results(session, task, items):

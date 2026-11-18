@@ -1,13 +1,60 @@
 //! Durable worker scheduling, called under the task lock.
 use super::states::NodeState;
 use super::store::TaskState;
-use super::work_plans::WorkPlan;
+use super::work_plans::{WorkPlan, ownership_overlap, owns_path};
 use super::{Engine, WorkflowError, spec};
 use crate::db::table::{self, Tracked};
 use crate::db::{DbTime, ImplementationWorkItemRow, Json, WorkflowNodeRow, new_uid};
 use serde_json::{Map, Value, json};
-use std::collections::HashSet;
+use std::collections::{BTreeSet, HashSet};
 use std::path::{Path, PathBuf};
+
+/// A worker's owned files and directories as strings.
+pub(crate) fn owned_paths(item: &ImplementationWorkItemRow) -> Vec<String> {
+    item.owned_paths.0.as_array().into_iter().flatten().filter_map(|p| p.as_str().map(String::from)).collect()
+}
+
+/// Why `item` cannot be granted `paths`: one of them overlaps another worker's ownership (either
+/// way round), so two workers would change the same file. None when every path is free.
+pub(crate) fn grant_conflict(
+    items: &[ImplementationWorkItemRow],
+    item: &ImplementationWorkItemRow,
+    paths: &[String],
+) -> Option<String> {
+    paths.iter().find_map(|path| {
+        items
+            .iter()
+            .find(|o| o.uid != item.uid && ownership_overlap(&owned_paths(o), std::slice::from_ref(path)))
+            .map(|o| format!("grantsPaths: {path} overlaps the ownership of worker {}", o.plan_key))
+    })
+}
+
+/// Add `paths` to the worker's ownership; returns the ones it did not own already.
+pub(crate) fn grant(item: &mut ImplementationWorkItemRow, paths: &[String]) -> Vec<String> {
+    let mut owned = owned_paths(item);
+    let added: Vec<String> =
+        paths.iter().filter(|p| !owned.iter().any(|o| owns_path(o, p))).cloned().collect::<Vec<_>>();
+    if !added.is_empty() {
+        owned.extend(added.iter().cloned());
+        item.owned_paths = Json(json!(owned));
+    }
+    added
+}
+
+/// The files a worker's completion would be refused for: changed since its base checkpoint
+/// (`committed`) or uncommitted (`git status --porcelain` lines, both sides of a rename), not
+/// owned, and not a `CONOUT$` console artifact (never part of a checkpoint).
+pub(crate) fn outside_ownership(owned: &[String], committed: &[String], porcelain: &[String]) -> Vec<String> {
+    let mut paths: BTreeSet<String> = committed.iter().cloned().collect();
+    for line in porcelain {
+        let rest: String = line.chars().skip(3).collect();
+        paths.extend(rest.split(" -> ").map(String::from));
+    }
+    paths
+        .into_iter()
+        .filter(|p| !p.is_empty() && p.rsplit('/').next() != Some("CONOUT$") && !owned.iter().any(|o| owns_path(o, p)))
+        .collect()
+}
 
 impl Engine {
     pub(crate) fn work_items(&self, state: &TaskState) -> Result<Vec<ImplementationWorkItemRow>, WorkflowError> {

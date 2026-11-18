@@ -29,6 +29,24 @@ pub fn owns_path(owner: &str, path: &str) -> bool {
     path == owner || path.starts_with(&(owner + "/"))
 }
 
+/// An explicit repository-relative file or directory, normalized; None when it is not one
+/// (absolute, a glob, `..`, `.git`, a drive letter or backslash).
+pub fn clean_owned_path(path: &str) -> Option<String> {
+    let parts: Vec<_> = path.split('/').filter(|p| !p.is_empty() && *p != ".").collect();
+    if parts.is_empty()
+        || path.starts_with('/')
+        || path.chars().any(|c| "\\:*?[]\0\n\r".contains(c))
+        || parts.iter().any(|p| ["..", ".git"].contains(&p.to_lowercase().as_str()) || p.ends_with(['.', ' ']))
+    {
+        return None;
+    }
+    Some(parts.join("/"))
+}
+
+pub fn ownership_overlap<A: AsRef<str>, B: AsRef<str>>(left: &[A], right: &[B]) -> bool {
+    left.iter().any(|a| right.iter().any(|b| owns_path(a.as_ref(), b.as_ref()) || owns_path(b.as_ref(), a.as_ref())))
+}
+
 fn length(text: &str, min: usize, max: usize) -> bool {
     (min..=max).contains(&text.chars().count())
 }
@@ -56,17 +74,10 @@ impl WorkPlan {
                 return Err("Invalid subtask fields or bounds".into());
             }
             for path in &mut item.owned_paths {
-                let parts: Vec<_> = path.split('/').filter(|p| !p.is_empty() && *p != ".").collect();
-                if parts.is_empty()
-                    || path.starts_with('/')
-                    || path.chars().any(|c| "\\:*?[]\0\n\r".contains(c))
-                    || parts
-                        .iter()
-                        .any(|p| ["..", ".git"].contains(&p.to_lowercase().as_str()) || p.ends_with(['.', ' ']))
-                {
+                let Some(clean) = clean_owned_path(path) else {
                     return Err("ownedPaths must contain explicit repository-relative files or directories".into());
-                }
-                *path = parts.join("/");
+                };
+                *path = clean;
             }
         }
         let mut resolved = HashSet::new();
@@ -84,8 +95,7 @@ impl WorkPlan {
         }
         for (index, left) in self.subtasks.iter().enumerate() {
             for right in &self.subtasks[index + 1..] {
-                if left.owned_paths.iter().any(|a| right.owned_paths.iter().any(|b| owns_path(a, b) || owns_path(b, a)))
-                {
+                if ownership_overlap(&left.owned_paths, &right.owned_paths) {
                     return Err(format!("Overlapping ownership: {} and {}", left.key, right.key));
                 }
             }

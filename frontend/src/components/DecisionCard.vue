@@ -59,7 +59,7 @@ const pre = computed(() => (s.phase === 'pre' ? 'pre' : ''))
 /** Transition delays only while entering, so later hovers react at once. */
 const delay = (ms: number) => (s.phase === 'entering' ? `${ms}ms` : '0ms')
 const ready = () => s.phase === 'idle' || s.phase === 'entering'
-const hasLeaf = (b: DecisionChoiceDto) => !b.followUp && !!(b.detail || b.warning)
+const hasLeaf = (b: DecisionChoiceDto) => !b.followUp && !!(b.detail || b.warning || b.grantsPaths?.length)
 const numbered = (i: number) => s.picked === i || s.chosen?.branch === i
 const footHint = computed(() => hint(view.value, s))
 
@@ -443,6 +443,7 @@ const riskLabel = computed(() => (view.value.risk ? RISK_LABELS[view.value.risk]
                     </span>
                     <span v-if="option.detail" class="dc-detail">{{ option.detail }}</span>
                     <span v-if="option.warning" class="dc-warn">{{ option.warning }}</span>
+                    <span v-if="option.grantsPaths?.length" class="dc-grant">Lets it also change: <code>{{ option.grantsPaths.join(', ') }}</code></span>
                     <span v-if="narrow && option.note && numbered(i)" class="dc-inline-note">
                       <strong>Agent's note:</strong> {{ option.note }}
                       <a v-if="sourceHref(option.source)" :href="sourceHref(option.source)!" target="_blank" rel="noopener noreferrer" class="dc-src">{{ option.source }}</a>
@@ -463,6 +464,7 @@ const riskLabel = computed(() => (view.value.risk ? RISK_LABELS[view.value.risk]
           >
             <span v-if="branch.warning" class="dc-warn">{{ branch.warning }}</span>
             <span v-if="branch.detail" class="dc-detail">{{ branch.detail }}</span>
+            <span v-if="branch.grantsPaths?.length" class="dc-grant">Lets it also change: <code>{{ branch.grantsPaths.join(', ') }}</code></span>
             <span v-if="narrow && branch.note" class="dc-inline-note">
               <strong>Agent's note:</strong> {{ branch.note }}
               <a v-if="sourceHref(branch.source)" :href="sourceHref(branch.source)!" target="_blank" rel="noopener noreferrer" class="dc-src">{{ branch.source }}</a>
@@ -650,6 +652,8 @@ const riskLabel = computed(() => (view.value.risk ? RISK_LABELS[view.value.risk]
 }
 .dc-option.numbered .dc-onum { max-width: 24px; min-width: 22px; opacity: 1; margin-right: 11px; border-width: 1px; }
 .dc-detail { color: var(--muted); font-size: 12.5px; font-weight: 400; }
+.dc-grant { color: var(--muted); font-size: 12px; font-weight: 500; overflow-wrap: anywhere; }
+.dc-grant code { font-size: 11.5px; color: var(--text); }
 .dc-warn {
   align-self: flex-start; background: var(--warn-soft); color: var(--warn); border: 1px solid var(--warn-border);
   font-size: 12px; font-weight: 500; padding: 1px 7px; border-radius: 6px;

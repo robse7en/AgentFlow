@@ -1003,6 +1003,29 @@ fn worktree_facts(worktree: &Value) -> Vec<Vec<String>> {
     facts
 }
 
+/// A worker's files that its completion is refused for, and the two ways out of it.
+fn outside_ownership(base: &str, paths: &[String]) -> Vec<Vec<String>> {
+    let mut listed = vec![
+        format!(
+            "These files differ from your base checkpoint `{base}` but are not in your owned files/directories, so \
+             AgentFlow refuses your completion while they do:"
+        ),
+        String::new(),
+    ];
+    listed.extend(path_list(paths));
+    vec![
+        vec!["### Files outside your ownership".to_string()],
+        listed,
+        vec![format!(
+            "Before you complete, put each one back and commit: `git checkout {base} -- <path>` for a file that exists \
+             in the base checkpoint, `git rm <path>` for one that does not (delete it if it is untracked). If a change \
+             there is really needed, ask the human with a decision tree whose approving choice lists the paths in \
+             `grantsPaths`: only picking that choice adds them to your ownership, so an approval given any other way, \
+             including in the answers above, does not."
+        )],
+    ]
+}
+
 const REVIEWER_ROLES: [&str; 2] = ["code_reviewer", "security_reviewer"];
 
 /// What AgentFlow knows about the unfinished attempts at this stage in the current review round:
@@ -1087,6 +1110,12 @@ pub fn previous_attempt(attempt: &Value) -> String {
     let worktree = attempt.get("worktree").filter(|w| !w.is_null());
     if let Some(worktree) = worktree {
         paragraphs.extend(worktree_facts(worktree));
+    }
+    if let Some(outside) = attempt.get("outsideOwnership").filter(|o| truthy(Some(o))) {
+        let paths = texts(outside.get("paths"));
+        if !paths.is_empty() {
+            paragraphs.extend(outside_ownership(&py_format(&outside["baseSha"]), &paths));
+        }
     }
     let mut guidance = if !launched && count == 1 {
         vec!["It did no work: carry out this stage as briefed above.".to_string()]
@@ -1475,6 +1504,11 @@ history. Ask via flowctl if your focused brief lacks a required decision.
 {owned}
 Only modify these paths. If changes elsewhere are required, report them as known issues
 for integration or ask the human. Do not modify dependency code outside your ownership.
+To ask for a file or directory outside them, use a decision tree (`flowctl question --file`)
+and give the choice that allows the change `"grantsPaths": ["path/to/file"]` (repository-
+relative, at most 10; not on a choice with a followUp). Picking that choice adds the paths to
+your ownership. Any other answer, even a yes, does not: completion is refused while a file
+outside your ownership differs from your base checkpoint.
 
 ## Acceptance criteria
 {criteria}

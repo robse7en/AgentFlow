@@ -19,7 +19,7 @@ from agentflow.database.models import AgentQuestion, Task
 from agentflow.services.chat import slack
 from agentflow.services.chat.base import AnswerPrompt, AnswerRequest
 from agentflow.workflow import default_workflow as wf
-from agentflow.workflow.decisions import ANSWER_SEPARATOR, answer_line, source_allowed
+from agentflow.workflow.decisions import ANSWER_SEPARATOR, answer_line, granted_paths, requested_paths, source_allowed
 from agentflow.workflow.engine import WorkflowError
 from agentflow.workflow.models import QuestionAnswerRequest, QuestionRequest
 from agentflow.workflow.states import NodeState
@@ -147,9 +147,39 @@ def test_context_or_risk_alone_make_a_tree_without_choices():
     (follow_up_option(1, recommended=True), "choices[0].followUp.choices: at most one choice can be recommended"),
     (follow_up_option(1, label="after their invoices close"), "choices[0].followUp.choices: labels must be unique"),
     (follow_up_option(1, note=None), "choices[0].followUp.choices[1].source: needs a note"),
+    (choice(1, grantsPaths="src/a.ts"), "choices[1].grantsPaths: must be a list of 1 to 10 paths"),
+    (choice(1, grantsPaths=[]), "choices[1].grantsPaths: must be a list of 1 to 10 paths"),
+    (choice(1, grantsPaths=[f"src/{n}.ts" for n in range(11)]), "choices[1].grantsPaths: must be a list of 1 to 10"),
+    (choice(1, grantsPaths=[7]), "choices[1].grantsPaths: must contain explicit repository-relative files"),
+    (choice(1, grantsPaths=["/etc/passwd"]), "choices[1].grantsPaths: must contain explicit repository-relative"),
+    (choice(1, grantsPaths=["src/../x"]), "choices[1].grantsPaths: must contain explicit repository-relative"),
+    (choice(1, grantsPaths=["src/*.ts"]), "choices[1].grantsPaths: must contain explicit repository-relative"),
+    (choice(1, grantsPaths=["."]), "choices[1].grantsPaths: must contain explicit repository-relative"),
+    (choice(0, grantsPaths=["src/a.ts"]),
+     "choices[0].grantsPaths: a choice with a follow-up cannot grant paths; put them on its options"),
 ])
 def test_every_rule_rejects_with_the_field_at_fault(data, problem):
     assert problem in rejected(data)
+
+
+def test_grants_are_normalized_and_found_on_the_picked_leaf():
+    data = choice(1, grantsPaths=["./src//shared/index.ts", "src/shared/index.ts", "docs"])
+    data["choices"][0]["followUp"]["choices"][0]["grantsPaths"] = ["docs/a.md"]
+    decision = asked(data).decision
+    assert decision["choices"][1]["grantsPaths"] == ["src/shared/index.ts", "docs"]
+    assert granted_paths(decision, [1]) == ["src/shared/index.ts", "docs"]
+    assert granted_paths(decision, [0, 0]) == ["docs/a.md"]
+    assert granted_paths(decision, [0, 1]) == [] and granted_paths(decision, [2]) == []
+    assert granted_paths(decision, None) == [] and granted_paths(None, [0]) == []
+    assert requested_paths(decision) == ["docs/a.md", "src/shared/index.ts", "docs"]
+    assert requested_paths(None) == []
+
+
+async def test_only_a_worker_can_ask_for_paths(engine, waiting):
+    with pytest.raises(WorkflowError, match="only a parallel worker") as raised:
+        await ask(engine, waiting, choice(1, grantsPaths=["src/a.ts"]))
+    assert raised.value.status_code == 422
+    assert engine.snapshot("TEST-1")["questions"] == []
 
 
 @pytest.mark.parametrize("source, allowed", [

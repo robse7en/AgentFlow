@@ -232,6 +232,8 @@ export interface DecisionChoiceDto {
   /** The agent's evidence for this choice, with where it came from (a repo path or https URL). */
   note?: string
   source?: string
+  /** A worker's leaf choice: files or directories outside its ownership that picking it lets it change. */
+  grantsPaths?: string[]
   /** Only on top-level choices: one more question whose choices are leaves. */
   followUp?: { message: string, choices: DecisionChoiceDto[] }
 }

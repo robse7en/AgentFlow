@@ -470,13 +470,14 @@ impl Engine {
         let run_number = state.runs.iter().filter(|r| r.node_id == node_id).count() + 1;
         // An implementer's HEAD at launch goes into the run's config.json, so a later retry can list
         // what an unfinished attempt committed. Best-effort: an unreadable worktree never blocks a launch.
-        let (worktree, base_sha) = match role {
+        let (worktree, base_sha, owned) = match role {
             Role::Implementer if node_key.starts_with("worker_") => {
                 let item = self.worker_item(state, index)?;
-                (Some(PathBuf::from(&item.worktree_path)), Some(item.base_sha))
+                let owned = super::workers::owned_paths(&item);
+                (Some(PathBuf::from(&item.worktree_path)), Some(item.base_sha), Some(owned))
             }
-            Role::Implementer => (Some(PathBuf::from(&state.task.worktree_path)), None),
-            _ => (None, None),
+            Role::Implementer => (Some(PathBuf::from(&state.task.worktree_path)), None, None),
+            _ => (None, None, None),
         };
         let head_now = match &worktree {
             Some(path) => self.git.head_sha(path).await.ok(),
@@ -490,6 +491,7 @@ impl Engine {
                 worktree.as_deref(),
                 head_now.as_deref(),
                 base_sha.as_deref(),
+                owned.as_deref(),
             )
             .await?;
         let role_node_ids: Vec<i64> =
@@ -852,7 +854,10 @@ impl Engine {
     /// FAILED runs) for a retry's briefing (`prompts::previous_attempt`); None when the latest
     /// earlier run did not fail. `worktree` is given for implementers only: their committed and
     /// uncommitted work is listed, measured from where the first unfinished attempt started
-    /// (`base_sha` when it recorded nothing).
+    /// (`base_sha` when it recorded nothing). A worker (`owned` given) also gets the files outside
+    /// its ownership that differ from `base_sha`, which its completion would be refused for again;
+    /// left out when git cannot list them.
+    #[allow(clippy::too_many_arguments)]
     async fn previous_attempt(
         &self,
         state: &TaskState,
@@ -861,6 +866,7 @@ impl Engine {
         worktree: Option<&Path>,
         head: Option<&str>,
         base_sha: Option<&str>,
+        owned: Option<&[String]>,
     ) -> Result<Option<Value>, WorkflowError> {
         let unfinished: Vec<&NodeRunRow> = state
             .runs
@@ -913,6 +919,23 @@ impl Engine {
             let uncommitted = self.git.dirty_paths(path, false).await.ok();
             attempt["worktree"] = json!({"path": py_str(path), "startSha": start, "headSha": head,
                                          "committed": committed, "uncommitted": uncommitted});
+            if let (Some(owned), Some(base), Some(head), Some(uncommitted)) =
+                (owned, base_sha.filter(|b| !b.is_empty()), head, uncommitted.as_deref())
+            {
+                let since_base = if start.as_deref() == Some(base) {
+                    committed.clone()
+                } else if head == base {
+                    Some(Vec::new())
+                } else {
+                    self.git.changed_paths(path, base, head).await.ok()
+                };
+                let outside = since_base
+                    .map(|since| super::workers::outside_ownership(owned, &since, uncommitted))
+                    .unwrap_or_default();
+                if !outside.is_empty() {
+                    attempt["outsideOwnership"] = json!({"baseSha": base, "paths": outside});
+                }
+            }
         }
         Ok(Some(attempt))
     }

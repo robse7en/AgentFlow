@@ -22,6 +22,8 @@ from __future__ import annotations
 import re
 from typing import Any, Sequence
 
+from .work_plans import clean_owned_path
+
 # Between a branch and its follow-up option in an answer line. Labels may not contain its glyph,
 # so a line splits back into exactly the labels that were picked.
 ANSWER_SEPARATOR = " → "
@@ -34,7 +36,10 @@ LABEL_LIMIT = 250
 CONTEXT_LIMIT = 500
 FOLLOW_UP_MESSAGE_LIMIT = 500
 CHOICE_TEXT_LIMITS = {"detail": 200, "warning": 120, "note": 300, "source": 200}
-CHOICE_FIELDS = ("label", "recommended", "detail", "warning", "note", "source", "followUp")
+CHOICE_FIELDS = ("label", "recommended", "detail", "warning", "note", "source", "grantsPaths", "followUp")
+# A worker's choice may name files or directories outside its ownership that picking it lets the
+# worker change (`grantsPaths`); at most this many per choice.
+GRANT_LIMIT = 10
 FOLLOW_UP_FIELDS = ("message", "choices")
 
 NO_SUCH_CHOICE = "That choice does not exist"
@@ -106,7 +111,26 @@ def _choice(raw: Any, field: str, top_level: bool) -> dict[str, Any]:
             raise ValueError(f"{field}.followUp: follow-up options cannot ask another follow-up "
                              "(one level only)")
         choice["followUp"] = _follow_up(follow_up, f"{field}.followUp")
+    grants = raw.get("grantsPaths")
+    if grants is not None:
+        if "followUp" in choice:
+            raise ValueError(f"{field}.grantsPaths: a choice with a follow-up cannot grant paths; "
+                             "put them on its options")
+        choice["grantsPaths"] = _grants(grants, f"{field}.grantsPaths")
     return choice
+
+
+def _grants(raw: Any, field: str) -> list[str]:
+    if not isinstance(raw, list) or not 1 <= len(raw) <= GRANT_LIMIT:
+        raise ValueError(f"{field}: must be a list of 1 to {GRANT_LIMIT} paths")
+    paths: list[str] = []
+    for item in raw:
+        path = clean_owned_path(item) if isinstance(item, str) else None
+        if path is None:
+            raise ValueError(f"{field}: must contain explicit repository-relative files or directories")
+        if path not in paths:
+            paths.append(path)
+    return paths
 
 
 def _level(raw: Any, field: str, minimum: int, top_level: bool) -> list[dict[str, Any]]:
@@ -175,3 +199,24 @@ def answer_line(choices: Sequence[str], decision: dict[str, Any] | None,
     if not options or not 0 <= path[1] < len(options):
         raise ValueError(NO_SUCH_CHOICE)
     return f"{path[0] + 1}.{path[1] + 1}: {branch['label']}{ANSWER_SEPARATOR}{options[path[1]]['label']}"
+
+
+def granted_paths(decision: dict[str, Any] | None, path: Sequence[int] | None) -> list[str]:
+    """The paths the picked leaf grants (`grantsPaths`); none for free text or a flat question.
+    `path` must already have passed `answer_line`."""
+    if decision is None or path is None:
+        return []
+    choice = decision["choices"][path[0]]
+    if len(path) == 2:
+        choice = choice["followUp"]["choices"][path[1]]
+    return list(choice.get("grantsPaths") or [])
+
+
+def requested_paths(decision: dict[str, Any] | None) -> list[str]:
+    """Every path any choice of the tree would grant, in order, once each."""
+    paths: list[str] = []
+    for choice in (decision or {}).get("choices") or []:
+        leaves = (choice.get("followUp") or {}).get("choices") or [choice]
+        for leaf in leaves:
+            paths += [p for p in leaf.get("grantsPaths") or [] if p not in paths]
+    return paths

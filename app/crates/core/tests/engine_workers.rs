@@ -2,6 +2,7 @@ mod engine_support;
 use agentflow_core::{
     db::{AgentSessionRow, DbTime, Json, WorkflowNodeRow, table::Tracked},
     engine::{
+        agents::clean_ask,
         launch::RunNodeRequest,
         lifecycle::{AgentOverride, CreateTaskRequest},
         spec,
@@ -299,6 +300,118 @@ async fn test_worker_retry_briefing_carries_the_failed_attempt() {
     let worktree = first["worker"]["worktreePath"].as_str().unwrap().to_string();
     let committed: Vec<_> = h.git.calls_of("changed_paths").into_iter().filter(|c| c[0] == worktree).collect();
     assert_eq!(committed, vec![vec![worktree, "a".repeat(40), head]]);
+}
+
+async fn ask_grant(h: &Harness, node: &Value, paths: &[&str]) -> Result<String, agentflow_core::engine::WorkflowError> {
+    let data = json!({"message": "May I register the part in the shared index?", "choices": [
+        {"label": "Yes, edit it", "grantsPaths": paths}, {"label": "No, leave it for integration"}]});
+    let (message, choices, decision) =
+        clean_ask(data["message"].as_str().unwrap(), data.get("choices"), data.get("context"), data.get("risk"))
+            .unwrap();
+    h.engine
+        .agent_decision("TEST-1", "implementer", node["lastRun"]["id"].as_i64(), &message, &choices, decision)
+        .await?;
+    let questions = h.engine.snapshot("TEST-1").unwrap()["questions"].clone();
+    Ok(questions.as_array().unwrap().last().unwrap()["uid"].as_str().unwrap().to_string())
+}
+
+fn owned(h: &Harness, node: &Value) -> Value {
+    workers(h).into_iter().find(|n| n["key"] == node["key"]).unwrap()["worker"]["ownedPaths"].clone()
+}
+
+#[tokio::test]
+async fn test_a_granted_choice_widens_the_workers_ownership() {
+    let h = parallel().await;
+    let nodes = submit(&h, plan(2)).await;
+    let (first, second) = (&nodes[0], &nodes[1]);
+    let declined = ask_grant(&h, second, &["src/shared/index.ts"]).await.unwrap();
+    h.engine.answer_question_path("TEST-1", &declined, &[1], None).await.unwrap();
+    assert_eq!(owned(&h, second), json!(["src/part-1"]));
+
+    let uid = ask_grant(&h, first, &["src/shared/index.ts", "src/part-0/inner.ts"]).await.unwrap();
+    h.engine.answer_question_path("TEST-1", &uid, &[0], None).await.unwrap();
+    assert_eq!(owned(&h, first), json!(["src/part-0", "src/shared/index.ts"]));
+    let events = h.engine.snapshot("TEST-1").unwrap()["events"].clone();
+    assert!(
+        events
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|e| e["message"].as_str().unwrap().contains("may now also change: src/shared/index.ts"))
+    );
+    // The same answer again (Slack after the browser) grants nothing twice.
+    h.engine.answer_question_path("TEST-1", &uid, &[0], None).await.unwrap();
+    assert_eq!(owned(&h, first), json!(["src/part-0", "src/shared/index.ts"]));
+
+    h.git.returns("changed_paths", Outcome::Ok(json!(["src/part-0/a.ts", "src/shared/index.ts"])));
+    assert_eq!(finish(&h, first).await["state"], "COMPLETED");
+}
+
+#[tokio::test]
+async fn test_a_grant_cannot_take_another_workers_paths() {
+    let h = parallel().await;
+    let nodes = submit(&h, plan(2)).await;
+    let (first, second) = (&nodes[0], &nodes[1]);
+    for path in ["src/part-1/x.ts", "src"] {
+        let error = ask_grant(&h, first, &[path]).await.unwrap_err();
+        assert_eq!(error.status, 409);
+        assert!(error.message.contains("overlaps the ownership of worker part-1"), "{error}");
+    }
+    let one = ask_grant(&h, first, &["src/shared"]).await.unwrap();
+    let two = ask_grant(&h, second, &["src/shared/a.ts"]).await.unwrap();
+    h.engine.answer_question_path("TEST-1", &one, &[0], None).await.unwrap();
+    let writes = h.terminals.calls().iter().filter(|c| c.starts_with("write_line")).count();
+    let error = h.engine.answer_question_path("TEST-1", &two, &[0], None).await.unwrap_err();
+    assert_eq!(error.status, 409);
+    assert!(error.message.contains("src/shared/a.ts overlaps the ownership of worker part-0"), "{error}");
+    assert_eq!(h.terminals.calls().iter().filter(|c| c.starts_with("write_line")).count(), writes);
+    assert_eq!(owned(&h, second), json!(["src/part-1"]));
+    h.engine.answer_question_path("TEST-1", &two, &[1], None).await.unwrap();
+}
+
+#[tokio::test]
+async fn test_a_retry_lists_the_files_outside_the_workers_ownership() {
+    let h = parallel().await;
+    let first = submit(&h, plan(4)).await[0].clone();
+    std::fs::create_dir_all(first["worker"]["worktreePath"].as_str().unwrap()).unwrap();
+    h.git.returns("changed_paths", Outcome::Ok(json!(["src/part-0/a.ts", "src/shared/index.ts"])));
+    let result = finish(&h, &first).await;
+    assert_eq!(result["state"], "FAILED");
+    assert!(result["error"].as_str().unwrap().contains("outside its ownership: src/shared/index.ts"));
+    let base = "a".repeat(40);
+    h.git.returns("head_sha", Outcome::Ok(json!("d".repeat(40))));
+    h.git.returns(
+        "dirty_paths",
+        Outcome::Ok(json!([
+            "?? CONOUT$",
+            "?? src/part-0/CONOUT$",
+            " M src/other.ts",
+            "R  src/old.ts -> src/part-0/new.ts"
+        ])),
+    );
+    let key = first["key"].as_str().unwrap();
+    let prompt_of = |snap: &Value| {
+        let retry = snap["nodes"].as_array().unwrap().iter().find(|n| n["key"] == key).unwrap();
+        (
+            retry["lastRun"]["id"].as_i64(),
+            std::fs::read_to_string(retry["lastRun"]["promptPath"].as_str().unwrap()).unwrap(),
+        )
+    };
+    let (retry_run, prompt) =
+        prompt_of(&h.engine.run_node("TEST-1", key, RunNodeRequest::default(), false).await.unwrap());
+    let section = prompt.split("### Files outside your ownership").nth(1).unwrap();
+    let listed: Vec<&str> =
+        section.split("```text").nth(1).unwrap().split("```").next().unwrap().split_whitespace().collect();
+    assert_eq!(listed, ["src/old.ts", "src/other.ts", "src/shared/index.ts"]);
+    assert!(section.contains(&format!("`git checkout {base} -- <path>`")) && section.contains("`grantsPaths`"));
+
+    // Once granted, the retry after the next failure no longer lists the files.
+    let retry = workers(&h).into_iter().find(|n| n["key"] == key).unwrap();
+    let uid = ask_grant(&h, &retry, &["src/shared/index.ts", "src/other.ts", "src/old.ts"]).await.unwrap();
+    h.engine.answer_question_path("TEST-1", &uid, &[0], None).await.unwrap();
+    h.engine.agent_fail("TEST-1", "implementer", retry_run, "Out of context").await.unwrap();
+    let (_, prompt) = prompt_of(&h.engine.run_node("TEST-1", key, RunNodeRequest::default(), false).await.unwrap());
+    assert!(!prompt.contains("### Files outside your ownership"));
 }
 
 #[tokio::test]

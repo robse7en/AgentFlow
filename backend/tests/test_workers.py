@@ -17,7 +17,7 @@ from agentflow.services.git_workspace import GitService
 from agentflow.workflow import default_workflow as wf, worker_prompts, workers
 from agentflow.workflow.prompts import PromptContext
 from agentflow.workflow.engine import WorkflowError
-from agentflow.workflow.models import AgentOverride
+from agentflow.workflow.models import AgentOverride, QuestionRequest
 from agentflow.workflow.states import NodeState
 from agentflow.workflow.work_plans import WorkPlan
 from test_workflow_safety import SHA, add_run, engine, requirements_digest, task_state
@@ -189,6 +189,95 @@ async def test_worker_retry_briefing_carries_the_failed_attempt(parallel_engine)
     assert "src/part-0/api.py" in section and "?? src/part-0/draft.py" in section
     worktree = first["worker"]["worktreePath"]
     engine.git.changed_paths.assert_awaited_once_with(str(Path(worktree)), SHA, "d" * 40)
+
+
+def grant_question(*paths):
+    return QuestionRequest(role="implementer", message="May I register the part in the shared index?", choices=[
+        {"label": "Yes, edit it", "grantsPaths": list(paths)}, {"label": "No, leave it for integration"}])
+
+
+async def ask_grant(engine, node, *paths):
+    question = grant_question(*paths)
+    await engine.agent_question("TEST-1", "implementer", node["lastRun"]["id"], question.message,
+                                question.choices, question.decision)
+    return engine.snapshot("TEST-1")["questions"][-1]["uid"]
+
+
+def owned(engine, node):
+    return next(n["worker"]["ownedPaths"] for n in engine.snapshot("TEST-1")["nodes"] if n["key"] == node["key"])
+
+
+@pytest.mark.asyncio
+async def test_a_granted_choice_widens_the_workers_ownership(parallel_engine):
+    engine = parallel_engine
+    first, second = (await submit_plan(engine, plan(2)))[:2]
+    declined = await ask_grant(engine, second, "src/shared/index.ts")
+    await engine.answer_question("TEST-1", declined, path=[1])
+    assert owned(engine, second) == ["src/part-1"]
+
+    uid = await ask_grant(engine, first, "src/shared/index.ts", "src/part-0/inner.ts")
+    await engine.answer_question("TEST-1", uid, path=[0])
+    assert owned(engine, first) == ["src/part-0", "src/shared/index.ts"]
+    events = engine.snapshot("TEST-1")["events"]
+    assert any("may now also change: src/shared/index.ts" in e["message"] for e in events)
+    # The same answer again (Slack after the browser) grants nothing twice.
+    await engine.answer_question("TEST-1", uid, path=[0])
+    assert owned(engine, first) == ["src/part-0", "src/shared/index.ts"]
+
+    engine.git.changed_paths.return_value = ["src/part-0/a.ts", "src/shared/index.ts"]
+    assert (await finish(engine, first))["state"] == "COMPLETED"
+
+
+@pytest.mark.asyncio
+async def test_a_grant_cannot_take_another_workers_paths(parallel_engine):
+    engine = parallel_engine
+    first, second = (await submit_plan(engine, plan(2)))[:2]
+    for path in ("src/part-1/x.ts", "src"):  # inside the other's directory, or around it
+        with pytest.raises(WorkflowError, match="overlaps the ownership of worker part-1") as raised:
+            await ask_grant(engine, first, path)
+        assert raised.value.status_code == 409
+    # Two workers may ask for the same free file; only the first answer grants it.
+    one, two = await ask_grant(engine, first, "src/shared"), await ask_grant(engine, second, "src/shared/a.ts")
+    await engine.answer_question("TEST-1", one, path=[0])
+    writes = engine.zellij.write_line.await_count
+    with pytest.raises(WorkflowError, match="src/shared/a.ts overlaps the ownership of worker part-0") as raised:
+        await engine.answer_question("TEST-1", two, path=[0])
+    assert raised.value.status_code == 409 and engine.zellij.write_line.await_count == writes
+    assert owned(engine, second) == ["src/part-1"]
+    await engine.answer_question("TEST-1", two, path=[1])  # declining still goes through
+
+
+@pytest.mark.asyncio
+async def test_a_retry_lists_the_files_outside_the_workers_ownership(parallel_engine):
+    engine = parallel_engine
+    first = (await submit_plan(engine))[0]
+    # A prepared worktree keeps its base checkpoint on a retry.
+    Path(first["worker"]["worktreePath"]).mkdir(parents=True)
+    engine.git.changed_paths.return_value = ["src/part-0/a.ts", "src/shared/index.ts"]
+    result = await finish(engine, first)
+    assert result["state"] == "FAILED" and "outside its ownership: src/shared/index.ts" in result["error"]
+    engine.git.head_sha = AsyncMock(return_value="d" * 40)
+    engine.git.dirty_paths = AsyncMock(return_value=["?? CONOUT$", "?? src/part-0/CONOUT$", " M src/other.ts",
+                                                     "R  src/old.ts -> src/part-0/new.ts"])
+    snap = await engine.run_node("TEST-1", first["key"])
+    retry = next(n for n in snap["nodes"] if n["key"] == first["key"])
+    section = Path(retry["lastRun"]["promptPath"]).read_text().split("### Files outside your ownership")[1]
+    listed = section.split("```text")[1].split("```")[0].split()
+    assert listed == ["src/old.ts", "src/other.ts", "src/shared/index.ts"]
+    assert f"`git checkout {SHA} -- <path>`" in section and "`grantsPaths`" in section
+
+    # Once granted, the retry after the next failure no longer lists the file.
+    with engine.db.session() as session:
+        item = next(i for i in workers.work_items(session, engine._load_task(session, "TEST-1"))
+                    if i.uid == first["worker"]["uid"])
+        assert workers.grant(item, ["src/shared/index.ts", "src/other.ts", "src/old.ts", "src/part-0/x"]) == [
+            "src/shared/index.ts", "src/other.ts", "src/old.ts"]
+        session.commit()
+    retry_run = retry["lastRun"]["id"]
+    await engine.agent_fail("TEST-1", "implementer", retry_run, "Out of context")
+    snap = await engine.run_node("TEST-1", first["key"])
+    retry = next(n for n in snap["nodes"] if n["key"] == first["key"])
+    assert "### Files outside your ownership" not in Path(retry["lastRun"]["promptPath"]).read_text()
 
 
 @pytest.mark.asyncio

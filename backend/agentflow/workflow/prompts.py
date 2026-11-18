@@ -642,6 +642,20 @@ def _worktree_facts(worktree: dict[str, Any]) -> list[list[str]]:
     return facts
 
 
+def _outside_ownership(base: str, paths: list[str]) -> list[list[str]]:
+    """A worker's files that its completion is refused for, and the two ways out of it."""
+    return [
+        ["### Files outside your ownership"],
+        [f"These files differ from your base checkpoint `{base}` but are not in your owned files/directories, "
+         "so AgentFlow refuses your completion while they do:", "", *_path_list(paths)],
+        [f"Before you complete, put each one back and commit: `git checkout {base} -- <path>` for a file that "
+         "exists in the base checkpoint, `git rm <path>` for one that does not (delete it if it is untracked). If a "
+         "change there is really needed, ask the human with a decision tree whose approving choice lists the paths "
+         "in `grantsPaths`: only picking that choice adds them to your ownership, so an approval given any other "
+         "way, including in the answers above, does not."],
+    ]
+
+
 _REVIEWER_ROLES = ("code_reviewer", "security_reviewer")
 
 
@@ -688,6 +702,9 @@ def previous_attempt(attempt: dict[str, Any]) -> str:
     worktree = attempt.get("worktree")
     if worktree is not None:
         paragraphs += _worktree_facts(worktree)
+    outside = attempt.get("outsideOwnership")
+    if outside and outside.get("paths"):
+        paragraphs += _outside_ownership(outside["baseSha"], outside["paths"])
     if not launched and count == 1:
         guidance = ["It did no work: carry out this stage as briefed above."]
     else:

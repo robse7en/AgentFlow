@@ -400,6 +400,19 @@ impl Engine {
                 state.nodes[node].label, state.nodes[node].state
             )));
         }
+        let requested = super::decisions::requested_paths(decision.as_ref().filter(|d| !d.is_null()));
+        if !requested.is_empty() {
+            if !state.nodes[node].key.starts_with("worker_") {
+                return Err(WorkflowError::new(
+                    "grantsPaths: only a parallel worker can ask for files outside its ownership",
+                    422,
+                ));
+            }
+            let item = self.worker_item(&state, node)?;
+            if let Some(conflict) = super::workers::grant_conflict(&self.work_items(&state)?, &item, &requested) {
+                return Err(WorkflowError::conflict(conflict));
+            }
+        }
         let mut question = AgentQuestionRow {
             id: 0,
             uid: new_uid(),
@@ -496,6 +509,14 @@ impl Engine {
         if state.runs[run].state != waiting || state.nodes[node].state != waiting {
             return Err(WorkflowError::conflict("The agent is no longer waiting for this answer"));
         }
+        // Checked again: another worker may have been granted one of these paths since.
+        let granted = super::decisions::granted_paths(decision, path);
+        let mut item = if granted.is_empty() { None } else { Some(self.worker_item(&state, node)?) };
+        if let Some(item) = &item
+            && let Some(conflict) = super::workers::grant_conflict(&self.work_items(&state)?, item, &granted)
+        {
+            return Err(WorkflowError::conflict(conflict));
+        }
         let agent = state
             .agents
             .iter()
@@ -529,7 +550,27 @@ impl Engine {
         answered.answer = Some(answer.clone());
         answered.answered = true;
         answered.answered_at = Some(DbTime::now());
-        self.db.session(|tx| table::update(tx, &original, &answered))?;
+        let before = item.clone();
+        let added = item.as_mut().map(|item| super::workers::grant(item, &granted)).unwrap_or_default();
+        // The answer and the grant it carries are one write.
+        self.db.session(|tx| -> rusqlite::Result<()> {
+            table::update(tx, &original, &answered)?;
+            if let (Some(before), Some(after)) = (&before, &item)
+                && !added.is_empty()
+            {
+                table::update(tx, before, after)?;
+            }
+            Ok(())
+        })?;
+        if !added.is_empty() {
+            let (label, key) = (state.nodes[node].label.clone(), state.nodes[node].key.clone());
+            state.log(
+                format!("{label} may now also change: {}", added.join(", ")),
+                Some(&key),
+                "info",
+                Some(json!({"grantedPaths": added, "questionUid": original.uid})),
+            );
+        }
         let still_open = self.open_question_count(run_id)?;
         if still_open > 0 {
             state.set_state(

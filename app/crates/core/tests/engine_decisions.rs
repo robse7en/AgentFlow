@@ -6,7 +6,9 @@ mod engine_support;
 use agentflow_core::chat::{answers, models::AnswerPrompt, models::AnswerRequest};
 use agentflow_core::config::SlackConfig;
 use agentflow_core::engine::agents::clean_ask;
-use agentflow_core::engine::decisions::{ANSWER_SEPARATOR, answer_line, source_allowed};
+use agentflow_core::engine::decisions::{
+    ANSWER_SEPARATOR, answer_line, granted_paths, requested_paths, source_allowed,
+};
 use agentflow_core::engine::spec;
 use engine_support::{Harness, add_session, engine, tab_seven};
 use serde_json::{Value, json};
@@ -158,11 +160,73 @@ fn every_rule_rejects_with_the_field_at_fault() {
             "choices[0].followUp.choices: labels must be unique",
         ),
         (changed(&follow(1), json!({"note": null})), "choices[0].followUp.choices[1].source: needs a note"),
+        (
+            changed(&choice(1), json!({"grantsPaths": "src/a.ts"})),
+            "choices[1].grantsPaths: must be a list of 1 to 10 paths",
+        ),
+        (changed(&choice(1), json!({"grantsPaths": []})), "choices[1].grantsPaths: must be a list of 1 to 10 paths"),
+        (
+            changed(&choice(1), json!({"grantsPaths": (0..11).map(|n| format!("src/{n}.ts")).collect::<Vec<_>>()})),
+            "choices[1].grantsPaths: must be a list of 1 to 10",
+        ),
+        (
+            changed(&choice(1), json!({"grantsPaths": [7]})),
+            "choices[1].grantsPaths: must contain explicit repository-relative files",
+        ),
+        (
+            changed(&choice(1), json!({"grantsPaths": ["/etc/passwd"]})),
+            "choices[1].grantsPaths: must contain explicit repository-relative",
+        ),
+        (
+            changed(&choice(1), json!({"grantsPaths": ["src/../x"]})),
+            "choices[1].grantsPaths: must contain explicit repository-relative",
+        ),
+        (
+            changed(&choice(1), json!({"grantsPaths": ["src/*.ts"]})),
+            "choices[1].grantsPaths: must contain explicit repository-relative",
+        ),
+        (
+            changed(&choice(1), json!({"grantsPaths": ["."]})),
+            "choices[1].grantsPaths: must contain explicit repository-relative",
+        ),
+        (
+            changed(&choice(0), json!({"grantsPaths": ["src/a.ts"]})),
+            "choices[0].grantsPaths: a choice with a follow-up cannot grant paths; put them on its options",
+        ),
     ];
     for (data, problem) in cases {
         let error = ask(&data).unwrap_err();
         assert!(error.contains(problem), "{error:?} should contain {problem:?}");
     }
+}
+
+#[test]
+fn grants_are_normalized_and_found_on_the_picked_leaf() {
+    let mut data = tree();
+    data["choices"][1]["grantsPaths"] = json!(["./src//shared/index.ts", "src/shared/index.ts", "docs"]);
+    data["choices"][0]["followUp"]["choices"][0]["grantsPaths"] = json!(["docs/a.md"]);
+    let decision = ask(&data).unwrap().2.unwrap();
+    assert_eq!(decision["choices"][1]["grantsPaths"], json!(["src/shared/index.ts", "docs"]));
+    let d = Some(&decision);
+    assert_eq!(granted_paths(d, Some(&[1])), ["src/shared/index.ts", "docs"]);
+    assert_eq!(granted_paths(d, Some(&[0, 0])), ["docs/a.md"]);
+    assert!(granted_paths(d, Some(&[0, 1])).is_empty() && granted_paths(d, Some(&[2])).is_empty());
+    assert!(granted_paths(d, None).is_empty() && granted_paths(None, Some(&[0])).is_empty());
+    assert_eq!(requested_paths(d), ["docs/a.md", "src/shared/index.ts", "docs"]);
+    assert!(requested_paths(None).is_empty());
+}
+
+#[tokio::test]
+async fn only_a_worker_can_ask_for_paths() {
+    let (h, run) = waiting().await;
+    let mut data = tree();
+    data["choices"][1]["grantsPaths"] = json!(["src/a.ts"]);
+    let (message, choices, decision) = ask(&data).unwrap();
+    let error =
+        h.engine.agent_decision("TEST-1", "implementer", Some(run), &message, &choices, decision).await.unwrap_err();
+    assert_eq!(error.status, 422);
+    assert!(error.message.contains("only a parallel worker"), "{error}");
+    assert_eq!(h.engine.snapshot("TEST-1").unwrap()["questions"], json!([]));
 }
 
 #[test]

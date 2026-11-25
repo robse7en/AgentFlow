@@ -212,11 +212,17 @@ impl JiraService {
         }
         // Without currentJQL the picker only searches the account's view history (its
         // "History Search" section), so tickets never opened in Jira would not be found.
+        // The picker also leaves sub-tasks out unless showSubTasks is set, so a sub-task could
+        // not be found even by its exact key.
         let data = self
             .api(
                 "GET",
                 "/rest/api/3/issue/picker",
-                &[("query", query.trim().into()), ("currentJQL", "order by updated DESC".into())],
+                &[
+                    ("query", query.trim().into()),
+                    ("currentJQL", "order by updated DESC".into()),
+                    ("showSubTasks", "true".into()),
+                ],
                 None,
             )
             .await?;

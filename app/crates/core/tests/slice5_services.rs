@@ -99,6 +99,7 @@ async fn test_search_issues_parses_sections_and_stops_at_max_results() {
     assert_eq!(results[0]["section"], "Current Search");
     assert!(t.calls.lock().unwrap()[0].1.contains("query=de+%26+x"));
     assert!(t.calls.lock().unwrap()[0].1.contains("currentJQL=order+by+updated+DESC"));
+    assert!(t.calls.lock().unwrap()[0].1.contains("showSubTasks=true"));
     assert!(t.calls.lock().unwrap()[0].2.values().any(|v| v.starts_with("Basic ")));
     assert!(s.search_issues(" ", 20).await.unwrap().is_empty());
 }

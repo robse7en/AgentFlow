@@ -8,6 +8,13 @@ tested. The frontend and Python package versions are independent of desktop vers
 Each version has a local annotated `v<version>` Git tag at the source checkpoint
 shown below. Tags must be pushed separately to share them with other checkouts.
 
+## 1.2.4 - 2026-11-26
+
+Source: the version commit tagged `v1.2.4` on `main`.
+
+- The Jira search on the New Task form finds sub-tasks. Jira's issue picker leaves them out
+  unless asked, so a sub-task could not be found even by its exact key.
+
 ## 1.2.3 - 2026-11-18
 
 Source: the version commit tagged `v1.2.3` on `main`.

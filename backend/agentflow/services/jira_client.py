@@ -184,7 +184,9 @@ class JiraService:
                     f"{self._base_url}/rest/api/3/issue/picker",
                     # Without currentJQL the picker only searches the account's view history
                     # ("History Search"), so tickets never opened in Jira would not be found.
-                    params={"query": query, "currentJQL": "order by updated DESC"},
+                    # The picker leaves sub-tasks out unless showSubTasks is set, so a sub-task
+                    # could not be found even by its exact key.
+                    params={"query": query, "currentJQL": "order by updated DESC", "showSubTasks": "true"},
                     headers={"Accept": "application/json", **headers},
                     auth=auth,
                 )
